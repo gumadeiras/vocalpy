@@ -10,6 +10,19 @@ __copyright__ = "2019 Dietrich Lab - Yale University School of Medicine"
 
 from utils import *
 
+import argparse
+import logging as log
+
+
+p    = argparse.ArgumentParser()
+p.add_argument("-v", "--verbose", help="output verbosity", action="store_true")
+args = p.parse_args()
+verbose = args.verbose
+if verbose:
+    log.basicConfig(format="%(levelname)s: %(message)s", level=log.DEBUG)
+    log.info("verbose output on")
+else:
+    log.basicConfig(format="%(levelname)s: %(message)s")
 # import tkinter as tk
 # from tkinter import filedialog
 
@@ -21,7 +34,7 @@ from utils import *
 timeStart = time()
 
 file_path = '/Users/gustavo/Documents/git/vocalpy/audio_example.wav'
-print("selected file: {}".format(file_path))
+log.info("selected file: {}".format(file_path))
 
 timeA = time()
 sample_rate, samples = wavfile.read(file_path)
@@ -29,62 +42,70 @@ audio_duration       = samples.shape[0]/sample_rate
 # -- rescale to be in the range (-1,1) so psd values match MATLAB's audioread
 # samples = samples / np.max(samples)
 timeB = time()
-print("audio duration: {:.2f} seconds".format(audio_duration))
-print("load audio runtime: {:.2f}".format(timeB - timeA))
+log.info("audio duration: {:.2f} seconds".format(audio_duration))
+log.info("load audio runtime: {:.2f}".format(timeB - timeA))
 
 # -- split spectrogram in minute bins
 bin_size = 60
 bins     = ceil(audio_duration/60)
-print("splitting audio into {} bins".format(bins))
+log.info("splitting audio into {} bins".format(bins))
 
 
 dir_path = '/Users/gustavo/Documents/git/vocalpy/outputs/all/mask'
 if not os.path.exists(dir_path):
     os.makedirs(dir_path, exist_ok=True)
 
-vocal_id = 0
-vocal_df = pd.DataFrame(columns=['start',
-                                 'end',
-                                 'duration',
-                                 'interval',
-                                 # 'min_freq_main',
-                                 # 'max_freq_main',
-                                 # 'avg_freq_main',
-                                 'min_freq_all',
-                                 'max_freq_all',
-                                 'avg_freq_all',
-                                 'bandwidth',
-                                 'min_intensity',
-                                 'max_intensity',
-                                 'avg_intensity',
-                                 'bg_intensity',
-                                 'area',
-                                 'points',
-                                 'centroid',
-                                 'orientation',
-                                 ])
-
+chunks = []
 for this_bin in range(1, bins+1):
+    if this_bin == 1:
+        start_range = ceil(0.3 * sample_rate)
+        end_range   = bin_size * sample_rate
+        time_range  = samples[start_range:end_range]
+        chunks.append((time_range, this_bin, start_range, end_range, bin_size, verbose))
+    elif this_bin == bins:
+        start_range = (this_bin - 1) * bin_size * sample_rate
+        end_range   = audio_duration * sample_rate
+        time_range  = samples[start_range:]
+        chunks.append((time_range, this_bin, start_range, end_range, bin_size, verbose))
+    else:
+        start_range = (this_bin - 1) * bin_size * sample_rate
+        end_range   = this_bin * bin_size * sample_rate
+        time_range  = samples[start_range:end_range]
+        chunks.append((time_range, this_bin, start_range, end_range, bin_size, verbose))
+
+from joblib import Parallel, delayed
+import multiprocessing
+ 
+num_cores = multiprocessing.cpu_count()
+
+def parallel_spectrogram(chunk):
+    time_range, this_bin, start_range, end_range, bin_size, verbose = chunk
+
+    if verbose:
+        log.basicConfig(format="%(levelname)s: %(message)s", level=log.DEBUG)
+    else:
+        log.basicConfig(format="%(levelname)s: %(message)s")
+
     timeA      = time()
     fs         = sample_rate
     window     = signal.get_window('hamming', 256)
     noverlap   = 128
     nfft       = 1024
-    if this_bin == 1:
-        start_range = ceil(0.3 * sample_rate)
-        end_range   = bin_size * sample_rate
-        time_range  = samples[start_range:end_range]
-    elif this_bin == bins:
-        start_range = (this_bin - 1) * bin_size * sample_rate
-        end_range   = audio_duration * sample_rate
-        time_range  = samples[start_range:]
-    else:
-        start_range = (this_bin - 1) * bin_size * sample_rate
-        end_range   = this_bin * bin_size * sample_rate
-        time_range  = samples[start_range:end_range]
+    # if this_bin == 1:
+    #     start_range = ceil(0.3 * sample_rate)
+    #     end_range   = bin_size * sample_rate
+    #     time_range  = samples[start_range:end_range]
+    # elif this_bin == bins:
+    #     start_range = (this_bin - 1) * bin_size * sample_rate
+    #     end_range   = audio_duration * sample_rate
+    #     time_range  = samples[start_range:]
+    # else:
+    #     start_range = (this_bin - 1) * bin_size * sample_rate
+    #     end_range   = this_bin * bin_size * sample_rate
+    #     time_range  = samples[start_range:end_range]
 
     time_range_secs = time_range.shape[0]/sample_rate
-    print("computing spectrogram for bin: {}; time range: {}s; audio range: {:.2f}-{:.2f}s".format(this_bin,
+    log.info("computing spectrogram for bin: {}; time range: {}s; audio range: {:.2f}-{:.2f}s".format(this_bin,
                                                                                                    time_range_secs,
                                                                                                    start_range / sample_rate,
                                                                                                    end_range / sample_rate))
@@ -93,29 +114,29 @@ for this_bin in range(1, bins+1):
                                                 noverlap=noverlap,
                                                 nfft=nfft,
                                                 mode='psd')
-    # print(t.shape)
-    # print(f.shape)
+    # log.info(t.shape)
+    # log.info(f.shape)
 
     # -- remove lower frequencies
     freq_cutoff = 45000
     Sxx         = Sxx[(f>freq_cutoff)]
     f           = f[(f>freq_cutoff)]
-    # print(Sxx.shape)
-    # print(np.min(Sxx))
-    # print(np.max(Sxx))
+    # log.info(Sxx.shape)
+    # log.info(np.min(Sxx))
+    # log.info(np.max(Sxx))
 
     time_res = time_range_secs/t.shape[0]
     freq_res = (np.max(f) - freq_cutoff) / f.shape[0]
     timeB    = time()
-    print("spectrogram runtime: {:.2f}".format(timeB - timeA))
-    print("time resolution: {:.2f}ms".format(time_res * 1000))
-    print("freq resolution: {:.2f}Hz".format(freq_res))
+    log.info("spectrogram runtime: {:.2f}".format(timeB - timeA))
+    log.info("time resolution: {:.2f}ms".format(time_res * 1000))
+    log.info("freq resolution: {:.2f}Hz".format(freq_res))
 
 
     # -- convert to dB
     Pxx        = 10*np.log10(Sxx)
-    # print(np.min(Pxx))
-    # print(np.max(Pxx))
+    # log.info(np.min(Pxx))
+    # log.info(np.max(Pxx))
     # plt.pcolormesh(t[35000:40000], f, Pxx[:,35000:40000], cmap='gray')
     # plt.show()
 
@@ -195,7 +216,7 @@ for this_bin in range(1, bins+1):
         if areas[i] >= min_area:
             grain[output == i + 1] = 255
     timeB = time()
-    print("connected components runtime: {:.2f}".format(timeB - timeA))
+    log.info("connected components runtime: {:.2f}".format(timeB - timeA))
 
     # -- one more opening to make sure segmentation covers *at least* the real area
     grain        = grain.astype(np.uint8)
@@ -227,7 +248,7 @@ for this_bin in range(1, bins+1):
     props  = measure.regionprops(labels, intensity_image=Pxx, cache=True, coordinates='rc')
     props  = sorted(props, key=lambda p: np.min(p.coords[:,1]), reverse=False)
     timeB    = time()
-    print("region props runtime: {:.2f}".format(timeB - timeA))
+    log.info("region props runtime: {:.2f}".format(timeB - timeA))
     # plt.subplot(311)
     # plt.pcolormesh(t[35000:40000], f, Pxx[:,35000:40000], cmap='gray')
     # plt.subplot(312)
@@ -247,6 +268,28 @@ for this_bin in range(1, bins+1):
     # min_intensity float
     # orientation float
 
+    vocal_id = 0
+    vocal_df = pd.DataFrame(columns=['start',
+                                     'end',
+                                     'duration',
+                                     'interval',
+                                     # 'min_freq_main',
+                                     # 'max_freq_main',
+                                     # 'avg_freq_main',
+                                     'min_freq_all',
+                                     'max_freq_all',
+                                     'avg_freq_all',
+                                     'bandwidth',
+                                     'min_intensity',
+                                     'max_intensity',
+                                     'avg_intensity',
+                                     'bg_intensity',
+                                     'area',
+                                     'points',
+                                     'centroid',
+                                     'orientation',
+                                     ])
+    
     for prop in props:
         start = np.min(prop.coords[:,1])
         try:
@@ -264,8 +307,8 @@ for this_bin in range(1, bins+1):
         max_freq_all = (np.max(prop.coords[:,0]) * freq_res) + freq_cutoff
         avg_freq_all = (np.mean(prop.coords[:,0]) * freq_res) + freq_cutoff
         bandwidth    = max_freq_all - min_freq_all
-        vocal_df     = vocal_df.append({'start': start * time_res,
-                                        'end': end * time_res,
+        vocal_df     = vocal_df.append({'start': (start * time_res) + ((this_bin - 1) * bin_size),
+                                        'end': (end * time_res) + ((this_bin - 1) * bin_size),
                                         'duration': duration * time_res * 1000,
                                         'interval': interval * time_res,
                                         'min_freq_all': min_freq_all,
@@ -301,9 +344,9 @@ for this_bin in range(1, bins+1):
             img = img.convert("L")
             img.save('/Users/gustavo/Documents/git/vocalpy/outputs/all/' + str(this_bin) + '_' + str(vocal_id) + '_overlay.jpg')
         except:
-            print('######## EXCEPT HERE')
-            print(centroid_time)
-            print(Pxx.shape)
+            log.info('######## EXCEPT HERE')
+            log.info(centroid_time)
+            log.info(Pxx.shape)
             img = np.flipud(Pxx_scaled[:,centroid_time-200:-1])
             img = Image.fromarray(img)
             img = img.convert("L")
@@ -320,12 +363,16 @@ for this_bin in range(1, bins+1):
             img.save('/Users/gustavo/Documents/git/vocalpy/outputs/all/' + str(this_bin) + '_' + str(vocal_id) + '_overlay.jpg')
         vocal_id = vocal_id + 1
 
-
+    return vocal_df
     # min_area_index = vocal_df[ vocal_df['duration'] >= 5 ].index
     # vocal_df.drop(min_area_index, inplace=True)
 
-    # print("dataframe contens ", vocal_df, sep='\n')
+    # log.info("dataframe contens ", vocal_df, sep='\n')
 
+results  = Parallel(n_jobs=num_cores)(delayed(parallel_spectrogram)(i) for i in chunks)
+# log.info(results)
+vocal_df = pd.concat(results)
+vocal_df.sort_values(by='start', ascending=True, inplace=True, kind='quicksort', na_position='last')
 vocal_df.to_excel('/Users/gustavo/Documents/git/vocalpy/outputs/output.xlsx')
 # for each cc add to dict: time points, freq points, area, intensity, min,avg,max intensity, centroids,
 
@@ -345,4 +392,4 @@ vocal_df.to_excel('/Users/gustavo/Documents/git/vocalpy/outputs/output.xlsx')
 # th3 = cv2.erode(th3, kernel)
 
 timeEnd = time()
-print("total time: {:.2f}".format(timeEnd - timeStart))
+log.info("total time: {:.2f}".format(timeEnd - timeStart))
