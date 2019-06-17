@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""VocalPy Identifier - Finds candidate vocalizations in exoerimental recordings"""
+'''VocalPy Identifier - Finds candidate vocalizations in exoerimental recordings'''
 
-__author__    = "Gustavo Madeira Santana"
-__email__     = "gustavo.santana@yale.edu"
-__copyright__ = "2019 Dietrich Lab - Yale University School of Medicine"
+__author__    = 'Gustavo Madeira Santana'
+__email__     = 'gustavo.santana@yale.edu'
+__copyright__ = '2019 Dietrich Lab - Yale University School of Medicine'
 
 #ToDo
 #Numba maybe
@@ -17,7 +17,7 @@ from   math              import floor, ceil
 from   PIL               import Image
 
 import argparse
-import logging           as     log
+import logging
 
 import multiprocessing
 from   joblib            import Parallel, delayed
@@ -127,9 +127,17 @@ def parallel_audio_processing(chunk):
     sample_rate, time_range, this_bin, start_range, end_range, bin_size, args = chunk
 
     if args.verbose:
-        log.basicConfig(format="%(levelname)s: %(message)s", level=log.DEBUG)
+        logging.basicConfig(level=logging.INFO,
+                            format='%(asctime)s [%(levelname)-5.5s]  %(message)s',
+                            datefmt='%d-%b-%y %H:%M:%S',
+                            handlers=[
+                                logging.FileHandler('{0}/{1}.log'.format('/Users/gustavo/Documents/git/vocalpy/outputs/', 'output')),
+                                logging.StreamHandler()
+                            ])
     else:
-        log.basicConfig(format="%(levelname)s: %(message)s")
+        logging.basicConfig(format='%(levelname)s: %(message)s')
+
+    logger = logging.getLogger()
 
     timeA           = time()
     fs              = sample_rate
@@ -137,7 +145,7 @@ def parallel_audio_processing(chunk):
     noverlap        = 128
     nfft            = 1024
     time_range_secs = time_range.shape[0] / sample_rate
-    log.info("[bin {}]: computing spectrogram for bin: {}; time range: {}s; audio range: {:.2f}-{:.2f}s".format(this_bin, this_bin,
+    logger.info('[bin {}]: computing spectrogram for bin: {}; time range: {}s; audio range: {:.2f}-{:.2f}s'.format(this_bin, this_bin,
                                                                                                    time_range_secs,
                                                                                                    start_range / sample_rate,
                                                                                                    end_range / sample_rate))
@@ -146,29 +154,29 @@ def parallel_audio_processing(chunk):
                                                 noverlap=noverlap,
                                                 nfft=nfft,
                                                 mode='psd')
-    # log.info(t[bin {}]: .shape)
-    # log.info(f[bin {}]: .shape)
+    # logger.info(t[bin {}]: .shape)
+    # logger.info(f[bin {}]: .shape)
 
     # -- remove lower frequencies
     freq_cutoff = 45000
     Sxx         = Sxx[(f>freq_cutoff)]
     f           = f[(f>freq_cutoff)]
-    # log.info(S[bin {}]: xx.shape)
-    # log.info(n[bin {}]: p.min(Sxx))
-    # log.info(n[bin {}]: p.max(Sxx))
+    # logger.info(S[bin {}]: xx.shape)
+    # logger.info(n[bin {}]: p.min(Sxx))
+    # logger.info(n[bin {}]: p.max(Sxx))
 
     time_res = time_range_secs/t.shape[0]
     freq_res = (np.max(f) - freq_cutoff) / f.shape[0]
     timeB    = time()
-    log.info("[bin {}]: spectrogram runtime: {:.2f}".format(this_bin, timeB - timeA))
-    log.info("[bin {}]: time resolution: {:.2f}ms".format(this_bin, time_res * 1000))
-    log.info("[bin {}]: freq resolution: {:.2f}Hz".format(this_bin, freq_res))
+    logger.info('[bin {}]: spectrogram runtime: {:.2f}'.format(this_bin, timeB - timeA))
+    logger.info('[bin {}]: time resolution: {:.2f}ms'.format(this_bin, time_res * 1000))
+    logger.info('[bin {}]: freq resolution: {:.2f}Hz'.format(this_bin, freq_res))
 
 
     # -- convert to dB
     Pxx        = 10*np.log10(Sxx)
-    # log.info(n[bin {}]: p.min(Pxx))
-    # log.info(n[bin {}]: p.max(Pxx))
+    # logger.info(n[bin {}]: p.min(Pxx))
+    # logger.info(n[bin {}]: p.max(Pxx))
     if args.plot:
         plt.pcolormesh(t[35000:40000], f, Pxx[:,35000:40000], cmap='gray')
         plt.title('Pxx (dB)')
@@ -266,7 +274,7 @@ def parallel_audio_processing(chunk):
         if areas[i] >= min_area:
             grain[output == i + 1] = 255
     timeB = time()
-    log.info("[bin {}]: connected components runtime: {:.2f}".format(this_bin, timeB - timeA))
+    logger.info('[bin {}]: connected components runtime: {:.2f}'.format(this_bin, timeB - timeA))
 
     # -- one more opening to make sure segmentation covers *at least* the real area
     grain        = grain.astype(np.uint8)
@@ -303,7 +311,7 @@ def parallel_audio_processing(chunk):
     props  = measure.regionprops(labels, intensity_image=Pxx, cache=True, coordinates='rc')
     props  = sorted(props, key=lambda p: np.min(p.coords[:,1]), reverse=False)
     timeB    = time()
-    log.info("[bin {}]: region props runtime: {:.2f}".format(this_bin, timeB - timeA))
+    logger.info('[bin {}]: region props runtime: {:.2f}'.format(this_bin, timeB - timeA))
     if args.plot:
         plt.subplot(311)
         plt.pcolormesh(t[35000:40000], f, Pxx[:,35000:40000], cmap='gray')
@@ -390,33 +398,33 @@ def parallel_audio_processing(chunk):
         try:
             img = np.flipud(Pxx_scaled[:,centroid_time-200:centroid_time+200])
             img = Image.fromarray(img)
-            img = img.convert("L")
+            img = img.convert('L')
             img.save('/Users/gustavo/Documents/git/vocalpy/outputs/all/' + str(this_bin) + '_' + str(vocal_id) + '.jpg')
 
             img = np.flipud(grain[:,centroid_time-200:centroid_time+200])
             img = Image.fromarray(img)
-            img = img.convert("L")
+            img = img.convert('L')
             img.save('/Users/gustavo/Documents/git/vocalpy/outputs/all/mask/' + str(this_bin) + '_' + str(vocal_id) + '.jpg')
 
             img = np.flipud(B_masked[:,centroid_time-200:centroid_time+200])
             img = Image.fromarray(img)
-            img = img.convert("L")
+            img = img.convert('L')
             img.save('/Users/gustavo/Documents/git/vocalpy/outputs/all/' + str(this_bin) + '_' + str(vocal_id) + '_overlay.jpg')
         except:
-            log.info('[bin {}]: ######## EXCEPT HERE FOR ID {}'.format(this_bin, vocal_id))
+            logger.info('[bin {}]: ######## EXCEPT HERE FOR ID {}'.format(this_bin, vocal_id))
             img = np.flipud(Pxx_scaled[:,centroid_time-200:-1])
             img = Image.fromarray(img)
-            img = img.convert("L")
+            img = img.convert('L')
             img.save('/Users/gustavo/Documents/git/vocalpy/outputs/all/' + str(this_bin) + '_' + str(vocal_id) + '.jpg')
 
             img = np.flipud(grain[:,centroid_time-200:-1])
             img = Image.fromarray(img)
-            img = img.convert("L")
+            img = img.convert('L')
             img.save('/Users/gustavo/Documents/git/vocalpy/outputs/all/mask/' + str(this_bin) + '_' + str(vocal_id) + '.jpg')
 
             img = np.flipud(B_masked[:,centroid_time-200:-1])
             img = Image.fromarray(img)
-            img = img.convert("L")
+            img = img.convert('L')
             img.save('/Users/gustavo/Documents/git/vocalpy/outputs/all/' + str(this_bin) + '_' + str(vocal_id) + '_overlay.jpg')
         vocal_id = vocal_id + 1
 
