@@ -16,9 +16,9 @@ import logging as log
 
 p    = argparse.ArgumentParser()
 p.add_argument("-v", "--verbose", help="output verbosity", action="store_true")
+p.add_argument("-p", "--plot", help="output verbosity", action="store_true")
 args = p.parse_args()
-verbose = args.verbose
-if verbose:
+if args.verbose:
     log.basicConfig(format="%(levelname)s: %(message)s", level=log.DEBUG)
     log.info("verbose output on")
 else:
@@ -57,21 +57,21 @@ if not os.path.exists(dir_path):
 
 chunks = []
 for this_bin in range(1, bins+1):
-    if this_bin == 1:
+    if this_bin == 1: # -- first bin
         start_range = ceil(0.3 * sample_rate)
         end_range   = bin_size * sample_rate
         time_range  = samples[start_range:end_range]
-        chunks.append((time_range, this_bin, start_range, end_range, bin_size, verbose))
-    elif this_bin == bins:
+        chunks.append((time_range, this_bin, start_range, end_range, bin_size, args))
+    elif this_bin == bins: # -- last bin
         start_range = (this_bin - 1) * bin_size * sample_rate
         end_range   = audio_duration * sample_rate
         time_range  = samples[start_range:]
-        chunks.append((time_range, this_bin, start_range, end_range, bin_size, verbose))
-    else:
+        chunks.append((time_range, this_bin, start_range, end_range, bin_size, args))
+    else: # -- all other bins
         start_range = (this_bin - 1) * bin_size * sample_rate
         end_range   = this_bin * bin_size * sample_rate
         time_range  = samples[start_range:end_range]
-        chunks.append((time_range, this_bin, start_range, end_range, bin_size, verbose))
+        chunks.append((time_range, this_bin, start_range, end_range, bin_size, args))
 
 from joblib import Parallel, delayed
 import multiprocessing
@@ -79,32 +79,19 @@ import multiprocessing
 num_cores = multiprocessing.cpu_count()
 
 def parallel_spectrogram(chunk):
-    time_range, this_bin, start_range, end_range, bin_size, verbose = chunk
+    time_range, this_bin, start_range, end_range, bin_size, args = chunk
 
-    if verbose:
+    if args.verbose:
         log.basicConfig(format="%(levelname)s: %(message)s", level=log.DEBUG)
     else:
         log.basicConfig(format="%(levelname)s: %(message)s")
 
-    timeA      = time()
-    fs         = sample_rate
-    window     = signal.get_window('hamming', 256)
-    noverlap   = 128
-    nfft       = 1024
-    # if this_bin == 1:
-    #     start_range = ceil(0.3 * sample_rate)
-    #     end_range   = bin_size * sample_rate
-    #     time_range  = samples[start_range:end_range]
-    # elif this_bin == bins:
-    #     start_range = (this_bin - 1) * bin_size * sample_rate
-    #     end_range   = audio_duration * sample_rate
-    #     time_range  = samples[start_range:]
-    # else:
-    #     start_range = (this_bin - 1) * bin_size * sample_rate
-    #     end_range   = this_bin * bin_size * sample_rate
-    #     time_range  = samples[start_range:end_range]
-
-    time_range_secs = time_range.shape[0]/sample_rate
+    timeA           = time()
+    fs              = sample_rate
+    window          = signal.get_window('hamming', 256)
+    noverlap        = 128
+    nfft            = 1024
+    time_range_secs = time_range.shape[0] / sample_rate
     log.info("computing spectrogram for bin: {}; time range: {}s; audio range: {:.2f}-{:.2f}s".format(this_bin,
                                                                                                    time_range_secs,
                                                                                                    start_range / sample_rate,
@@ -137,8 +124,10 @@ def parallel_spectrogram(chunk):
     Pxx        = 10*np.log10(Sxx)
     # log.info(np.min(Pxx))
     # log.info(np.max(Pxx))
-    # plt.pcolormesh(t[35000:40000], f, Pxx[:,35000:40000], cmap='gray')
-    # plt.show()
+    if args.plot:
+        plt.pcolormesh(t[35000:40000], f, Pxx[:,35000:40000], cmap='gray')
+        plt.title('Pxx (dB)')
+        plt.show()
 
     # -- rescale to save spectrograms in grayscale
     dtype      = np.uint8
@@ -147,33 +136,43 @@ def parallel_spectrogram(chunk):
     # -- normalize data
     B = np.abs(Pxx)
     B = B/np.max(B)
-    # plt.pcolormesh(t[35000:40000], f, B[:,35000:40000], cmap='gray')
-    # plt.show()
+    if args.plot:
+        plt.pcolormesh(t[35000:40000], f, B[:,35000:40000], cmap='gray')
+        plt.title('B = Pxx normalized')
+        plt.show()
 
     # -- rescale intensity values to be between (0,1)
     # B = exposure.rescale_intensity(B, in_range='image', out_range=(0,1))
     B = exposure.rescale_intensity(B, in_range='image', out_range=dtype)
-    # plt.pcolormesh(t[35000:40000], f, B[:,35000:40000], cmap='gray')
-    # plt.show()
+    if args.plot:
+        plt.pcolormesh(t[35000:40000], f, B[:,35000:40000], cmap='gray')
+        plt.title('B intensity values rescaled to dtype')
+        plt.show()
 
     # -- image complement
     ii8    = np.iinfo(dtype)
     B_orig = B
     B      = ii8.max - B
-    # plt.pcolormesh(t[35000:40000], f, B[:,35000:40000], cmap='gray')
-    # plt.show()
+    if args.plot:
+        plt.pcolormesh(t[35000:40000], f, B[:,35000:40000], cmap='gray')
+        plt.title('B complement')
+        plt.show()
 
 
     # -- contrast adjustment
     B = exposure.adjust_gamma(B)
-    # plt.pcolormesh(t[35000:40000], f, B[:,35000:40000], cmap='gray')
-    # plt.show()
+    if args.plot:
+        plt.pcolormesh(t[35000:40000], f, B[:,35000:40000], cmap='gray')
+        plt.title('B contrast adjustment')
+        plt.show()
 
     # -- binarize spectrogram
     BB = bradley_roth_numpy(B, t=10)
     BB = ii8.max - BB
-    # plt.pcolormesh(t[35000:40000], f, BB[:,35000:40000], cmap='gray')
-    # plt.show()
+    if args.plot:
+        plt.pcolormesh(t[35000:40000], f, BB[:,35000:40000], cmap='gray')
+        plt.title('BB = B binarized bradley roth')
+        plt.show()
 
     # -- kernels for morphological operations
     kernel_rect  = np.ones((4,2), np.uint8)
@@ -185,17 +184,23 @@ def parallel_spectrogram(chunk):
     dilate12 = cv2.dilate(erode11, kernel_rect, iterations=1)
     dilate13 = cv2.dilate(dilate12, kernel_line2, iterations=1)
     erode14  = cv2.erode(dilate13, kernel_line1, iterations=2)
-    # plt.subplot(511)
-    # plt.pcolormesh(t[80000:85000], f, BB[:,80000:85000], cmap='gray')
-    # plt.subplot(512)
-    # plt.pcolormesh(t[80000:85000], f, erode11[:,80000:85000], cmap='gray')
-    # plt.subplot(513)
-    # plt.pcolormesh(t[80000:85000], f, dilate12[:,80000:85000], cmap='gray')
-    # plt.subplot(514)
-    # plt.pcolormesh(t[80000:85000], f, dilate13[:,80000:85000], cmap='gray')
-    # plt.subplot(515)
-    # plt.pcolormesh(t[80000:85000], f, erode14[:,80000:85000], cmap='gray')
-    # plt.show()
+    if args.plot:
+        plt.subplot(511)
+        plt.pcolormesh(t[80000:85000], f, BB[:,80000:85000], cmap='gray')
+        plt.title('BB')
+        plt.subplot(512)
+        plt.pcolormesh(t[80000:85000], f, erode11[:,80000:85000], cmap='gray')
+        plt.title('BB + erode (4,1)')
+        plt.subplot(513)
+        plt.pcolormesh(t[80000:85000], f, dilate12[:,80000:85000], cmap='gray')
+        plt.title('+ dilate (4,2)')
+        plt.subplot(514)
+        plt.pcolormesh(t[80000:85000], f, dilate13[:,80000:85000], cmap='gray')
+        plt.title('+ dilate (5,1)')
+        plt.subplot(515)
+        plt.pcolormesh(t[80000:85000], f, erode14[:,80000:85000], cmap='gray')
+        plt.title('+ erode (4,1)')
+        plt.show()
 
     timeA  = time()
     connectivity = 4
@@ -228,19 +233,24 @@ def parallel_spectrogram(chunk):
 
     # -- get spectrogram area using the segmentation mask
     B_masked = B * (((255 - grain) > 0) * 1)
-    # plt.subplot(411)
-    # plt.pcolormesh(t[80000:85000], f, Pxx[:,80000:85000], cmap='gray')
-    # # plt.pcolormesh(t, f, Pxx, cmap='gray')
-    # plt.subplot(412)
-    # plt.pcolormesh(t[80000:85000], f, BB[:,80000:85000], cmap='gray')
-    # # plt.pcolormesh(t, f, BB, cmap='gray')
-    # plt.subplot(413)
-    # plt.pcolormesh(t[80000:85000], f, grain[:,80000:85000], cmap='gray')
-    # # plt.pcolormesh(t, f, grain, cmap='gray')
-    # plt.subplot(414)
-    # plt.pcolormesh(t[80000:85000], f, B_masked[:,80000:85000], cmap='gray')
-    # # plt.pcolormesh(t, f, B_masked, cmap='gray')
-    # plt.show()
+    if args.plot:
+        plt.subplot(411)
+        plt.pcolormesh(t[80000:85000], f, Pxx[:,80000:85000], cmap='gray')
+        # plt.pcolormesh(t, f, Pxx, cmap='gray')
+        plt.title('Pxx')
+        plt.subplot(412)
+        plt.pcolormesh(t[80000:85000], f, BB[:,80000:85000], cmap='gray')
+        # plt.pcolormesh(t, f, BB, cmap='gray')
+        plt.title('BB')
+        plt.subplot(413)
+        plt.pcolormesh(t[80000:85000], f, grain[:,80000:85000], cmap='gray')
+        # plt.pcolormesh(t, f, grain, cmap='gray')
+        plt.title('grain')
+        plt.subplot(414)
+        plt.pcolormesh(t[80000:85000], f, B_masked[:,80000:85000], cmap='gray')
+        # plt.pcolormesh(t, f, B_masked, cmap='gray')
+        plt.title('B_masked')
+        plt.show()
 
     # -- get connected components stats
     timeA     = time()
