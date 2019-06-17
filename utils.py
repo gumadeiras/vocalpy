@@ -135,7 +135,12 @@ def parallel_audio_processing(chunk):
                                 logging.StreamHandler()
                             ])
     else:
-        logging.basicConfig(format='%(levelname)s: %(message)s')
+        logging.basicConfig(level=logging.INFO,
+                            format='%(asctime)s [%(levelname)-5.5s]  %(message)s',
+                            datefmt='%d-%b-%y %H:%M:%S',
+                            handlers=[
+                                logging.FileHandler('{0}/{1}.log'.format('/Users/gustavo/Documents/git/vocalpy/outputs/', 'output')),
+                            ])
 
     logger = logging.getLogger()
 

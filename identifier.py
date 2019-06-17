@@ -20,7 +20,7 @@ from utils import *
 
 p    = argparse.ArgumentParser()
 p.add_argument('-v', '--verbose', help='output verbosity', action='store_true')
-p.add_argument('-p', '--plot', help='plot after each operation', action='store_true')
+p.add_argument('-p', '--plot', help='plot sample spectrogram after each operation', action='store_true')
 args = p.parse_args()
 
 dir_path = '/Users/gustavo/Documents/git/vocalpy/outputs/all/mask'
@@ -37,7 +37,13 @@ if args.verbose:
                         ])
     logging.info('verbose output on')
 else:
-    logging.basicConfig(format='%(levelname)s: %(message)s')
+    print('logging to file: {}'.format('/Users/gustavo/Documents/git/vocalpy/outputs/output.log'))
+    logging.basicConfig(level=logging.INFO,
+                        format='%(asctime)s [%(levelname)-5.5s]  %(message)s',
+                        datefmt='%d-%b-%y %H:%M:%S',
+                        handlers=[
+                            logging.FileHandler('{0}/{1}.log'.format('/Users/gustavo/Documents/git/vocalpy/outputs/', 'output')),
+                        ])
 
 logger = logging.getLogger()
 
