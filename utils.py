@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-'''VocalPy Identifier - Finds candidate vocalizations in exoerimental recordings'''
+'''VocalPy Identifier - A python version of (VocalMat by Antonio Fonseca)
+Finds candidate vocalizations in experimental recordings'''
 
 __author__    = 'Gustavo Madeira Santana'
 __email__     = 'gustavo.santana@yale.edu'
@@ -124,6 +125,7 @@ def imshow_components(labels):
 
 
 def parallel_audio_processing(chunk):
+    timeBinA = time()
     sample_rate, time_range, this_bin, start_range, end_range, bin_size, args = chunk
 
     if args.verbose:
@@ -159,16 +161,23 @@ def parallel_audio_processing(chunk):
                                                 noverlap=noverlap,
                                                 nfft=nfft,
                                                 mode='psd')
-    # logger.info(t[bin {}]: .shape)
-    # logger.info(f[bin {}]: .shape)
+
+    # -- rescale to be in the range (-1,1) so psd values match MATLAB's audioread
+    # -- change to be max possible number: 2^16/2 = 65536/2 = 32768
+    psd_samples = time_range / np.iinfo(np.int16).max
+    _, _, PSD   = signal.spectrogram(psd_samples, fs=fs,
+                                                  window=window,
+                                                  noverlap=noverlap,
+                                                  nfft=nfft,
+                                                  mode='psd')
+    # logger.info(Sxx.shape)
+    # logger.info(PSD.shape)
 
     # -- remove lower frequencies
     freq_cutoff = 45000
     Sxx         = Sxx[(f>freq_cutoff)]
+    PSD         = PSD[(f>freq_cutoff)]
     f           = f[(f>freq_cutoff)]
-    # logger.info(S[bin {}]: xx.shape)
-    # logger.info(n[bin {}]: p.min(Sxx))
-    # logger.info(n[bin {}]: p.max(Sxx))
 
     time_res = time_range_secs/t.shape[0]
     freq_res = (np.max(f) - freq_cutoff) / f.shape[0]
@@ -180,8 +189,7 @@ def parallel_audio_processing(chunk):
 
     # -- convert to dB
     Pxx        = 10*np.log10(Sxx)
-    # logger.info(n[bin {}]: p.min(Pxx))
-    # logger.info(n[bin {}]: p.max(Pxx))
+    PSD        = 10*np.log10(PSD)
     if args.plot:
         plt.pcolormesh(t[35000:40000], f, Pxx[:,35000:40000], cmap='gray')
         plt.title('Pxx (dB)')
@@ -313,7 +321,8 @@ def parallel_audio_processing(chunk):
     # -- get connected components stats
     timeA     = time()
     labels = measure.label(grain, background=0)
-    props  = measure.regionprops(labels, intensity_image=Pxx, cache=True, coordinates='rc')
+
+    props  = measure.regionprops(labels, intensity_image=PSD, cache=True, coordinates='rc')
     props  = sorted(props, key=lambda p: np.min(p.coords[:,1]), reverse=False)
     timeB    = time()
     logger.info('[bin {}]: region props runtime: {:.2f}'.format(this_bin, timeB - timeA))
@@ -357,7 +366,7 @@ def parallel_audio_processing(chunk):
                                      'avg_intensity',
                                      'bg_intensity',
                                      'area',
-                                     'points',
+                                     # 'points',
                                      'centroid',
                                      'orientation',
                                      ])
@@ -375,31 +384,33 @@ def parallel_audio_processing(chunk):
         if duration < 5:
             continue
 
-        min_freq_all = (np.min(prop.coords[:,0]) * freq_res) + freq_cutoff
-        max_freq_all = (np.max(prop.coords[:,0]) * freq_res) + freq_cutoff
-        avg_freq_all = (np.mean(prop.coords[:,0]) * freq_res) + freq_cutoff
-        bandwidth    = max_freq_all - min_freq_all
-        vocal_df     = vocal_df.append({'start': (start * time_res) + ((this_bin - 1) * bin_size),
-                                        'end': (end * time_res) + ((this_bin - 1) * bin_size),
-                                        'duration': duration * time_res * 1000,
-                                        'interval': interval * time_res,
-                                        'min_freq_all': min_freq_all,
-                                        'max_freq_all': max_freq_all,
-                                        'avg_freq_all': avg_freq_all,
-                                        'bandwidth': bandwidth,
-                                        'min_intensity': prop.min_intensity,
-                                        'max_intensity': prop.max_intensity,
-                                        'avg_intensity': prop.mean_intensity,
-                                        'bg_intensity': 0,
-                                        'area': prop.area,
-                                        'points': prop.coords,
-                                        'centroid': prop.centroid,
-                                        'orientation': prop.orientation,
-                                        }, ignore_index=True)
-
-        # -- save spectrogram and mask around each vocalization
+        # -- get spectrogram and mask around each vocalization
         centroid_time = ceil(prop.centroid[1])
         spectro_range = 200
+
+        min_freq_all  = (np.min(prop.coords[:,0]) * freq_res) + freq_cutoff
+        max_freq_all  = (np.max(prop.coords[:,0]) * freq_res) + freq_cutoff
+        avg_freq_all  = (np.mean(prop.coords[:,0]) * freq_res) + freq_cutoff
+        bandwidth     = max_freq_all - min_freq_all
+        bg_intensity  = np.mean(PSD[:,centroid_time-200:centroid_time+200])
+        vocal_df      = vocal_df.append({'start': (start * time_res) + ((this_bin - 1) * bin_size),
+                                         'end': (end * time_res) + ((this_bin - 1) * bin_size),
+                                         'duration': duration * time_res * 1000,
+                                         'interval': interval * time_res,
+                                         'min_freq_all': min_freq_all,
+                                         'max_freq_all': max_freq_all,
+                                         'avg_freq_all': avg_freq_all,
+                                         'bandwidth': bandwidth,
+                                         'min_intensity': prop.min_intensity,
+                                         'max_intensity': prop.max_intensity,
+                                         'avg_intensity': prop.mean_intensity,
+                                         'bg_intensity': bg_intensity,
+                                         'area': prop.area,
+                                         # 'points': prop.coords,
+                                         'centroid': prop.centroid,
+                                         'orientation': prop.orientation,
+                                         }, ignore_index=True)
+
         try:
             img = np.flipud(Pxx_scaled[:,centroid_time-200:centroid_time+200])
             img = Image.fromarray(img)
@@ -433,4 +444,6 @@ def parallel_audio_processing(chunk):
             img.save('/Users/gustavo/Documents/git/vocalpy/outputs/all/' + str(this_bin) + '_' + str(vocal_id) + '_overlay.jpg')
         vocal_id = vocal_id + 1
 
+    timeBinB = time()
+    logger.info('[bin {}]: bin runtime: {:.2f}'.format(this_bin, timeBinB - timeBinA))
     return vocal_df

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-'''VocalPy Identifier - Finds candidate vocalizations in experimental recordings'''
+'''VocalPy Identifier - A python version of (VocalMat by Antonio Fonseca)
+Finds candidate vocalizations in experimental recordings'''
 
 __author__    = 'Gustavo Madeira Santana'
 __email__     = 'gustavo.santana@yale.edu'
@@ -21,6 +22,8 @@ from utils import *
 p    = argparse.ArgumentParser()
 p.add_argument('-v', '--verbose', help='output verbosity', action='store_true')
 p.add_argument('-p', '--plot', help='plot sample spectrogram after each operation', action='store_true')
+p.add_argument('-b', '--bin_size', help='bin size in seconds to split spectrogram processing', type=int, default=60)
+p.add_argument('-t', '--threads', help='number of threads', type=int, default=0)
 args = p.parse_args()
 
 dir_path = '/Users/gustavo/Documents/git/vocalpy/outputs/all/mask'
@@ -45,14 +48,12 @@ else:
                             logging.FileHandler('{0}/{1}.log'.format('/Users/gustavo/Documents/git/vocalpy/outputs/', 'output')),
                         ])
 
-logger = logging.getLogger()
-
-timeStart = time()
+logger    = logging.getLogger()
 
 file_path = '/Users/gustavo/Documents/git/vocalpy/audio_example.wav'
 logger.info('selected file: {}'.format(file_path))
 
-timeA = time()
+timeStart = time()
 sample_rate, samples = wavfile.read(file_path)
 audio_duration       = samples.shape[0]/sample_rate
 # -- rescale to be in the range (-1,1) so psd values match MATLAB's audioread
@@ -60,11 +61,11 @@ audio_duration       = samples.shape[0]/sample_rate
 # samples = samples / np.max(samples)
 timeB = time()
 logger.info('audio duration: {:.2f} seconds'.format(audio_duration))
-logger.info('load audio runtime: {:.2f}'.format(timeB - timeA))
+logger.info('load audio runtime: {:.2f}'.format(timeB - timeStart))
 
 # -- split audio in minute bins
-bin_size = 60
-bins     = ceil(audio_duration/60)
+bin_size = args.bin_size
+bins     = ceil(audio_duration/bin_size)
 logger.info('splitting audio into {} bins'.format(bins))
 
 # -- separate audio into chunks to be distributed to each process
@@ -87,7 +88,11 @@ for this_bin in range(1, bins+1):
         chunks.append((sample_rate, time_range, this_bin, start_range, end_range, bin_size, args))
 
 # -- run one chunk in each available core
-num_cores = multiprocessing.cpu_count()
+if args.threads > 0 :
+    num_cores = args.threads
+else:
+    num_cores = multiprocessing.cpu_count()
+
 results   = Parallel(n_jobs=num_cores)(delayed(parallel_audio_processing)(i) for i in chunks)
 
 # -- concatenate results
@@ -95,7 +100,7 @@ vocal_df  = pd.concat(results)
 
 # -- sort vocalizations by start time and save to excel
 vocal_df.sort_values(by='start', ascending=True, inplace=True, kind='quicksort', na_position='last')
-vocal_df.to_excel('/Users/gustavo/Documents/git/vocalpy/outputs/output.xlsx')
+vocal_df.to_excel('/Users/gustavo/Documents/git/vocalpy/outputs/vocal_stats.xlsx')
 
 timeEnd   = time()
 logger.info('total time: {:.2f}'.format(timeEnd - timeStart))
