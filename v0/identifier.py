@@ -26,35 +26,38 @@ p.add_argument('-b', '--bin_size', help='bin size in seconds to split spectrogra
 p.add_argument('-t', '--threads', help='number of threads', type=int, default=0)
 args = p.parse_args()
 
-dir_path = '/Users/gustavo/Documents/git/vocalpy/outputs/all/mask'
-if not os.path.exists(dir_path):
-    os.makedirs(dir_path, exist_ok=True)
+root_dir = '/Users/gustavo/Documents/git/vocalpy'
+out_dir  = os.path.join(root_dir, 'outputs')
+mask_dir = os.path.join(root_dir, 'outputs', 'all', 'mask')
+audio_f  = os.path.join(root_dir, 'audio_example.wav')
+
+if not os.path.exists(mask_dir):
+    os.makedirs(mask_dir, exist_ok=True)
 
 if args.verbose:
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s [%(levelname)-5.5s]  %(message)s',
                         datefmt='%d-%b-%y %H:%M:%S',
                         handlers=[
-                            logging.FileHandler('{0}/{1}.log'.format('/Users/gustavo/Documents/git/vocalpy/outputs/', 'output')),
+                            logging.FileHandler('{0}/{1}.log'.format(out_dir, 'output')),
                             logging.StreamHandler()
                         ])
     logging.info('verbose output on')
 else:
-    print('logging to file: {}'.format('/Users/gustavo/Documents/git/vocalpy/outputs/output.log'))
+    print('logging to file: {}'.format(os.path.join(out_dir,'output.log')))
     logging.basicConfig(level=logging.INFO,
                         format='%(asctime)s [%(levelname)-5.5s]  %(message)s',
                         datefmt='%d-%b-%y %H:%M:%S',
                         handlers=[
-                            logging.FileHandler('{0}/{1}.log'.format('/Users/gustavo/Documents/git/vocalpy/outputs/', 'output')),
+                            logging.FileHandler('{0}/{1}.log'.format(out_dir, 'output')),
                         ])
 
 logger    = logging.getLogger()
 
-file_path = '/Users/gustavo/Documents/git/vocalpy/audio_example.wav'
-logger.info('selected file: {}'.format(file_path))
+logger.info('selected file: {}'.format(audio_f))
 
 timeStart = time()
-sample_rate, samples = wavfile.read(file_path)
+sample_rate, samples = wavfile.read(audio_f)
 audio_duration       = samples.shape[0]/sample_rate
 # -- rescale to be in the range (-1,1) so psd values match MATLAB's audioread
 # -- change to be max possible number: 2^16/2 = 65536/2 = 32768
@@ -75,17 +78,17 @@ for this_bin in range(1, bins+1):
         start_range = ceil(0.3 * sample_rate)
         end_range   = bin_size * sample_rate
         time_range  = samples[start_range:end_range]
-        chunks.append((sample_rate, time_range, this_bin, start_range, end_range, bin_size, args))
+        chunks.append((out_dir, sample_rate, time_range, this_bin, start_range, end_range, bin_size, args))
     elif this_bin == bins: # -- last bin
         start_range = (this_bin - 1) * bin_size * sample_rate
         end_range   = audio_duration * sample_rate
         time_range  = samples[start_range:]
-        chunks.append((sample_rate, time_range, this_bin, start_range, end_range, bin_size, args))
+        chunks.append((out_dir, sample_rate, time_range, this_bin, start_range, end_range, bin_size, args))
     else: # -- all other bins
         start_range = (this_bin - 1) * bin_size * sample_rate
         end_range   = this_bin * bin_size * sample_rate
         time_range  = samples[start_range:end_range]
-        chunks.append((sample_rate, time_range, this_bin, start_range, end_range, bin_size, args))
+        chunks.append((out_dir, sample_rate, time_range, this_bin, start_range, end_range, bin_size, args))
 
 # -- run one chunk in each available core
 if args.threads > 0 :
@@ -100,7 +103,7 @@ vocal_df  = pd.concat(results)
 
 # -- sort vocalizations by start time and save to excel
 vocal_df.sort_values(by='start', ascending=True, inplace=True, kind='quicksort', na_position='last')
-vocal_df.to_excel('/Users/gustavo/Documents/git/vocalpy/outputs/vocal_stats.xlsx')
+vocal_df.to_excel(os.path.join(out_dir, 'vocal_stats.xlsx'))
 
 timeEnd   = time()
 logger.info('total time: {:.2f}'.format(timeEnd - timeStart))

@@ -20,11 +20,15 @@ from   PIL               import Image
 import argparse
 import logging
 
+import multiprocessing
+from   joblib            import Parallel, delayed
+
 import matplotlib.pyplot as     plt
 
 import cv2
 
 from   scipy             import signal
+from   scipy.io          import wavfile
 from   skimage           import exposure, measure
 
 def bradley_roth_numpy(image, s=None, t=None):
@@ -122,15 +126,14 @@ def imshow_components(labels):
 
 def parallel_audio_processing(chunk):
     timeBinA = time()
-    
-    output_dir, spectrogram_dir, mask_dir, overlay_dir, sample_rate, time_range, this_bin, start_range, end_range, bin_size, args = chunk
+    out_dir, sample_rate, time_range, this_bin, start_range, end_range, bin_size, args = chunk
 
     if args.verbose:
         logging.basicConfig(level=logging.INFO,
                             format='%(asctime)s [%(levelname)-5.5s]  %(message)s',
                             datefmt='%d-%b-%y %H:%M:%S',
                             handlers=[
-                                logging.FileHandler('{0}/{1}.log'.format(output_dir,  'output')),
+                                logging.FileHandler('{0}/{1}.log'.format(out_dir,  'output')),
                                 logging.StreamHandler()
                             ])
     else:
@@ -138,7 +141,7 @@ def parallel_audio_processing(chunk):
                             format='%(asctime)s [%(levelname)-5.5s]  %(message)s',
                             datefmt='%d-%b-%y %H:%M:%S',
                             handlers=[
-                                logging.FileHandler('{0}/{1}.log'.format(output_dir, 'output')),
+                                logging.FileHandler('{0}/{1}.log'.format(out_dir, 'output')),
                             ])
 
     logger = logging.getLogger()
@@ -149,7 +152,7 @@ def parallel_audio_processing(chunk):
     noverlap        = 128
     nfft            = 1024
     time_range_secs = time_range.shape[0] / sample_rate
-    logger.info('[bin {}]: computing spectrogram for bin: {}; time range: {:.2f}s; audio range: {:.2f}-{:.2f}s'.format(this_bin, this_bin,
+    logger.info('[bin {}]: computing spectrogram for bin: {}; time range: {}s; audio range: {:.2f}-{:.2f}s'.format(this_bin, this_bin,
                                                                                                    time_range_secs,
                                                                                                    start_range / sample_rate,
                                                                                                    end_range / sample_rate))
@@ -406,56 +409,37 @@ def parallel_audio_processing(chunk):
             img = np.flipud(Pxx_scaled[:,centroid_time-200:centroid_time+200])
             img = Image.fromarray(img)
             img = img.convert('L')
-            img.save(os.path.join(spectrogram_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
+            img.save(os.path.join(out_dir, 'all', str(this_bin) + '_' + str(vocal_id) + '.jpg'))
 
             img = np.flipud(grain[:,centroid_time-200:centroid_time+200])
             img = Image.fromarray(img)
             img = img.convert('L')
-            img.save(os.path.join(mask_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
+            img.save(os.path.join(out_dir, 'all', 'mask', str(this_bin) + '_' + str(vocal_id) + '.jpg'))
 
             img = np.flipud(B_masked[:,centroid_time-200:centroid_time+200])
             img = Image.fromarray(img)
             img = img.convert('L')
-            img.save(os.path.join(overlay_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
+            img.save(os.path.join(out_dir, 'all', str(this_bin) + '_' + str(vocal_id) + '_overlay.jpg'))
         except:
             logger.info('[bin {}]: ######## EXCEPT HERE FOR ID {}, '.format(this_bin, vocal_id))
-            logger.info('[bin {}]: ######## path1 {}, '.format(this_bin, os.path.join(output_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg')))
-            logger.info('[bin {}]: ######## path2 {}, '.format(this_bin, os.path.join(mask_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg')))
+            logger.info('[bin {}]: ######## path1 {}, '.format(this_bin, os.path.join(out_dir, 'all', str(this_bin) + '_' + str(vocal_id) + '.jpg')))
+            logger.info('[bin {}]: ######## path2 {}, '.format(this_bin, os.path.join(out_dir, 'all', 'mask', str(this_bin) + '_' + str(vocal_id) + '.jpg')))
             img = np.flipud(Pxx_scaled[:,centroid_time-200:-1])
             img = Image.fromarray(img)
             img = img.convert('L')
-            img.save(os.path.join(spectrogram_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
+            img.save(os.path.join(out_dir, 'all', str(this_bin) + '_' + str(vocal_id) + '.jpg'))
 
             img = np.flipud(grain[:,centroid_time-200:-1])
             img = Image.fromarray(img)
             img = img.convert('L')
-            img.save(os.path.join(mask_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
+            img.save(os.path.join(out_dir, 'all', 'mask', str(this_bin) + '_' + str(vocal_id) + '.jpg'))
 
             img = np.flipud(B_masked[:,centroid_time-200:-1])
             img = Image.fromarray(img)
             img = img.convert('L')
-            img.save(os.path.join(overlay_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
+            img.save(os.path.join(out_dir, 'all', str(this_bin) + '_' + str(vocal_id) + '_overlay.jpg'))
         vocal_id = vocal_id + 1
 
     timeBinB = time()
     logger.info('[bin {}]: bin runtime: {:.2f}'.format(this_bin, timeBinB - timeBinA))
     return vocal_df
-
-def create_logger(args=None, out_dir=None):
-    if args.verbose:
-        logging.basicConfig(level=logging.INFO,
-                            format='%(asctime)s [%(levelname)-5.5s]  %(message)s',
-                            datefmt='%d-%b-%y %H:%M:%S',
-                            handlers=[
-                                logging.FileHandler('{0}/{1}.log'.format(out_dir, 'output')),
-                                logging.StreamHandler()
-                            ])
-        logging.info('verbose output on')
-    else:
-        print('logging to file: {}'.format(os.path.join(out_dir,'output.log')))
-        logging.basicConfig(level=logging.INFO,
-                            format='%(asctime)s [%(levelname)-5.5s]  %(message)s',
-                            datefmt='%d-%b-%y %H:%M:%S',
-                            handlers=[
-                                logging.FileHandler('{0}/{1}.log'.format(out_dir, 'output')),
-                            ])
