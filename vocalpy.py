@@ -11,14 +11,15 @@ __copyright__ = '2019 Dietrich Lab - Yale University School of Medicine'
 #Numba maybe
 
 import os
+import utils
 import argparse
 import logging
 import multiprocessing
-import pandas  as     pd
-from time      import time
-from recording import Recording
-from joblib    import Parallel, delayed
-from utils     import parallel_audio_processing, bradley_roth_numpy, create_logger
+
+import pandas          as     pd
+from   time            import time
+from   recording       import Recording
+from   joblib          import Parallel, delayed
 
 # import tkinter as tk
 # from tkinter import filedialog
@@ -42,16 +43,17 @@ audio_f  = os.path.join(root_dir, 'audio_example.wav')
 if not os.path.exists(out_dir):
     os.makedirs(out_dir, exist_ok=True)
 
-create_logger(args, out_dir)
+utils.create_logger(args, out_dir)
 logger = logging.getLogger()
 
 logger.info('selected file: {}'.format(audio_f))
 
 timeStart       = time()
 audio_recording = Recording(recording_path=audio_f, args=args)
+utils.save_file(audio_recording, audio_recording.output_dir)
 timeB           = time()
+logger.info('recording object created ({:.2f}s) and saved to: "{}"'.format((timeB - timeStart), audio_recording.output_dir))
 
-logger.info('load audio runtime: {:.2f}'.format(timeB - timeStart))
 logger.info('audio duration: {:.2f} seconds'.format(audio_recording.recording_duration))
 logger.info('splitting audio into {} chunks'.format(audio_recording.bins))
 
@@ -61,7 +63,7 @@ if args.threads > 0 :
 else:
     num_cores = multiprocessing.cpu_count()
 
-results   = Parallel(n_jobs=num_cores)(delayed(parallel_audio_processing)(i) for i in audio_recording.chunks)
+results   = Parallel(n_jobs=num_cores, require='sharedmem')(delayed(utils.parallel_audio_processing)(i) for i in audio_recording.chunks)
 
 # -- concatenate results
 vocal_df  = pd.concat(results)
@@ -71,4 +73,4 @@ vocal_df.sort_values(by='start', ascending=True, inplace=True, kind='quicksort',
 vocal_df.to_excel(os.path.join(audio_recording.output_dir, 'vocal_stats.xlsx'))
 
 timeEnd   = time()
-logger.info('total time: {:.2f}'.format(timeEnd - timeStart))
+logger.info('total time: {:.2f}s'.format(timeEnd - timeStart))
