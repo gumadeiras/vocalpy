@@ -27,7 +27,9 @@ class Vocal(object):
                        area          = None,
                        points        = None,
                        centroid      = None,
-                       orientation   = None):
+                       orientation   = None,
+                       spectrogram   = None,
+                       mask          = None):
 
         self.bin_number    = bin_number
         self.start         = start
@@ -46,6 +48,8 @@ class Vocal(object):
         self.points        = points
         self.centroid      = centroid
         self.orientation   = orientation
+        self.spectrogram   = spectrogram
+        self.mask          = mask
 
     def __str__(self):
         return "{}: bin_number: {}, \n start: {}, \n end: {}, \n duration: {}, \n interval: {}, \n min_freq: {}, \n max_freq: {}, \n avg_freq: {}, \n bandwidth: {}, \n min_intensity: {}, \n max_intensity: {}, \n avg_intensity: {}, \n bg_intensity: {}, \n area: {}, \n centroid: {}, \n orientation: {}, \n".format(self.__class__.__name__, self.bin_number, self.start, self.end, self.duration, self.interval, self.min_freq, self.max_freq, self.avg_freq, self.bandwidth, self.min_intensity, self.max_intensity, self.avg_intensity, self.bg_intensity, self.area, self.centroid, self.orientation)
@@ -122,6 +126,14 @@ class Vocal(object):
     def orientation(self):
         return self._orientation
 
+    @property
+    def spectrogram(self):
+        return self._spectrogram
+
+    @property
+    def mask(self):
+        return self._mask
+
     @bin_number.setter
     def bin_number(self, new_bin_number):
         self._bin_number = new_bin_number
@@ -193,6 +205,14 @@ class Vocal(object):
     @orientation.setter
     def orientation(self, new_orientation):
         self._orientation = new_orientation
+
+    @spectrogram.setter
+    def spectrogram(self, new_spectrogram):
+        self._spectrogram = new_spectrogram
+
+    @mask.setter
+    def mask(self, new_mask):
+        self._mask = new_mask
 
     # -- functions:
     # -- combine vocals

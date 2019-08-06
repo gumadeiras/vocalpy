@@ -430,8 +430,6 @@ def parallel_audio_processing(chunk):
         new_vocal.centroid        = prop.centroid,
         new_vocal.orientation     = prop.orientation,
 
-        vocal_list.append(new_vocal)
-
         # vocal_df        = vocal_df.append({'bin': this_bin,
         #                                    'start': (start * time_res) + ((this_bin - 1) * bin_size),
         #                                    'end': (end * time_res) + ((this_bin - 1) * bin_size),
@@ -457,34 +455,40 @@ def parallel_audio_processing(chunk):
             img = Image.fromarray(img)
             img = img.convert('L')
             img.save(os.path.join(spectrogram_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
+            new_vocal.spectrogram = img
 
             img = np.flipud(grain[:,centroid_time-200:centroid_time+200])
             img = Image.fromarray(img)
             img = img.convert('L')
             img.save(os.path.join(mask_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
+            new_vocal.mask = img
 
             img = np.flipud(B_masked[:,centroid_time-200:centroid_time+200])
             img = Image.fromarray(img)
             img = img.convert('L')
             img.save(os.path.join(overlay_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
         except:
-            logger.info('[bin {}]: ######## EXCEPT HERE FOR ID {}, '.format(this_bin, vocal_id))
-            logger.info('[bin {}]: ######## path1 {}, '.format(this_bin, os.path.join(output_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg')))
-            logger.info('[bin {}]: ######## path2 {}, '.format(this_bin, os.path.join(mask_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg')))
+            logger.info('[bin {}]: ######## EXCEPT HERE FOR ID {}'.format(this_bin, vocal_id))
+            logger.info('[bin {}]: ######## path1 {}'.format(this_bin, os.path.join(output_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg')))
+            logger.info('[bin {}]: ######## path2 {}'.format(this_bin, os.path.join(mask_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg')))
             img = np.flipud(Pxx_scaled[:,centroid_time-200:-1])
             img = Image.fromarray(img)
             img = img.convert('L')
             img.save(os.path.join(spectrogram_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
+            new_vocal.spectrogram = img
 
             img = np.flipud(grain[:,centroid_time-200:-1])
             img = Image.fromarray(img)
             img = img.convert('L')
             img.save(os.path.join(mask_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
+            new_vocal.mask = img
 
             img = np.flipud(B_masked[:,centroid_time-200:-1])
             img = Image.fromarray(img)
             img = img.convert('L')
             img.save(os.path.join(overlay_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
+        
+        vocal_list.append(new_vocal)
         vocal_id = vocal_id + 1
 
     timeBinB = time()

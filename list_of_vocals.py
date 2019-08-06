@@ -5,7 +5,9 @@ __author__    = 'Gustavo Madeira Santana'
 __email__     = 'gustavo.santana@yale.edu'
 __copyright__ = '2019 Dietrich Lab - Yale University School of Medicine'
 
-import numpy as np
+import numpy as     np
+
+from   utils import save_file
 
 class ListOfVocals(object):
     '''
@@ -19,3 +21,6 @@ class ListOfVocals(object):
     def __repr__(self):
         # return "{}: vocals_in_recording: {}, \n number_of_vocals: {}, \n vocals_processed: {}".format(self.__class__.__name__, self.vocals_in_recording, self.number_of_vocals, self.vocals_processed)
         return "{}: number_of_vocals: {}, \n vocals_processed: {}".format(self.__class__.__name__, self.number_of_vocals, self.vocals_processed)
+
+    def save_list_of_vocals_object(self, path):
+        save_file(self, 'list_of_vocals', path)

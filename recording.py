@@ -16,6 +16,7 @@ import pandas   as     pd
 from   time     import time
 from   math     import ceil
 from   scipy.io import wavfile
+from   utils    import save_file
 
 class Recording(object):
     '''
@@ -45,6 +46,9 @@ class Recording(object):
         self.bins               = ceil(self.recording_duration / self.bin_size)
         self.chunks             = self.create_chunks()
         self.list_of_vocals     = None
+
+    def save_recording_object(self, path):
+        save_file(self, 'recording', path)
 
     def create_paths(self, recording_path):
         '''
@@ -148,3 +152,10 @@ class Recording(object):
         # self.samples_normalized = None
 
         return chunks
+
+    def recording_processing_finished(self):
+        '''
+        recording has already been processed, clear chuncks 
+        '''
+        self.chunks = None
+        self.save_recording_object(self.output_dir)

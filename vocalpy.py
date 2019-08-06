@@ -48,7 +48,8 @@ logger.info('selected file: {}'.format(audio_f))
 
 timeStart       = time()
 audio_recording = Recording(recording_path=audio_f, args=args)
-utils.save_file(audio_recording, 'recording', audio_recording.output_dir)
+# utils.save_file(audio_recording, 'recording', audio_recording.output_dir)
+audio_recording.save_recording_object(audio_recording.output_dir)
 timeBRecording  = time()
 
 logger.info('recording object created ({:.2f}s) and saved to: "{}"'.format((timeBRecording - timeStart), audio_recording.output_dir))
@@ -64,13 +65,15 @@ else:
 # -- distribute recording chuncks to available cores
 timeAParallel = time()
 results       = Parallel(n_jobs=num_cores, require='sharedmem')(delayed(utils.parallel_audio_processing)(i) for i in audio_recording.chunks)
+audio_recording.recording_processing_finished()
 timeBParallel = time()
 logger.info('recording parallel processing ({:.2f}s)'.format(timeBParallel - timeAParallel))
 
 # -- create list of vocals found in the recording
 list_of_vocals = ListOfVocals(vocals_in_recording=results)
+list_of_vocals.save_list_of_vocals_object(audio_recording.output_dir)
 print(list_of_vocals)
-utils.save_file(list_of_vocals, 'list_of_vocals', audio_recording.output_dir)
+# utils.save_file(list_of_vocals, 'list_of_vocals', audio_recording.output_dir)
 
 # # -- concatenate results
 # vocal_df  = pd.concat(results)
