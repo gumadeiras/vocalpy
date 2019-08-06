@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
-VocalPy - A python version of (VocalMat by Antonio Fonseca)
-'''
+'''VocalPy - A python version based on (VocalMat by Antonio Fonseca)'''
 
 __author__    = 'Gustavo Madeira Santana'
 __email__     = 'gustavo.santana@yale.edu'
@@ -34,20 +32,19 @@ class Recording(object):
         self.output_dir         = None
 
         self.create_paths(recording_path)
-        
+
         self.sample_rate        = None
         self.samples            = None
         # self.samples_normalized = None
         self.recording_duration = None
-        
+
         self.read_audio()
-        
+
         self.frequency_cutoff   = frequency_cutoff
         self.bin_size           = self.args.bin_size
         self.bins               = ceil(self.recording_duration / self.bin_size)
         self.chunks             = self.create_chunks()
         self.list_of_vocals     = None
-
 
     def create_paths(self, recording_path):
         '''
@@ -89,7 +86,7 @@ class Recording(object):
         '''
         chunks = []
         for this_bin in range(1, self.bins+1):
-            if this_bin == 1: # -- first bin, remove first 0.3 seconds of recording
+            if this_bin == 1: # -- first bin, remove first 0.3 seconds of recording (noisy)
                 start_range       = ceil(0.3 * self.sample_rate)
                 end_range         = self.bin_size * self.sample_rate
                 sample_range      = self.samples[start_range:end_range]
@@ -147,7 +144,7 @@ class Recording(object):
                                self.args))
 
         # -- samples are now in chuncks, remove from object
-        self.samples            = None
+        self.samples  = None
         # self.samples_normalized = None
 
         return chunks

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-'''VocalPy Identifier - A python version of (VocalMat by Antonio Fonseca)
-Finds candidate vocalizations in experimental recordings'''
+'''VocalPy - A python version based on (VocalMat by Antonio Fonseca)'''
 
 __author__    = 'Gustavo Madeira Santana'
 __email__     = 'gustavo.santana@yale.edu'
@@ -14,6 +13,8 @@ import cv2
 import pickle
 import logging
 import argparse
+
+from vocal               import Vocal
 
 import numpy             as     np
 import pandas            as     pd
@@ -61,12 +62,12 @@ def create_logger(args=None, out_dir=None):
                             handlers=[
                                 logging.FileHandler('{0}/{1}.log'.format(out_dir, 'output')),
                             ])
-def save_file(file, path):
+def save_file(file, filename, path):
 
     if os.path.exists(path)==False:
         raise ValueError("path does not existe: {}".format(path))
 
-    pickle.dump(file, open(os.path.join(path, 'recording.vocalpy'),'wb'))
+    pickle.dump(file, open(os.path.join(path, filename + '.vocalpy'),'wb'))
 
 def bradley_roth(image, s=None, t=None):
     # -- from somewhere
@@ -162,7 +163,7 @@ def parallel_audio_processing(chunk):
 
     logger = logging.getLogger()
 
-    timeA             = time()
+    timeASpectrogram  = time()
     fs                = sample_rate
     window            = signal.get_window('hamming', 256)
     noverlap          = 128
@@ -194,10 +195,10 @@ def parallel_audio_processing(chunk):
     PSD = PSD[(f>frequency_cutoff)]
     f   = f[(f>frequency_cutoff)]
 
-    time_res = sample_range_secs/t.shape[0]
-    freq_res = (np.max(f) - frequency_cutoff) / f.shape[0]
-    timeB    = time()
-    logger.info('[bin {}]: spectrogram runtime: {:.2f}s'.format(this_bin, timeB - timeA))
+    time_res         = sample_range_secs/t.shape[0]
+    freq_res         = (np.max(f) - frequency_cutoff) / f.shape[0]
+    timeBSpectrogram = time()
+    logger.info('[bin {}]: spectrogram runtime: {:.2f}s'.format(this_bin, timeBSpectrogram - timeASpectrogram))
     logger.info('[bin {}]: time resolution: {:.2f}ms'.format(this_bin, time_res * 1000))
     logger.info('[bin {}]: freq resolution: {:.2f}Hz'.format(this_bin, freq_res))
 
@@ -232,7 +233,6 @@ def parallel_audio_processing(chunk):
 
     # -- image complement
     ii8    = np.iinfo(dtype)
-    B_orig = B
     B      = ii8.max - B
     if args.plot:
         plt.pcolormesh(t[35000:40000], f, B[:,35000:40000], cmap='gray')
@@ -248,11 +248,11 @@ def parallel_audio_processing(chunk):
         plt.show()
 
     # -- binarize spectrogram
-    BB = bradley_roth(B, t=10)
-    BB = ii8.max - BB
+    B = bradley_roth(B, t=10)
+    B = ii8.max - B
     if args.plot:
-        plt.pcolormesh(t[35000:40000], f, BB[:,35000:40000], cmap='gray')
-        plt.title('BB = B binarized bradley roth')
+        plt.pcolormesh(t[35000:40000], f, B[:,35000:40000], cmap='gray')
+        plt.title('B binarized bradley roth')
         plt.show()
 
     # -- kernels for morphological operations
@@ -261,17 +261,17 @@ def parallel_audio_processing(chunk):
     kernel_line2 = np.ones((5,1), np.uint8)
 
     # -- morphological operations
-    erode11  = cv2.erode(BB, kernel_line1, iterations=1)
+    erode11  = cv2.erode(B, kernel_line1, iterations=1)
     dilate12 = cv2.dilate(erode11, kernel_rect, iterations=1)
     dilate13 = cv2.dilate(dilate12, kernel_line2, iterations=1)
     erode14  = cv2.erode(dilate13, kernel_line1, iterations=2)
     if args.plot:
         plt.subplot(511)
-        plt.pcolormesh(t[80000:85000], f, BB[:,80000:85000], cmap='gray')
-        plt.title('BB')
+        plt.pcolormesh(t[80000:85000], f, B[:,80000:85000], cmap='gray')
+        plt.title('B')
         plt.subplot(512)
         plt.pcolormesh(t[80000:85000], f, erode11[:,80000:85000], cmap='gray')
-        plt.title('BB + erode (4,1)')
+        plt.title('B + erode (4,1)')
         plt.subplot(513)
         plt.pcolormesh(t[80000:85000], f, dilate12[:,80000:85000], cmap='gray')
         plt.title('+ dilate (4,2)')
@@ -283,7 +283,7 @@ def parallel_audio_processing(chunk):
         plt.title('+ erode (4,1)')
         plt.show()
 
-    timeA  = time()
+    timeAConnectedComponents        = time()
     connectivity = 4
     num_cc, output, stats, centroids = cv2.connectedComponentsWithStats(erode14, connectivity, cv2.CV_32S)
 
@@ -301,8 +301,8 @@ def parallel_audio_processing(chunk):
     for i in range(0, num_cc):
         if areas[i] >= min_area:
             grain[output == i + 1] = 255
-    timeB = time()
-    logger.info('[bin {}]: connected components runtime: {:.2f}s'.format(this_bin, timeB - timeA))
+    timeBConnectedComponents = time()
+    logger.info('[bin {}]: connected components runtime: {:.2f}s'.format(this_bin, timeBConnectedComponents - timeAConnectedComponents))
 
     # -- one more opening to make sure segmentation covers *at least* the real area
     grain        = grain.astype(np.uint8)
@@ -320,9 +320,9 @@ def parallel_audio_processing(chunk):
         # plt.pcolormesh(t, f, Pxx, cmap='gray')
         plt.title('Pxx')
         plt.subplot(412)
-        plt.pcolormesh(t[80000:85000], f, BB[:,80000:85000], cmap='gray')
-        # plt.pcolormesh(t, f, BB, cmap='gray')
-        plt.title('BB')
+        plt.pcolormesh(t[80000:85000], f, B[:,80000:85000], cmap='gray')
+        # plt.pcolormesh(t, f, B, cmap='gray')
+        plt.title('B')
         plt.subplot(413)
         plt.pcolormesh(t[80000:85000], f, grain[:,80000:85000], cmap='gray')
         # plt.pcolormesh(t, f, grain, cmap='gray')
@@ -337,13 +337,13 @@ def parallel_audio_processing(chunk):
     # --
     # -- LATER GET SEGMENTATION FROM CNN AND THEN USE IT INSTEAD OF CONNECTED COMPONENTS.STATS
     # --
-    timeA     = time()
+    timeARegionProps = time()
     labels = measure.label(grain, background=0)
 
     props  = measure.regionprops(labels, intensity_image=PSD, cache=True, coordinates='rc')
     props  = sorted(props, key=lambda p: np.min(p.coords[:,1]), reverse=False)
-    timeB    = time()
-    logger.info('[bin {}]: region props runtime: {:.2f}s'.format(this_bin, timeB - timeA))
+    timeBRegionProps = time()
+    logger.info('[bin {}]: region props runtime: {:.2f}s'.format(this_bin, timeBRegionProps - timeARegionProps))
     if args.plot:
         plt.subplot(311)
         plt.pcolormesh(t[35000:40000], f, Pxx[:,35000:40000], cmap='gray')
@@ -368,6 +368,7 @@ def parallel_audio_processing(chunk):
                                      'min_freq_all',
                                      'max_freq_all',
                                      'avg_freq_all',
+                                     'median_freq_all',
                                      'bandwidth',
                                      'min_intensity',
                                      'max_intensity',
@@ -378,6 +379,8 @@ def parallel_audio_processing(chunk):
                                      'centroid',
                                      'orientation',
                                      ])
+
+    vocal_list = []
 
     for prop in props:
         start = np.min(prop.coords[:,1])
@@ -393,32 +396,61 @@ def parallel_audio_processing(chunk):
             continue
 
         # -- get spectrogram and mask around each vocalization
-        centroid_time = ceil(prop.centroid[1])
         spectro_range = 200
-
-        min_freq_all  = (np.min(prop.coords[:,0]) * freq_res) + frequency_cutoff
-        max_freq_all  = (np.max(prop.coords[:,0]) * freq_res) + frequency_cutoff
-        avg_freq_all  = (np.mean(prop.coords[:,0]) * freq_res) + frequency_cutoff
-        bandwidth     = max_freq_all - min_freq_all
+        centroid_time = ceil(prop.centroid[1])
         bg_intensity  = np.mean(PSD[:,centroid_time-200:centroid_time+200])
-        vocal_df      = vocal_df.append({'bin': this_bin,
-                                         'start': (start * time_res) + ((this_bin - 1) * bin_size),
-                                         'end': (end * time_res) + ((this_bin - 1) * bin_size),
-                                         'duration': duration * time_res * 1000,
-                                         'interval': interval * time_res,
-                                         'min_freq_all': min_freq_all,
-                                         'max_freq_all': max_freq_all,
-                                         'avg_freq_all': avg_freq_all,
-                                         'bandwidth': bandwidth,
-                                         'min_intensity': prop.min_intensity,
-                                         'max_intensity': prop.max_intensity,
-                                         'avg_intensity': prop.mean_intensity,
-                                         'bg_intensity': bg_intensity,
-                                         'area': prop.area,
-                                         # 'points': prop.coords,
-                                         'centroid': prop.centroid,
-                                         'orientation': prop.orientation,
-                                         }, ignore_index=True)
+        
+        if prop.mean_intensity <= bg_intensity:
+            continue
+
+        min_freq_all    = (np.min(prop.coords[:,0]) * freq_res) + frequency_cutoff
+        max_freq_all    = (np.max(prop.coords[:,0]) * freq_res) + frequency_cutoff
+        avg_freq_all    = (np.mean(prop.coords[:,0]) * freq_res) + frequency_cutoff
+        median_freq_all = np.median(prop.coords[:,0])
+        median_freq_all = (median_freq_all * freq_res) + frequency_cutoff
+        bandwidth       = max_freq_all - min_freq_all
+
+        new_vocal = Vocal()
+        new_vocal.bin_number      = this_bin,
+        new_vocal.start           = (start * time_res) + ((this_bin - 1) * bin_size),
+        new_vocal.end             = (end * time_res) + ((this_bin - 1) * bin_size),
+        new_vocal.duration        = duration * time_res * 1000,
+        new_vocal.interval        = interval * time_res,
+        new_vocal.min_freq        = min_freq_all,
+        new_vocal.max_freq        = max_freq_all,
+        new_vocal.avg_freq        = avg_freq_all,
+        new_vocal.median_freq     = median_freq_all,
+        new_vocal.bandwidth       = bandwidth,
+        new_vocal.min_intensity   = prop.min_intensity,
+        new_vocal.max_intensity   = prop.max_intensity,
+        new_vocal.avg_intensity   = prop.mean_intensity,
+        new_vocal.bg_intensity    = bg_intensity,
+        new_vocal.area            = prop.area,
+        new_vocal.points          = prop.coords,
+        new_vocal.centroid        = prop.centroid,
+        new_vocal.orientation     = prop.orientation,
+
+        vocal_list.append(new_vocal)
+
+        # vocal_df        = vocal_df.append({'bin': this_bin,
+        #                                    'start': (start * time_res) + ((this_bin - 1) * bin_size),
+        #                                    'end': (end * time_res) + ((this_bin - 1) * bin_size),
+        #                                    'duration': duration * time_res * 1000,
+        #                                    'interval': interval * time_res,
+        #                                    'min_freq_all': min_freq_all,
+        #                                    'max_freq_all': max_freq_all,
+        #                                    'avg_freq_all': avg_freq_all,
+        #                                    'median_freq_all': median_freq_all,
+        #                                    'bandwidth': bandwidth,
+        #                                    'min_intensity': prop.min_intensity,
+        #                                    'max_intensity': prop.max_intensity,
+        #                                    'avg_intensity': prop.mean_intensity,
+        #                                    'bg_intensity': bg_intensity,
+        #                                    'area': prop.area,
+        #                                    # 'points': prop.coords,
+        #                                    'centroid': prop.centroid,
+        #                                    'orientation': prop.orientation,
+        #                                    }, ignore_index=True)
 
         try:
             img = np.flipud(Pxx_scaled[:,centroid_time-200:centroid_time+200])
@@ -456,5 +488,6 @@ def parallel_audio_processing(chunk):
         vocal_id = vocal_id + 1
 
     timeBinB = time()
+    logger.info('[bin {}]: number of vocals: {}'.format(this_bin, vocal_id))
     logger.info('[bin {}]: bin runtime: {:.2f}s'.format(this_bin, timeBinB - timeBinA))
-    return vocal_df
+    return np.asarray(vocal_list)

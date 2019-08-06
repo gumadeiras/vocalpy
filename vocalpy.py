@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-'''
-VocalPy - A python version of (VocalMat by Antonio Fonseca)
-'''
+'''VocalPy - A python version based on (VocalMat by Antonio Fonseca)'''
 
 __author__    = 'Gustavo Madeira Santana'
 __email__     = 'gustavo.santana@yale.edu'
@@ -19,6 +17,7 @@ import multiprocessing
 import pandas          as     pd
 from   time            import time
 from   recording       import Recording
+from   list_of_vocals  import ListOfVocals
 from   joblib          import Parallel, delayed
 
 # import tkinter as tk
@@ -45,32 +44,40 @@ if not os.path.exists(out_dir):
 
 utils.create_logger(args, out_dir)
 logger = logging.getLogger()
-
 logger.info('selected file: {}'.format(audio_f))
 
 timeStart       = time()
 audio_recording = Recording(recording_path=audio_f, args=args)
-utils.save_file(audio_recording, audio_recording.output_dir)
-timeB           = time()
-logger.info('recording object created ({:.2f}s) and saved to: "{}"'.format((timeB - timeStart), audio_recording.output_dir))
+utils.save_file(audio_recording, 'recording', audio_recording.output_dir)
+timeBRecording  = time()
 
+logger.info('recording object created ({:.2f}s) and saved to: "{}"'.format((timeBRecording - timeStart), audio_recording.output_dir))
 logger.info('audio duration: {:.2f} seconds'.format(audio_recording.recording_duration))
 logger.info('splitting audio into {} chunks'.format(audio_recording.bins))
 
-# -- run one chunk in each available core
+# -- get core count for parallelization
 if args.threads > 0 :
     num_cores = args.threads
 else:
     num_cores = multiprocessing.cpu_count()
 
-results   = Parallel(n_jobs=num_cores, require='sharedmem')(delayed(utils.parallel_audio_processing)(i) for i in audio_recording.chunks)
+# -- distribute recording chuncks to available cores
+timeAParallel = time()
+results       = Parallel(n_jobs=num_cores, require='sharedmem')(delayed(utils.parallel_audio_processing)(i) for i in audio_recording.chunks)
+timeBParallel = time()
+logger.info('recording parallel processing ({:.2f}s)'.format(timeBParallel - timeAParallel))
 
-# -- concatenate results
-vocal_df  = pd.concat(results)
+# -- create list of vocals found in the recording
+list_of_vocals = ListOfVocals(vocals_in_recording=results)
+print(list_of_vocals)
+utils.save_file(list_of_vocals, 'list_of_vocals', audio_recording.output_dir)
 
-# -- sort vocalizations by start time and save to excel
-vocal_df.sort_values(by='start', ascending=True, inplace=True, kind='quicksort', na_position='last')
-vocal_df.to_excel(os.path.join(audio_recording.output_dir, 'vocal_stats.xlsx'))
+# # -- concatenate results
+# vocal_df  = pd.concat(results)
+# 
+# # -- sort vocalizations by start time and save to excel
+# vocal_df.sort_values(by='start', ascending=True, inplace=True, kind='quicksort', na_position='last')
+# vocal_df.to_excel(os.path.join(audio_recording.output_dir, 'vocal_stats.xlsx'))
 
 timeEnd   = time()
 logger.info('total time: {:.2f}s'.format(timeEnd - timeStart))
