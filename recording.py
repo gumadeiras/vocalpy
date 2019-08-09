@@ -46,6 +46,14 @@ class Recording(object):
         self.bins               = ceil(self.recording_duration / self.bin_size)
         self.chunks             = self.create_chunks()
         self.list_of_vocals     = None
+    
+    @property
+    def list_of_vocals(self):
+        return self._list_of_vocals
+    
+    @list_of_vocals.setter
+    def list_of_vocals(self, new_list_of_vocals):
+        self._list_of_vocals = new_list_of_vocals
 
     def save_recording_object(self, path):
         save_file(self, 'recording', path)
@@ -89,6 +97,7 @@ class Recording(object):
         separate audio into chunks for parallel or sequential processing
         '''
         chunks = []
+        ############## CREATE A BASELINE CHUNK WITH REPETITIVE INFO AND CONCATENATE
         for this_bin in range(1, self.bins+1):
             if this_bin == 1: # -- first bin, remove first 0.3 seconds of recording (noisy)
                 start_range       = ceil(0.3 * self.sample_rate)
@@ -155,7 +164,56 @@ class Recording(object):
 
     def recording_processing_finished(self):
         '''
-        recording has already been processed, clear chuncks 
+        recording has already been processed, clear chunks 
         '''
         self.chunks = None
         self.save_recording_object(self.output_dir)
+
+    def save_recording_data_to_excel(self):
+        # -- save metadata to an excel file
+
+        # vocal_df = pd.DataFrame(columns=['bin',
+        #                                  'start',
+        #                                  'end',
+        #                                  'duration',
+        #                                  'interval',
+        #                                  # 'min_freq_main',
+        #                                  # 'max_freq_main',
+        #                                  # 'avg_freq_main',
+        #                                  'min_freq_all',
+        #                                  'max_freq_all',
+        #                                  'avg_freq_all',
+        #                                  'median_freq_all',
+        #                                  'bandwidth',
+        #                                  'min_intensity',
+        #                                  'max_intensity',
+        #                                  'avg_intensity',
+        #                                  'bg_intensity',
+        #                                  'area',
+        #                                  # 'points',
+        #                                  'centroid',
+        #                                  'orientation',
+        #                                  ])
+        
+        # vocal_df        = vocal_df.append({'bin': this_bin,
+        #                                    'start': (start * time_res) + ((this_bin - 1) * bin_size),
+        #                                    'end': (end * time_res) + ((this_bin - 1) * bin_size),
+        #                                    'duration': duration * time_res * 1000,
+        #                                    'interval': interval * time_res,
+        #                                    'min_freq_all': min_freq_all,
+        #                                    'max_freq_all': max_freq_all,
+        #                                    'avg_freq_all': avg_freq_all,
+        #                                    'median_freq_all': median_freq_all,
+        #                                    'bandwidth': bandwidth,
+        #                                    'min_intensity': prop.min_intensity,
+        #                                    'max_intensity': prop.max_intensity,
+        #                                    'avg_intensity': prop.mean_intensity,
+        #                                    'bg_intensity': bg_intensity,
+        #                                    'area': prop.area,
+        #                                    # 'points': prop.coords,
+        #                                    'centroid': prop.centroid,
+        #                                    'orientation': prop.orientation,
+        #                                    }, ignore_index=True)
+
+        print("save_recording_data_to_excel not implemented")
+        return 0

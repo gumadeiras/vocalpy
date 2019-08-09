@@ -15,6 +15,7 @@ import logging
 import argparse
 
 from vocal               import Vocal
+from list_of_vocals      import ListOfVocals
 
 import numpy             as     np
 import pandas            as     pd
@@ -356,30 +357,7 @@ def parallel_audio_processing(chunk):
         plt.title('Labels')
         plt.show()
 
-    vocal_id = 0
-    vocal_df = pd.DataFrame(columns=['bin',
-                                     'start',
-                                     'end',
-                                     'duration',
-                                     'interval',
-                                     # 'min_freq_main',
-                                     # 'max_freq_main',
-                                     # 'avg_freq_main',
-                                     'min_freq_all',
-                                     'max_freq_all',
-                                     'avg_freq_all',
-                                     'median_freq_all',
-                                     'bandwidth',
-                                     'min_intensity',
-                                     'max_intensity',
-                                     'avg_intensity',
-                                     'bg_intensity',
-                                     'area',
-                                     # 'points',
-                                     'centroid',
-                                     'orientation',
-                                     ])
-
+    vocal_id   = 0
     vocal_list = []
 
     for prop in props:
@@ -396,11 +374,11 @@ def parallel_audio_processing(chunk):
             continue
 
         # -- get spectrogram and mask around each vocalization
-        spectro_range = 200
+        spectro_range = 164
         centroid_time = ceil(prop.centroid[1])
-        bg_intensity  = np.mean(PSD[:,centroid_time-200:centroid_time+200])
+        bg_intensity  = np.mean(PSD[:,centroid_time-spectro_range:centroid_time+spectro_range])
         
-        if prop.mean_intensity <= bg_intensity:
+        if (prop.mean_intensity/bg_intensity) > 0.92:
             continue
 
         min_freq_all    = (np.min(prop.coords[:,0]) * freq_res) + frequency_cutoff
@@ -426,44 +404,24 @@ def parallel_audio_processing(chunk):
         new_vocal.avg_intensity   = prop.mean_intensity,
         new_vocal.bg_intensity    = bg_intensity,
         new_vocal.area            = prop.area,
-        new_vocal.points          = prop.coords,
-        new_vocal.centroid        = prop.centroid,
+        # new_vocal.points          = prop.coords,
+        new_vocal.centroid        = [prop.centroid[0], 164],
         new_vocal.orientation     = prop.orientation,
 
-        # vocal_df        = vocal_df.append({'bin': this_bin,
-        #                                    'start': (start * time_res) + ((this_bin - 1) * bin_size),
-        #                                    'end': (end * time_res) + ((this_bin - 1) * bin_size),
-        #                                    'duration': duration * time_res * 1000,
-        #                                    'interval': interval * time_res,
-        #                                    'min_freq_all': min_freq_all,
-        #                                    'max_freq_all': max_freq_all,
-        #                                    'avg_freq_all': avg_freq_all,
-        #                                    'median_freq_all': median_freq_all,
-        #                                    'bandwidth': bandwidth,
-        #                                    'min_intensity': prop.min_intensity,
-        #                                    'max_intensity': prop.max_intensity,
-        #                                    'avg_intensity': prop.mean_intensity,
-        #                                    'bg_intensity': bg_intensity,
-        #                                    'area': prop.area,
-        #                                    # 'points': prop.coords,
-        #                                    'centroid': prop.centroid,
-        #                                    'orientation': prop.orientation,
-        #                                    }, ignore_index=True)
-
         try:
-            img = np.flipud(Pxx_scaled[:,centroid_time-200:centroid_time+200])
+            img = np.flipud(Pxx_scaled[:,centroid_time-spectro_range:centroid_time+spectro_range])
             img = Image.fromarray(img)
             img = img.convert('L')
             img.save(os.path.join(spectrogram_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
             new_vocal.spectrogram = img
 
-            img = np.flipud(grain[:,centroid_time-200:centroid_time+200])
+            img = np.flipud(grain[:,centroid_time-spectro_range:centroid_time+spectro_range])
             img = Image.fromarray(img)
             img = img.convert('L')
             img.save(os.path.join(mask_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
             new_vocal.mask = img
 
-            img = np.flipud(B_masked[:,centroid_time-200:centroid_time+200])
+            img = np.flipud(B_masked[:,centroid_time-spectro_range:centroid_time+spectro_range])
             img = Image.fromarray(img)
             img = img.convert('L')
             img.save(os.path.join(overlay_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
@@ -471,19 +429,19 @@ def parallel_audio_processing(chunk):
             logger.info('[bin {}]: ######## EXCEPT HERE FOR ID {}'.format(this_bin, vocal_id))
             logger.info('[bin {}]: ######## path1 {}'.format(this_bin, os.path.join(output_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg')))
             logger.info('[bin {}]: ######## path2 {}'.format(this_bin, os.path.join(mask_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg')))
-            img = np.flipud(Pxx_scaled[:,centroid_time-200:-1])
+            img = np.flipud(Pxx_scaled[:,centroid_time-spectro_range:-1])
             img = Image.fromarray(img)
             img = img.convert('L')
             img.save(os.path.join(spectrogram_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
             new_vocal.spectrogram = img
 
-            img = np.flipud(grain[:,centroid_time-200:-1])
+            img = np.flipud(grain[:,centroid_time-spectro_range:-1])
             img = Image.fromarray(img)
             img = img.convert('L')
             img.save(os.path.join(mask_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
             new_vocal.mask = img
 
-            img = np.flipud(B_masked[:,centroid_time-200:-1])
+            img = np.flipud(B_masked[:,centroid_time-spectro_range:-1])
             img = Image.fromarray(img)
             img = img.convert('L')
             img.save(os.path.join(overlay_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
@@ -491,7 +449,12 @@ def parallel_audio_processing(chunk):
         vocal_list.append(new_vocal)
         vocal_id = vocal_id + 1
 
+    if len(vocal_list):
+        vocal_list = ListOfVocals(vocals_in_recording=np.asarray(vocal_list))
+
     timeBinB = time()
     logger.info('[bin {}]: number of vocals: {}'.format(this_bin, vocal_id))
+    logger.info('[bin {}]: {}'.format(this_bin, vocal_list))
     logger.info('[bin {}]: bin runtime: {:.2f}s'.format(this_bin, timeBinB - timeBinA))
-    return np.asarray(vocal_list)
+    
+    return vocal_list

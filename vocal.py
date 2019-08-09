@@ -25,11 +25,14 @@ class Vocal(object):
                        avg_intensity = None,
                        bg_intensity  = None,
                        area          = None,
-                       points        = None,
+                       # points        = None,
                        centroid      = None,
                        orientation   = None,
                        spectrogram   = None,
-                       mask          = None):
+                       mask          = None,
+                       cnn_mask      = None,
+                       label         = None,
+                       probabilities = None):
 
         self.bin_number    = bin_number
         self.start         = start
@@ -45,11 +48,14 @@ class Vocal(object):
         self.avg_intensity = avg_intensity
         self.bg_intensity  = bg_intensity
         self.area          = area
-        self.points        = points
+        # self.points        = points
         self.centroid      = centroid
         self.orientation   = orientation
         self.spectrogram   = spectrogram
         self.mask          = mask
+        self.cnn_mask      = cnn_mask
+        self.label         = label
+        self.probabilities = probabilities
 
     def __str__(self):
         return "{}: bin_number: {}, \n start: {}, \n end: {}, \n duration: {}, \n interval: {}, \n min_freq: {}, \n max_freq: {}, \n avg_freq: {}, \n bandwidth: {}, \n min_intensity: {}, \n max_intensity: {}, \n avg_intensity: {}, \n bg_intensity: {}, \n area: {}, \n centroid: {}, \n orientation: {}, \n".format(self.__class__.__name__, self.bin_number, self.start, self.end, self.duration, self.interval, self.min_freq, self.max_freq, self.avg_freq, self.bandwidth, self.min_intensity, self.max_intensity, self.avg_intensity, self.bg_intensity, self.area, self.centroid, self.orientation)
@@ -114,9 +120,9 @@ class Vocal(object):
     def area(self):
         return self._area
 
-    @property
-    def points(self):
-        return self._points
+    # @property
+    # def points(self):
+    #     return self._points
 
     @property
     def centroid(self):
@@ -133,6 +139,18 @@ class Vocal(object):
     @property
     def mask(self):
         return self._mask
+    
+    @property
+    def cnn_mask(self):
+        return self._cnn_mask
+    
+    @property
+    def label(self):
+        return self._label
+    
+    @property
+    def probabilites(self):
+        return self._probabilites
 
     @bin_number.setter
     def bin_number(self, new_bin_number):
@@ -194,9 +212,9 @@ class Vocal(object):
     def area(self, new_area):
         self._area = new_area
 
-    @points.setter
-    def points(self, new_points):
-        self._points = new_points
+    # @points.setter
+    # def points(self, new_points):
+    #     self._points = new_points
 
     @centroid.setter
     def centroid(self, new_centroid):
@@ -214,6 +232,14 @@ class Vocal(object):
     def mask(self, new_mask):
         self._mask = new_mask
 
-    # -- functions:
-    # -- combine vocals
-    # -- generate dataset (one spectrogram for however many vocals there are, max size 512x512)
+    @cnn_mask.setter
+    def cnn_mask(self, new_cnn_mask):
+        self._cnn_mask = new_cnn_mask
+
+    @label.setter
+    def label(self, new_label):
+        self._label = new_label
+
+    @probabilities.setter
+    def probabilities(self, new_probabilities):
+        self._probabilities = new_probabilities

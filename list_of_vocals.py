@@ -7,20 +7,105 @@ __copyright__ = '2019 Dietrich Lab - Yale University School of Medicine'
 
 import numpy as     np
 
-from   utils import save_file
+from   vocal import Vocal
+from   PIL   import Image
 
 class ListOfVocals(object):
     '''
     list of vocalizations
     '''
-    def __init__(self, vocals_in_recording=None, number_of_vocals=None):
-        self.vocals_in_recording = np.hstack(vocals_in_recording)
-        self.number_of_vocals    = len(self.vocals_in_recording)
+    def __init__(self, vocals_in_recording=None):
+        if vocals_in_recording is not None:
+            self.vocals_in_recording = np.hstack(vocals_in_recording)
+            self.number_of_vocals    = len(self.vocals_in_recording)
+        else:
+            self.vocals_in_recording = None
+            self.number_of_vocals    = None
+        
         self.vocals_processed    = False
 
-    def __repr__(self):
+    def __str__(self):
         # return "{}: vocals_in_recording: {}, \n number_of_vocals: {}, \n vocals_processed: {}".format(self.__class__.__name__, self.vocals_in_recording, self.number_of_vocals, self.vocals_processed)
         return "{}: number_of_vocals: {}, \n vocals_processed: {}".format(self.__class__.__name__, self.number_of_vocals, self.vocals_processed)
 
     def save_list_of_vocals_object(self, path):
+        from utils import save_file
         save_file(self, 'list_of_vocals', path)
+
+    def connect_vocals(self):
+    # -- connects vocals that are less than 12ms apart
+        def combine_vocals(first_vocal, second_vocal):
+            # -- combines vocals into one
+            combined_vocal = Vocal()
+            combined_vocal.bin_number    = first_vocal.bin_number if (first_vocal.bin_number < second_vocal.bin_number) else second_vocal.bin_number
+            combined_vocal.start         = first_vocal.start if (first_vocal.start < second_vocal.start) else second_vocal.start
+            combined_vocal.end           = first_vocal.end if (first_vocal.end > second_vocal.end) else second_vocal.end
+            combined_vocal.duration      = combined.end - combined.start
+            combined_vocal.interval      = None
+            combined_vocal.min_freq      = first_vocal.min_freq if (first_vocal.min_freq < second_vocal.min_freq) else second_vocal.min_freq
+            combined_vocal.max_freq      = first_vocal.max_freq if (first_vocal.max_freq > second_vocal.max_freq) else second_vocal.max_freq
+            combined_vocal.avg_freq      = np.mean((first_vocal.avg_freq, second_vocal.avg_freq))
+            combined_vocal.bandwidth     = combined_vocal.max_freq - combined_vocal.min_freq
+            combined_vocal.min_intensity = first_vocal.min_intensity if (first_vocal.min_intensity < second_vocal.min_intensity) else second_vocal.min_intensity
+            combined_vocal.max_intensity = first_vocal.max_intensity if (first_vocal.max_intensity < second_vocal.max_intensity) else second_vocal.max_intensity
+            combined_vocal.avg_intensity = np.mean((first_vocal.avg_intensity, second_vocal.avg_intensity))
+            combined_vocal.bg_intensity  = np.mean((first_vocal.bg_intensity, second_vocal.bg_intensity))
+            combined_vocal.area          = first_vocal.area + second_vocal.area
+            combined_vocal.centroid      = np.mean(np.vstack((first_vocal.centroid, second_vocal.centroid)), axis=0)
+            combined_vocal.orientation   = None
+
+            combined_vocal.spectrogram   = -1
+            combined_vocal.mask          = -1
+
+            return combined_vocal
+
+        def update_intervals(list_of_vocals):
+            # -- go through vocals and update inter vocal times
+            return 0
+
+        new_list_of_vocals = []
+
+        vocal_idx = 0
+        there_are_vocals = True
+        while there_are_vocals == True:
+            # look at this vocals and next ones until the next doesn't belong with this one
+            base_vocal = self.list_of_vocals[vocal_idx]
+            next_vocal = self.list_of_vocals[vocal_idx+1]
+
+            # -- conditions to check:
+            # -- 1) next vocal starts within 12ms from base vocal start time
+            # -- 2) next vocal starts within 12ms from base vocal end time
+            # -- 3) next vocal starts within base vocal start/end (harmonic)
+            next_vocal_is_close = True if (np.abs(base_vocal.start - next_vocal.start) <= 12 or np.abs(base_vocal.end   - next_vocal.start) <= 12 or next_vocal.start >= base_vocal.start & next_vocal.end <= base_vocal.end) else False
+
+            # while (np.abs(base_vocal.start - next_vocal.start) <= 12 or np.abs(base_vocal.end   - next_vocal.start) <= 12 or next_vocal.start >= base_vocal.start & next_vocal.end <= base_vocal.end):
+            while next_vocal_is_close == True:
+                new_vocal  = combine_vocals(base_vocal, next_vocal)
+                base_vocal = new_vocal
+                vocal_idx  = vocal_idx + 1
+                next_vocal = self.list_of_vocals[vocal_idx+1]
+                next_vocal_is_close = True if (np.abs(base_vocal.start - next_vocal.start) <= 12 or np.abs(base_vocal.end   - next_vocal.start) <= 12 or next_vocal.start >= base_vocal.start & next_vocal.end <= base_vocal.end) else False            
+
+            new_list_of_vocals.append(base_vocal)
+
+            #check if there is a next vocal, else there_are_vocals = False
+
+        # self.vocals_in_recording = np.hstack(new_list_of_vocals)
+        print("check if this is correct")
+
+    def combine_list_of_list_of_vocals(self, list_of_list_of_vocals):
+        new_list_of_vocals = []
+        for list_of_vocals in list_of_list_of_vocals:
+            try: 
+                new_list_of_vocals.append(np.hstack(list_of_vocals.vocals_in_recording))
+            except:
+                 continue
+        
+        self.vocals_in_recording = np.hstack(new_list_of_vocals)
+        self.number_of_vocals    = len(self.vocals_in_recording)
+        return 0
+
+    def create_dataset(self):
+        # -- create dataset for the CNN and FCN
+        print("create_dataset not implemented")
+        return 0
