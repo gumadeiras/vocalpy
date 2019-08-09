@@ -26,8 +26,8 @@ class ListOfVocals(object):
         self.intervals_fixed         = False
 
     def __str__(self):
-        # return "{}: vocals_in_recording: {}, \n number_of_vocals: {}, \n vocals_processed: {}".format(self.__class__.__name__, self.vocals_in_recording, self.number_of_vocals, self.vocals_processed)
-        return "{}:\n number_of_vocals: {}, \n vocals_combined: {} \n intervals_fixed: {}".format(self.__class__.__name__, self.number_of_vocals, self.vocals_combined, self.intervals_fixed)
+        # return "{}: vocals_in_recording: {} \n number_of_vocals: {} \n vocals_processed: {}".format(self.__class__.__name__, self.vocals_in_recording, self.number_of_vocals, self.vocals_processed)
+        return "{}:\n number_of_vocals: {} \n vocals_combined: {} \n intervals_fixed: {}".format(self.__class__.__name__, self.number_of_vocals, self.vocals_combined, self.intervals_fixed)
 
     def save_list_of_vocals_object(self, path):
         from utils import save_file
@@ -35,10 +35,10 @@ class ListOfVocals(object):
     
     def update_intervals(self):
             # -- go through vocals and update inter vocal times
-            self.vocals_in_recording[0].interval = [0]
+            self.vocals_in_recording[0].interval = 0
 
             for idx in range(1, len(self.vocals_in_recording),1):
-                    self.vocals_in_recording[idx].interval = [np.abs((self.vocals_in_recording[idx-1].end[0] - self.vocals_in_recording[idx].start[0]) * 1000)]
+                    self.vocals_in_recording[idx].interval = np.abs((self.vocals_in_recording[idx-1].end - self.vocals_in_recording[idx].start) * 1000)
 
             self.intervals_fixed = True
             return 0
@@ -47,23 +47,38 @@ class ListOfVocals(object):
     # -- connects vocals that are less than 12ms apart
         def combine_vocals(first_vocal, second_vocal):
             # -- combines vocals into one
-            combined_vocal = Vocal()
-            combined_vocal.bin_number    = first_vocal.bin_number if (first_vocal.bin_number < second_vocal.bin_number) else second_vocal.bin_number
-            combined_vocal.start         = first_vocal.start if (first_vocal.start < second_vocal.start) else second_vocal.start
-            combined_vocal.end           = first_vocal.end if (first_vocal.end > second_vocal.end) else second_vocal.end
-            combined_vocal.duration      = combined.end - combined.start
-            combined_vocal.interval      = None
-            combined_vocal.min_freq      = first_vocal.min_freq if (first_vocal.min_freq < second_vocal.min_freq) else second_vocal.min_freq
-            combined_vocal.max_freq      = first_vocal.max_freq if (first_vocal.max_freq > second_vocal.max_freq) else second_vocal.max_freq
-            combined_vocal.avg_freq      = np.mean((first_vocal.avg_freq, second_vocal.avg_freq))
-            combined_vocal.bandwidth     = combined_vocal.max_freq - combined_vocal.min_freq
-            combined_vocal.min_intensity = first_vocal.min_intensity if (first_vocal.min_intensity < second_vocal.min_intensity) else second_vocal.min_intensity
-            combined_vocal.max_intensity = first_vocal.max_intensity if (first_vocal.max_intensity < second_vocal.max_intensity) else second_vocal.max_intensity
-            combined_vocal.avg_intensity = np.mean((first_vocal.avg_intensity, second_vocal.avg_intensity))
-            combined_vocal.bg_intensity  = np.mean((first_vocal.bg_intensity, second_vocal.bg_intensity))
-            combined_vocal.area          = first_vocal.area + second_vocal.area
-            combined_vocal.centroid      = np.mean(np.vstack((first_vocal.centroid, second_vocal.centroid)), axis=0)
-            combined_vocal.orientation   = None
+            combined_vocal = Vocal(bin_number    = first_vocal.bin_number if (first_vocal.bin_number < second_vocal.bin_number) else second_vocal.bin_number,
+                                   start         = first_vocal.start if (first_vocal.start < second_vocal.start) else second_vocal.start,
+                                   end           = first_vocal.end if (first_vocal.end > second_vocal.end) else second_vocal.end,
+                                   duration      = combined.end - combined.start,
+                                   interval      = [-1],
+                                   min_freq      = first_vocal.min_freq if (first_vocal.min_freq < second_vocal.min_freq) else second_vocal.min_freq,
+                                   max_freq      = first_vocal.max_freq if (first_vocal.max_freq > second_vocal.max_freq) else second_vocal.max_freq,
+                                   avg_freq      = np.mean((first_vocal.avg_freq, second_vocal.avg_freq)),
+                                   bandwidth     = combined_vocal.max_freq - combined_vocal.min_freq,
+                                   min_intensity = first_vocal.min_intensity if (first_vocal.min_intensity < second_vocal.min_intensity) else second_vocal.min_intensity,
+                                   max_intensity = first_vocal.max_intensity if (first_vocal.max_intensity < second_vocal.max_intensity) else second_vocal.max_intensity,
+                                   avg_intensity = np.mean((first_vocal.avg_intensity, second_vocal.avg_intensity)),
+                                   bg_intensity  = np.mean((first_vocal.bg_intensity, second_vocal.bg_intensity)),
+                                   area          = first_vocal.area + second_vocal.area,
+                                   centroid      = np.mean(np.vstack((first_vocal.centroid, second_vocal.centroid)), axis=0),
+                                   orientation   = None)
+            # combined_vocal.bin_number    = first_vocal.bin_number if (first_vocal.bin_number < second_vocal.bin_number) else second_vocal.bin_number
+            # combined_vocal.start         = first_vocal.start if (first_vocal.start < second_vocal.start) else second_vocal.start
+            # combined_vocal.end           = first_vocal.end if (first_vocal.end > second_vocal.end) else second_vocal.end
+            # combined_vocal.duration      = combined.end - combined.start
+            # combined_vocal.interval      = [-1]
+            # combined_vocal.min_freq      = first_vocal.min_freq if (first_vocal.min_freq < second_vocal.min_freq) else second_vocal.min_freq
+            # combined_vocal.max_freq      = first_vocal.max_freq if (first_vocal.max_freq > second_vocal.max_freq) else second_vocal.max_freq
+            # combined_vocal.avg_freq      = np.mean((first_vocal.avg_freq, second_vocal.avg_freq))
+            # combined_vocal.bandwidth     = combined_vocal.max_freq - combined_vocal.min_freq
+            # combined_vocal.min_intensity = first_vocal.min_intensity if (first_vocal.min_intensity < second_vocal.min_intensity) else second_vocal.min_intensity
+            # combined_vocal.max_intensity = first_vocal.max_intensity if (first_vocal.max_intensity < second_vocal.max_intensity) else second_vocal.max_intensity
+            # combined_vocal.avg_intensity = np.mean((first_vocal.avg_intensity, second_vocal.avg_intensity))
+            # combined_vocal.bg_intensity  = np.mean((first_vocal.bg_intensity, second_vocal.bg_intensity))
+            # combined_vocal.area          = first_vocal.area + second_vocal.area
+            # combined_vocal.centroid      = np.mean(np.vstack((first_vocal.centroid, second_vocal.centroid)), axis=0)
+            # combined_vocal.orientation   = None
 
             combined_vocal.spectrogram   = -1
             combined_vocal.mask          = -1

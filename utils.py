@@ -151,7 +151,7 @@ def bradley_roth(image, s=None, t=None):
 def parallel_audio_processing(chunk):
     timeBinA = time()
 
-    output_dir, spectrogram_dir, mask_dir, overlay_dir, sample_rate, sample_range, this_bin, start_range, end_range, bin_size, frequency_cutoff, args = chunk
+    output_dir, spectrogram_dir, mask_dir, sample_rate, sample_range, this_bin, start_range, end_range, bin_size, frequency_cutoff, args = chunk
 
     if args.verbose:
         logging.basicConfig(level=logging.INFO,
@@ -394,64 +394,46 @@ def parallel_audio_processing(chunk):
         median_freq = np.median(prop.coords[:,0])
         median_freq = (median_freq * freq_res) + frequency_cutoff
         bandwidth   = max_freq - min_freq
+        
+        new_vocal = Vocal(bin_number      = this_bin,
+                          start           = (start * time_res) + ((this_bin - 1) * bin_size),
+                          end             = (end * time_res) + ((this_bin - 1) * bin_size),
+                          duration        = duration * time_res * 1000,
+                          interval        = interval * time_res,
+                          min_freq        = min_freq,
+                          max_freq        = max_freq,
+                          avg_freq        = avg_freq,
+                          median_freq     = median_freq,
+                          bandwidth       = bandwidth,
+                          min_intensity   = prop.min_intensity,
+                          max_intensity   = prop.max_intensity,
+                          avg_intensity   = prop.mean_intensity,
+                          bg_intensity    = bg_intensity,
+                          area            = prop.area,
+                          centroid        = [spectro_range, ceil(prop.centroid[0])],
+                          orientation     = prop.orientation)
 
-        new_vocal = Vocal()
-        new_vocal.bin_number      = this_bin,
-        new_vocal.start           = (start * time_res) + ((this_bin - 1) * bin_size),
-        new_vocal.end             = (end * time_res) + ((this_bin - 1) * bin_size),
-        new_vocal.duration        = duration * time_res * 1000,
-        new_vocal.interval        = interval * time_res,
-        new_vocal.min_freq        = min_freq,
-        new_vocal.max_freq        = max_freq,
-        new_vocal.avg_freq        = avg_freq,
-        new_vocal.median_freq     = median_freq,
-        new_vocal.bandwidth       = bandwidth,
-        new_vocal.min_intensity   = prop.min_intensity,
-        new_vocal.max_intensity   = prop.max_intensity,
-        new_vocal.avg_intensity   = prop.mean_intensity,
-        new_vocal.bg_intensity    = bg_intensity,
-        new_vocal.area            = prop.area,
-        # new_vocal.points          = prop.coords,
-        new_vocal.centroid        = [spectro_range, prop.centroid[0]],
-        new_vocal.orientation     = prop.orientation,
 
         try:
             img = np.flipud(Pxx_scaled[:,centroid_time-spectro_range:centroid_time+spectro_range])
-            img = Image.fromarray(img)
-            img = img.convert('L')
-            img.save(os.path.join(spectrogram_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
             new_vocal.spectrogram = img
+            # new_vocal.save_array_as_image(source='spectrogram', path=output_dir, filename=str(vocal_id))
 
             img = np.flipud(grain[:,centroid_time-spectro_range:centroid_time+spectro_range])
-            img = Image.fromarray(img)
-            img = img.convert('L')
-            img.save(os.path.join(mask_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
             new_vocal.mask = img
-
-            img = np.flipud(B_masked[:,centroid_time-spectro_range:centroid_time+spectro_range])
-            img = Image.fromarray(img)
-            img = img.convert('L')
-            img.save(os.path.join(overlay_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
+            # new_vocal.save_array_as_image(source='mask', path=output_dir, filename=str(vocal_id))
         except:
             logger.info('[bin {}]: ######## EXCEPT HERE FOR ID {}'.format(this_bin, vocal_id))
             logger.info('[bin {}]: ######## path1 {}'.format(this_bin, os.path.join(output_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg')))
             logger.info('[bin {}]: ######## path2 {}'.format(this_bin, os.path.join(mask_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg')))
+            
             img = np.flipud(Pxx_scaled[:,centroid_time-spectro_range:-1])
-            img = Image.fromarray(img)
-            img = img.convert('L')
-            img.save(os.path.join(spectrogram_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
             new_vocal.spectrogram = img
+            # new_vocal.save_array_as_image(source='spectrogram', path=output_dir, filename=str(vocal_id))
 
             img = np.flipud(grain[:,centroid_time-spectro_range:-1])
-            img = Image.fromarray(img)
-            img = img.convert('L')
-            img.save(os.path.join(mask_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
             new_vocal.mask = img
-
-            img = np.flipud(B_masked[:,centroid_time-spectro_range:-1])
-            img = Image.fromarray(img)
-            img = img.convert('L')
-            img.save(os.path.join(overlay_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg'))
+            # new_vocal.save_array_as_image(source='mask', path=output_dir, filename=str(vocal_id))
         
         vocal_list.append(new_vocal)
         vocal_id = vocal_id + 1

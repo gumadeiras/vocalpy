@@ -23,29 +23,28 @@ class Recording(object):
     audio recording object and auxiliary functions to process the recordings
     '''
     def __init__(self, recording_path=None, args=None, frequency_cutoff=45000):
-        self.args               = args
-        self.recording_path     = recording_path
-        self.recording_dir      = None
-        self.recording_name     = None
-        self.spectrogram_dir    = None
-        self.masks_dir          = None
-        self.overlay_dir        = None
-        self.output_dir         = None
+        self.args                 = args
+        self.recording_path       = recording_path
+        self.recording_dir        = None
+        self.recording_name       = None
+        self.spectrogram_dir      = None
+        self.masks_dir            = None
+        self.output_dir           = None
 
         self.create_paths(recording_path)
 
-        self.sample_rate        = None
-        self.samples            = None
+        self.sample_rate          = None
+        self.samples              = None
         # self.samples_normalized = None
-        self.recording_duration = None
+        self.recording_duration   = None
 
         self.read_audio()
 
-        self.frequency_cutoff   = frequency_cutoff
-        self.bin_size           = self.args.bin_size
-        self.bins               = ceil(self.recording_duration / self.bin_size)
-        self.chunks             = self.create_chunks()
-        self.has_list_of_vocals     = None
+        self.frequency_cutoff     = frequency_cutoff
+        self.bin_size             = self.args.bin_size
+        self.bins                 = ceil(self.recording_duration / self.bin_size)
+        self.chunks               = self.create_chunks()
+        self._has_list_of_vocals  = None
     
     @property
     def has_list_of_vocals(self):
@@ -67,8 +66,7 @@ class Recording(object):
         self.recording_name     = filename
         self.output_dir         = os.path.join(self.recording_dir, 'outputs')
         self.spectrogram_dir    = os.path.join(self.output_dir, 'spectrogram')
-        self.mask_dir           = os.path.join(self.output_dir, 'segmentation')
-        self.overlay_dir        = os.path.join(self.output_dir, 'overlay')
+        self.mask_dir           = os.path.join(self.output_dir, 'mask')
 
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir, exist_ok=True)
@@ -79,8 +77,6 @@ class Recording(object):
         if not os.path.exists(self.mask_dir):
             os.makedirs(self.mask_dir, exist_ok=True)
 
-        if not os.path.exists(self.overlay_dir):
-            os.makedirs(self.overlay_dir, exist_ok=True)
 
     def read_audio(self):
         '''
@@ -107,7 +103,6 @@ class Recording(object):
                 chunks.append((self.output_dir,
                                self.spectrogram_dir,
                                self.mask_dir,
-                               self.overlay_dir,
                                self.sample_rate,
                                sample_range,
                                # sample_range_norm,
@@ -126,7 +121,6 @@ class Recording(object):
                 chunks.append((self.output_dir,
                                self.spectrogram_dir,
                                self.mask_dir,
-                               self.overlay_dir,
                                self.sample_rate,
                                sample_range,
                                # sample_range_norm,
@@ -145,7 +139,6 @@ class Recording(object):
                 chunks.append((self.output_dir,
                                self.spectrogram_dir,
                                self.mask_dir,
-                               self.overlay_dir,
                                self.sample_rate,
                                sample_range,
                                # sample_range_norm,
@@ -205,24 +198,24 @@ class Recording(object):
                                              ])
         
         for this_vocal in list_of_vocals.vocals_in_recording:
-            recording_df = recording_df.append({'bin_number'      : this_vocal.bin_number[0],
-                                                'start'           : this_vocal.start[0],
-                                                'end'             : this_vocal.end[0],
-                                                'duration'        : this_vocal.duration[0],
-                                                'interval'        : this_vocal.interval[0],
-                                                'min_freq'        : this_vocal.min_freq[0],
-                                                'max_freq'        : this_vocal.max_freq[0],
-                                                'avg_freq'        : this_vocal.avg_freq[0],
-                                                'median_freq'     : this_vocal.median_freq[0],
-                                                'bandwidth'       : this_vocal.bandwidth[0],
-                                                'min_intensity'   : this_vocal.min_intensity[0],
-                                                'max_intensity'   : this_vocal.max_intensity[0],
-                                                'avg_intensity'   : this_vocal.avg_intensity[0],
-                                                'bg_intensity'    : this_vocal.bg_intensity[0],
-                                                'area'            : this_vocal.area[0],
-                                                # 'points'        : this_vocal.points[0],
-                                                'centroid'        : this_vocal.centroid[0],
-                                                'orientation'     : this_vocal.orientation[0],
+            recording_df = recording_df.append({'bin_number'      : this_vocal.bin_number,
+                                                'start'           : this_vocal.start,
+                                                'end'             : this_vocal.end,
+                                                'duration'        : this_vocal.duration,
+                                                'interval'        : this_vocal.interval,
+                                                'min_freq'        : this_vocal.min_freq,
+                                                'max_freq'        : this_vocal.max_freq,
+                                                'avg_freq'        : this_vocal.avg_freq,
+                                                'median_freq'     : this_vocal.median_freq,
+                                                'bandwidth'       : this_vocal.bandwidth,
+                                                'min_intensity'   : this_vocal.min_intensity,
+                                                'max_intensity'   : this_vocal.max_intensity,
+                                                'avg_intensity'   : this_vocal.avg_intensity,
+                                                'bg_intensity'    : this_vocal.bg_intensity,
+                                                'area'            : this_vocal.area,
+                                                # 'points'        : this_vocal.points,
+                                                'centroid'        : this_vocal.centroid,
+                                                'orientation'     : this_vocal.orientation,
                                                 }, ignore_index=True)
 
         # -- sort vocalizations by start time and save to excel
