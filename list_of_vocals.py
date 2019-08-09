@@ -22,15 +22,26 @@ class ListOfVocals(object):
             self.vocals_in_recording = None
             self.number_of_vocals    = None
         
-        self.vocals_processed    = False
+        self.vocals_combined         = False
+        self.intervals_fixed         = False
 
     def __str__(self):
         # return "{}: vocals_in_recording: {}, \n number_of_vocals: {}, \n vocals_processed: {}".format(self.__class__.__name__, self.vocals_in_recording, self.number_of_vocals, self.vocals_processed)
-        return "{}: number_of_vocals: {}, \n vocals_processed: {}".format(self.__class__.__name__, self.number_of_vocals, self.vocals_processed)
+        return "{}:\n number_of_vocals: {}, \n vocals_combined: {} \n intervals_fixed: {}".format(self.__class__.__name__, self.number_of_vocals, self.vocals_combined, self.intervals_fixed)
 
     def save_list_of_vocals_object(self, path):
         from utils import save_file
         save_file(self, 'list_of_vocals', path)
+    
+    def update_intervals(self):
+            # -- go through vocals and update inter vocal times
+            self.vocals_in_recording[0].interval = [0]
+
+            for idx in range(1, len(self.vocals_in_recording),1):
+                    self.vocals_in_recording[idx].interval = [np.abs((self.vocals_in_recording[idx-1].end[0] - self.vocals_in_recording[idx].start[0]) * 1000)]
+
+            self.intervals_fixed = True
+            return 0
 
     def connect_vocals(self):
     # -- connects vocals that are less than 12ms apart
@@ -58,10 +69,6 @@ class ListOfVocals(object):
             combined_vocal.mask          = -1
 
             return combined_vocal
-
-        def update_intervals(list_of_vocals):
-            # -- go through vocals and update inter vocal times
-            return 0
 
         new_list_of_vocals = []
 
@@ -103,9 +110,5 @@ class ListOfVocals(object):
         
         self.vocals_in_recording = np.hstack(new_list_of_vocals)
         self.number_of_vocals    = len(self.vocals_in_recording)
-        return 0
-
-    def create_dataset(self):
-        # -- create dataset for the CNN and FCN
-        print("create_dataset not implemented")
+        self.vocals_combined     = True
         return 0

@@ -63,12 +63,19 @@ def create_logger(args=None, out_dir=None):
                             handlers=[
                                 logging.FileHandler('{0}/{1}.log'.format(out_dir, 'output')),
                             ])
-def save_file(file, filename, path):
 
+def save_file(file, filename, path):
     if os.path.exists(path)==False:
         raise ValueError("path does not existe: {}".format(path))
 
     pickle.dump(file, open(os.path.join(path, filename + '.vocalpy'),'wb'))
+
+def load_file(filename, path):
+    if os.path.exists(path)==False:
+        raise ValueError("path does not existe: {}".format(path))
+
+    return pickle.load(open(os.path.join(path, filename + '.vocalpy'), 'rb'))
+
 
 def bradley_roth(image, s=None, t=None):
     # -- from somewhere
@@ -381,12 +388,12 @@ def parallel_audio_processing(chunk):
         if (prop.mean_intensity/bg_intensity) > 0.92:
             continue
 
-        min_freq_all    = (np.min(prop.coords[:,0]) * freq_res) + frequency_cutoff
-        max_freq_all    = (np.max(prop.coords[:,0]) * freq_res) + frequency_cutoff
-        avg_freq_all    = (np.mean(prop.coords[:,0]) * freq_res) + frequency_cutoff
-        median_freq_all = np.median(prop.coords[:,0])
-        median_freq_all = (median_freq_all * freq_res) + frequency_cutoff
-        bandwidth       = max_freq_all - min_freq_all
+        min_freq    = (np.min(prop.coords[:,0]) * freq_res) + frequency_cutoff
+        max_freq    = (np.max(prop.coords[:,0]) * freq_res) + frequency_cutoff
+        avg_freq    = (np.mean(prop.coords[:,0]) * freq_res) + frequency_cutoff
+        median_freq = np.median(prop.coords[:,0])
+        median_freq = (median_freq * freq_res) + frequency_cutoff
+        bandwidth   = max_freq - min_freq
 
         new_vocal = Vocal()
         new_vocal.bin_number      = this_bin,
@@ -394,10 +401,10 @@ def parallel_audio_processing(chunk):
         new_vocal.end             = (end * time_res) + ((this_bin - 1) * bin_size),
         new_vocal.duration        = duration * time_res * 1000,
         new_vocal.interval        = interval * time_res,
-        new_vocal.min_freq        = min_freq_all,
-        new_vocal.max_freq        = max_freq_all,
-        new_vocal.avg_freq        = avg_freq_all,
-        new_vocal.median_freq     = median_freq_all,
+        new_vocal.min_freq        = min_freq,
+        new_vocal.max_freq        = max_freq,
+        new_vocal.avg_freq        = avg_freq,
+        new_vocal.median_freq     = median_freq,
         new_vocal.bandwidth       = bandwidth,
         new_vocal.min_intensity   = prop.min_intensity,
         new_vocal.max_intensity   = prop.max_intensity,
@@ -405,7 +412,7 @@ def parallel_audio_processing(chunk):
         new_vocal.bg_intensity    = bg_intensity,
         new_vocal.area            = prop.area,
         # new_vocal.points          = prop.coords,
-        new_vocal.centroid        = [prop.centroid[0], 164],
+        new_vocal.centroid        = [spectro_range, prop.centroid[0]],
         new_vocal.orientation     = prop.orientation,
 
         try:
@@ -450,6 +457,7 @@ def parallel_audio_processing(chunk):
         vocal_id = vocal_id + 1
 
     if len(vocal_list):
+        # -- if list is not empty, create a list of vocals
         vocal_list = ListOfVocals(vocals_in_recording=np.asarray(vocal_list))
 
     timeBinB = time()

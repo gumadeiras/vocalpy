@@ -18,8 +18,8 @@ class Vocal(object):
                        min_freq      = None,
                        max_freq      = None,
                        avg_freq      = None,
-                       bandwidth     = None,
                        median_freq   = None,
+                       bandwidth     = None,
                        min_intensity = None,
                        max_intensity = None,
                        avg_intensity = None,
@@ -58,7 +58,7 @@ class Vocal(object):
         self.probabilities = probabilities
 
     def __str__(self):
-        return "{}: bin_number: {}, \n start: {}, \n end: {}, \n duration: {}, \n interval: {}, \n min_freq: {}, \n max_freq: {}, \n avg_freq: {}, \n bandwidth: {}, \n min_intensity: {}, \n max_intensity: {}, \n avg_intensity: {}, \n bg_intensity: {}, \n area: {}, \n centroid: {}, \n orientation: {}, \n".format(self.__class__.__name__, self.bin_number, self.start, self.end, self.duration, self.interval, self.min_freq, self.max_freq, self.avg_freq, self.bandwidth, self.min_intensity, self.max_intensity, self.avg_intensity, self.bg_intensity, self.area, self.centroid, self.orientation)
+        return "{}:\n bin_number: {}, \n start: {}, \n end: {}, \n duration: {}, \n interval: {}, \n min_freq: {}, \n max_freq: {}, \n avg_freq: {}, \n bandwidth: {}, \n min_intensity: {}, \n max_intensity: {}, \n avg_intensity: {}, \n bg_intensity: {}, \n area: {}, \n centroid: {}, \n orientation: {}, \n".format(self.__class__.__name__, self.bin_number, self.start, self.end, self.duration, self.interval, self.min_freq, self.max_freq, self.avg_freq, self.bandwidth, self.min_intensity, self.max_intensity, self.avg_intensity, self.bg_intensity, self.area, self.centroid, self.orientation)
 
     @property
     def bin_number(self):
@@ -149,8 +149,8 @@ class Vocal(object):
         return self._label
     
     @property
-    def probabilites(self):
-        return self._probabilites
+    def probabilities(self):
+        return self._probabilities
 
     @bin_number.setter
     def bin_number(self, new_bin_number):

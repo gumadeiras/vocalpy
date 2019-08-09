@@ -16,7 +16,7 @@ import pandas   as     pd
 from   time     import time
 from   math     import ceil
 from   scipy.io import wavfile
-from   utils    import save_file
+from   utils    import save_file, load_file
 
 class Recording(object):
     '''
@@ -45,15 +45,15 @@ class Recording(object):
         self.bin_size           = self.args.bin_size
         self.bins               = ceil(self.recording_duration / self.bin_size)
         self.chunks             = self.create_chunks()
-        self.list_of_vocals     = None
+        self.has_list_of_vocals     = None
     
     @property
-    def list_of_vocals(self):
-        return self._list_of_vocals
+    def has_list_of_vocals(self):
+        return self._has_list_of_vocals
     
-    @list_of_vocals.setter
-    def list_of_vocals(self, new_list_of_vocals):
-        self._list_of_vocals = new_list_of_vocals
+    @has_list_of_vocals.setter
+    def has_list_of_vocals(self, new_has_list_of_vocals):
+        self._has_list_of_vocals = new_has_list_of_vocals
 
     def save_recording_object(self, path):
         save_file(self, 'recording', path)
@@ -167,53 +167,75 @@ class Recording(object):
         recording has already been processed, clear chunks 
         '''
         self.chunks = None
-        self.save_recording_object(self.output_dir)
+        return 0
 
-    def save_recording_data_to_excel(self):
+    def load_list_of_vocals(self):
+        return load_file('list_of_vocals', self.output_dir)
+
+    def save_recording_data_to_excel(self, list_of_vocals=None):
         # -- save metadata to an excel file
+        if self.has_list_of_vocals != True:
+            return -1
+        list_of_vocals = list_of_vocals if list_of_vocals is not None else self.load_list_of_vocals()
 
-        # vocal_df = pd.DataFrame(columns=['bin',
-        #                                  'start',
-        #                                  'end',
-        #                                  'duration',
-        #                                  'interval',
-        #                                  # 'min_freq_main',
-        #                                  # 'max_freq_main',
-        #                                  # 'avg_freq_main',
-        #                                  'min_freq_all',
-        #                                  'max_freq_all',
-        #                                  'avg_freq_all',
-        #                                  'median_freq_all',
-        #                                  'bandwidth',
-        #                                  'min_intensity',
-        #                                  'max_intensity',
-        #                                  'avg_intensity',
-        #                                  'bg_intensity',
-        #                                  'area',
-        #                                  # 'points',
-        #                                  'centroid',
-        #                                  'orientation',
-        #                                  ])
+        if list_of_vocals.intervals_fixed == False:
+            list_of_vocals.update_intervals()
+
+        recording_df = pd.DataFrame(columns=['bin_number',
+                                             'start',
+                                             'end',
+                                             'duration',
+                                             'interval',
+                                             # 'min_freq_main',
+                                             # 'max_freq_main',
+                                             # 'avg_freq_main',
+                                             'min_freq',
+                                             'max_freq',
+                                             'avg_freq',
+                                             'median_freq',
+                                             'bandwidth',
+                                             'min_intensity',
+                                             'max_intensity',
+                                             'avg_intensity',
+                                             'bg_intensity',
+                                             'area',
+                                             # 'points',
+                                             'centroid',
+                                             'orientation',
+                                             ])
         
-        # vocal_df        = vocal_df.append({'bin': this_bin,
-        #                                    'start': (start * time_res) + ((this_bin - 1) * bin_size),
-        #                                    'end': (end * time_res) + ((this_bin - 1) * bin_size),
-        #                                    'duration': duration * time_res * 1000,
-        #                                    'interval': interval * time_res,
-        #                                    'min_freq_all': min_freq_all,
-        #                                    'max_freq_all': max_freq_all,
-        #                                    'avg_freq_all': avg_freq_all,
-        #                                    'median_freq_all': median_freq_all,
-        #                                    'bandwidth': bandwidth,
-        #                                    'min_intensity': prop.min_intensity,
-        #                                    'max_intensity': prop.max_intensity,
-        #                                    'avg_intensity': prop.mean_intensity,
-        #                                    'bg_intensity': bg_intensity,
-        #                                    'area': prop.area,
-        #                                    # 'points': prop.coords,
-        #                                    'centroid': prop.centroid,
-        #                                    'orientation': prop.orientation,
-        #                                    }, ignore_index=True)
+        for this_vocal in list_of_vocals.vocals_in_recording:
+            recording_df = recording_df.append({'bin_number'      : this_vocal.bin_number[0],
+                                                'start'           : this_vocal.start[0],
+                                                'end'             : this_vocal.end[0],
+                                                'duration'        : this_vocal.duration[0],
+                                                'interval'        : this_vocal.interval[0],
+                                                'min_freq'        : this_vocal.min_freq[0],
+                                                'max_freq'        : this_vocal.max_freq[0],
+                                                'avg_freq'        : this_vocal.avg_freq[0],
+                                                'median_freq'     : this_vocal.median_freq[0],
+                                                'bandwidth'       : this_vocal.bandwidth[0],
+                                                'min_intensity'   : this_vocal.min_intensity[0],
+                                                'max_intensity'   : this_vocal.max_intensity[0],
+                                                'avg_intensity'   : this_vocal.avg_intensity[0],
+                                                'bg_intensity'    : this_vocal.bg_intensity[0],
+                                                'area'            : this_vocal.area[0],
+                                                # 'points'        : this_vocal.points[0],
+                                                'centroid'        : this_vocal.centroid[0],
+                                                'orientation'     : this_vocal.orientation[0],
+                                                }, ignore_index=True)
 
-        print("save_recording_data_to_excel not implemented")
+        # -- sort vocalizations by start time and save to excel
+        recording_df.sort_values(by='start', ascending=True, inplace=True, kind='quicksort', na_position='last')
+        recording_df.to_excel(os.path.join(self.output_dir, 'recording_stats.xlsx'))
+        return 0
+
+    def create_dataset(self, list_of_vocals=None):
+        # -- create dataset for the CNN and FCN
+        # -- create from list of vocals or save spectrograms, create filename list etc and create from folder path?
+        if self.has_list_of_vocals != True and list_of_vocals is None:
+            return -1
+        list_of_vocals = list_of_vocals if list_of_vocals is not None else self.load_list_of_vocals()
+        
+        print("create_dataset not implemented")
         return 0

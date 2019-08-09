@@ -71,16 +71,13 @@ logger.info('recording parallel processing ({:.2f}s)'.format(timeBParallel - tim
 # -- create list of vocals found in the recording
 list_of_vocals = ListOfVocals()
 list_of_vocals.combine_list_of_list_of_vocals(list_of_list_of_vocals=results)
+list_of_vocals.update_intervals()
 list_of_vocals.save_list_of_vocals_object(path=audio_recording.output_dir)
 print(list_of_vocals)
-# utils.save_file(results, 'list_of_vocals.vocalpy', audio_recording.output_dir)
+audio_recording.has_list_of_vocals = True
+audio_recording.save_recording_object(path=audio_recording.output_dir)
 
-# # -- concatenate results
-# vocal_df  = pd.concat(results)
-# 
-# # -- sort vocalizations by start time and save to excel
-# vocal_df.sort_values(by='start', ascending=True, inplace=True, kind='quicksort', na_position='last')
-# vocal_df.to_excel(os.path.join(audio_recording.output_dir, 'vocal_stats.xlsx'))
+audio_recording.save_recording_data_to_excel(list_of_vocals=list_of_vocals)
 
 timeEnd   = time()
 logger.info('total time: {:.2f}s'.format(timeEnd - timeStart))
