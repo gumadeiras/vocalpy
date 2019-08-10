@@ -159,8 +159,12 @@ class ListOfVocals(object):
         self.vocals_combined     = True
         return 0
 
-    def save_spectrograms(self):
+    def save_spectrograms(self, output_dir=None):
+        for filename, vocal in enumerate(self.vocals_in_recording):
+            vocal.save_spectrogram_as_image(path=output_dir, filename=str(filename))
         return 0
 
-    def save_masks(self):
+    def save_masks(self, output_dir=None):
+        for filename, vocal in enumerate(self.vocals_in_recording):
+            vocal.save_mask_as_image(path=output_dir, filename=str(filename))
         return 0

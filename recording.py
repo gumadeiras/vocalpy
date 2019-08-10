@@ -223,6 +223,14 @@ class Recording(object):
         recording_df.to_excel(os.path.join(self.output_dir, 'recording_stats.xlsx'))
         return 0
 
+    def save_spectrograms_and_masks(self, list_of_vocals=None, path=None):
+        if self.has_list_of_vocals != True and list_of_vocals is None:
+            return -1
+        list_of_vocals = list_of_vocals if list_of_vocals is not None else self.load_list_of_vocals()
+        list_of_vocals.save_spectrograms(output_dir=path)
+        list_of_vocals.save_masks(output_dir=path)
+        return 0
+
     def create_dataset(self, list_of_vocals=None):
         # -- create dataset for the CNN and FCN
         # -- create from list of vocals or save spectrograms, create filename list etc and create from folder path?

@@ -56,7 +56,7 @@ logger.info('audio duration: {:.2f} seconds'.format(audio_recording.recording_du
 logger.info('splitting audio into {} chunks'.format(audio_recording.bins))
 
 # -- get core count for parallelization
-if args.threads > 0 :
+if args.threads > 0:
     num_cores = args.threads
 else:
     num_cores = multiprocessing.cpu_count()
@@ -76,8 +76,10 @@ list_of_vocals.update_centroids_and_spectrograms()
 list_of_vocals.save_list_of_vocals_object(path=audio_recording.output_dir)
 print(list_of_vocals)
 
+# -- update recording object and save data (images and excel)
 audio_recording.has_list_of_vocals = True
 audio_recording.save_recording_object(path=audio_recording.output_dir)
+audio_recording.save_spectrograms_and_masks(list_of_vocals=list_of_vocals, path=audio_recording.output_dir)
 audio_recording.save_recording_data_to_excel(list_of_vocals=list_of_vocals)
 
 timeEnd   = time()

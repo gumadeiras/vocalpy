@@ -13,6 +13,7 @@ import cv2
 import pickle
 import logging
 import argparse
+import warnings
 
 from vocal               import Vocal
 from list_of_vocals      import ListOfVocals
@@ -384,7 +385,23 @@ def parallel_audio_processing(chunk):
         # -- get spectrogram and mask around each vocalization
         spectro_range = 164 + 100  # 164 for square, extra 100 padding for combining vocals later
         centroid_time = ceil(prop.centroid[1])
-        bg_intensity  = np.mean(PSD[:,centroid_time-spectro_range:centroid_time+spectro_range])
+
+        # -- edge conditions, spectro_range goes over the spectrom vector limit (for this bin)
+        # with warnings.catch_warnings():
+        with warnings.catch_warnings():
+            warnings.filterwarnings('error')
+            try:
+                bg_intensity  = np.mean(PSD[:,centroid_time-spectro_range:centroid_time+spectro_range])
+            except RuntimeWarning:
+                left_end_idx = centroid_time-spectro_range
+                if left_end_idx < 0:
+                    centroid_time = centroid_time + np.abs(left_end_idx)
+                    bg_intensity  = np.mean(PSD[:,centroid_time-spectro_range:centroid_time+spectro_range])
+                else:
+                    centroid_time = centroid_time - np.abs(left_end_idx)
+                    bg_intensity  = np.mean(PSD[:,centroid_time-spectro_range:centroid_time+spectro_range])
+            warnings.simplefilter('ignore')
+            warnings.filterwarnings('ignore')
 
         if (prop.mean_intensity/bg_intensity) > 0.92:
             continue
@@ -414,27 +431,13 @@ def parallel_audio_processing(chunk):
                           centroid        = [ceil(prop.centroid[1]), ceil(prop.centroid[0])],
                           orientation     = prop.orientation)
 
+        img = np.flipud(Pxx_scaled[:,centroid_time-spectro_range:centroid_time+spectro_range])
+        new_vocal.spectrogram = img
+        # new_vocal.save_spectrogram_as_image(path=output_dir, filename=str(vocal_id))
 
-        try:
-            img = np.flipud(Pxx_scaled[:,centroid_time-spectro_range:centroid_time+spectro_range])
-            new_vocal.spectrogram = img
-            new_vocal.save_array_as_image(source='spectrogram', path=output_dir, filename=str(vocal_id))
-
-            img = np.flipud(grain[:,centroid_time-spectro_range:centroid_time+spectro_range])
-            new_vocal.mask = img
-            new_vocal.save_array_as_image(source='mask', path=output_dir, filename=str(vocal_id))
-        except:
-            logger.info('[bin {}]: ######## EXCEPT HERE FOR ID {}'.format(this_bin, vocal_id))
-            logger.info('[bin {}]: ######## path1 {}'.format(this_bin, os.path.join(output_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg')))
-            logger.info('[bin {}]: ######## path2 {}'.format(this_bin, os.path.join(mask_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg')))
-
-            img = np.flipud(Pxx_scaled[:,centroid_time-spectro_range:-1])
-            new_vocal.spectrogram = img
-            new_vocal.save_array_as_image(source='spectrogram', path=output_dir, filename=str(vocal_id))
-
-            img = np.flipud(grain[:,centroid_time-spectro_range:-1])
-            new_vocal.mask = img
-            new_vocal.save_array_as_image(source='mask', path=output_dir, filename=str(vocal_id))
+        img = np.flipud(grain[:,centroid_time-spectro_range:centroid_time+spectro_range])
+        new_vocal.mask = img
+        # new_vocal.save_mask_as_image(path=output_dir, filename=str(vocal_id))
 
         vocal_list.append(new_vocal)
         vocal_id = vocal_id + 1

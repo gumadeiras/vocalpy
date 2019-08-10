@@ -67,7 +67,7 @@ class Vocal(object):
     @property
     def bin_number(self):
         return self._bin_number
-    
+
     @property
     def start(self):
         return self._start
@@ -143,15 +143,15 @@ class Vocal(object):
     @property
     def mask(self):
         return self._mask
-    
+
     @property
     def cnn_mask(self):
         return self._cnn_mask
-    
+
     @property
     def label(self):
         return self._label
-    
+
     @property
     def probabilities(self):
         return self._probabilities
@@ -248,18 +248,26 @@ class Vocal(object):
     def probabilities(self, new_probabilities):
         self._probabilities = new_probabilities
 
-    def save_array_as_image(self, source='spectrogram', path=None, array=None, filename='vocal'):
+    def save_spectrogram_as_image(self, path=None, filename='vocal'):
         if os.path.exists(path)==False:
             raise ValueError("path does not existe: {}".format(path))
 
-        if source == 'spectrogram':
-            img = Image.fromarray(self.spectrogram)
-        elif source == 'mask':
-            img = Image.fromarray(self.mask)
-        elif source == 'cnn_mask':
-            img = Image.fromarray(self.cnn_mask)
-        else:
-            img = Image.fromarray(array)
-
+        img = Image.fromarray(self.spectrogram)
         img = img.convert('L')
-        img.save(os.path.join(path, source, str(self.bin_number) + '_' + filename + '.jpg'))
+        img.save(os.path.join(path, 'spectrogram', str(self.bin_number) + '_' + filename + '.jpg'))
+
+    def save_mask_as_image(self, path=None, filename='vocal'):
+        if os.path.exists(path)==False:
+            raise ValueError("path does not existe: {}".format(path))
+
+        img = Image.fromarray(self.mask)
+        img = img.convert('L')
+        img.save(os.path.join(path, 'mask', str(self.bin_number) + '_' + filename + '.jpg'))
+
+    def save_cnn_mask_as_image(self, path=None, filename='vocal'):
+        if os.path.exists(path)==False:
+            raise ValueError("path does not existe: {}".format(path))
+
+        img = Image.fromarray(self.cnn_mask)
+        img = img.convert('L')
+        img.save(os.path.join(path, 'cnn_mask', str(self.bin_number) + '_' + filename + '.jpg'))
