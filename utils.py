@@ -145,7 +145,7 @@ def bradley_roth(image, s=None, t=None):
 
     # -- convert back to uint8
     out  = 255 * np.reshape(out, (rows, cols)).astype(np.uint8)
-    
+
     return out
 
 def parallel_audio_processing(chunk):
@@ -364,6 +364,7 @@ def parallel_audio_processing(chunk):
         plt.title('Labels')
         plt.show()
 
+    timeAVocal = time()
     vocal_id   = 0
     vocal_list = []
 
@@ -381,10 +382,10 @@ def parallel_audio_processing(chunk):
             continue
 
         # -- get spectrogram and mask around each vocalization
-        spectro_range = 164
+        spectro_range = 164 + 100  # 164 for square, extra 100 padding for combining vocals later
         centroid_time = ceil(prop.centroid[1])
         bg_intensity  = np.mean(PSD[:,centroid_time-spectro_range:centroid_time+spectro_range])
-        
+
         if (prop.mean_intensity/bg_intensity) > 0.92:
             continue
 
@@ -394,7 +395,7 @@ def parallel_audio_processing(chunk):
         median_freq = np.median(prop.coords[:,0])
         median_freq = (median_freq * freq_res) + frequency_cutoff
         bandwidth   = max_freq - min_freq
-        
+
         new_vocal = Vocal(bin_number      = this_bin,
                           start           = (start * time_res) + ((this_bin - 1) * bin_size),
                           end             = (end * time_res) + ((this_bin - 1) * bin_size),
@@ -410,41 +411,48 @@ def parallel_audio_processing(chunk):
                           avg_intensity   = prop.mean_intensity,
                           bg_intensity    = bg_intensity,
                           area            = prop.area,
-                          centroid        = [spectro_range, ceil(prop.centroid[0])],
+                          centroid        = [ceil(prop.centroid[1]), ceil(prop.centroid[0])],
                           orientation     = prop.orientation)
 
 
         try:
             img = np.flipud(Pxx_scaled[:,centroid_time-spectro_range:centroid_time+spectro_range])
             new_vocal.spectrogram = img
-            # new_vocal.save_array_as_image(source='spectrogram', path=output_dir, filename=str(vocal_id))
+            new_vocal.save_array_as_image(source='spectrogram', path=output_dir, filename=str(vocal_id))
 
             img = np.flipud(grain[:,centroid_time-spectro_range:centroid_time+spectro_range])
             new_vocal.mask = img
-            # new_vocal.save_array_as_image(source='mask', path=output_dir, filename=str(vocal_id))
+            new_vocal.save_array_as_image(source='mask', path=output_dir, filename=str(vocal_id))
         except:
             logger.info('[bin {}]: ######## EXCEPT HERE FOR ID {}'.format(this_bin, vocal_id))
             logger.info('[bin {}]: ######## path1 {}'.format(this_bin, os.path.join(output_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg')))
             logger.info('[bin {}]: ######## path2 {}'.format(this_bin, os.path.join(mask_dir, str(this_bin) + '_' + str(vocal_id) + '.jpg')))
-            
+
             img = np.flipud(Pxx_scaled[:,centroid_time-spectro_range:-1])
             new_vocal.spectrogram = img
-            # new_vocal.save_array_as_image(source='spectrogram', path=output_dir, filename=str(vocal_id))
+            new_vocal.save_array_as_image(source='spectrogram', path=output_dir, filename=str(vocal_id))
 
             img = np.flipud(grain[:,centroid_time-spectro_range:-1])
             new_vocal.mask = img
-            # new_vocal.save_array_as_image(source='mask', path=output_dir, filename=str(vocal_id))
-        
+            new_vocal.save_array_as_image(source='mask', path=output_dir, filename=str(vocal_id))
+
         vocal_list.append(new_vocal)
         vocal_id = vocal_id + 1
 
     if len(vocal_list):
         # -- if list is not empty, create a list of vocals
         vocal_list = ListOfVocals(vocals_in_recording=np.asarray(vocal_list))
+        timeAConnectVocals = time()
+        vocal_list.connect_vocals()
+        timeBConnectVocals = time()
+        logger.info('[bin {}]: connecting vocals runtime: {:.2f}s'.format(this_bin, timeBConnectVocals - timeAConnectVocals))
+
+    timeBVocal = time()
+    logger.info('[bin {}]: list of vocals runtime: {:.2f}s'.format(this_bin, timeBVocal - timeAVocal))
 
     timeBinB = time()
-    logger.info('[bin {}]: number of vocals: {}'.format(this_bin, vocal_id))
+    logger.info('[bin {}]: raw number of vocals: {}'.format(this_bin, vocal_id))
     logger.info('[bin {}]: {}'.format(this_bin, vocal_list))
     logger.info('[bin {}]: bin runtime: {:.2f}s'.format(this_bin, timeBinB - timeBinA))
-    
+
     return vocal_list
