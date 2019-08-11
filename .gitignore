@@ -128,5 +128,4 @@ dmypy.json
 *.wav
 .DS_Store
 audio_example/*
-outputs/*
-outputs2/*
+*outputs*/*

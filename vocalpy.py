@@ -30,14 +30,16 @@ from   joblib          import Parallel, delayed
 
 p    = argparse.ArgumentParser()
 p.add_argument('-v', '--verbose', help='output verbosity', action='store_true')
+p.add_argument('-r', '--root', help='root directory where outputs will be saved', type=str, default='/Users/gustavo/Documents/git/vocalpy')
+p.add_argument('-f', '--filename', help='audio file name', type=str, default='audio_example.wav')
 p.add_argument('-p', '--plot', help='plot sample spectrogram after each operation', action='store_true')
 p.add_argument('-b', '--bin_size', help='bin size in seconds to split spectrogram processing', type=int, default=60)
 p.add_argument('-t', '--threads', help='number of threads', type=int, default=0)
 args = p.parse_args()
 
-root_dir = '/Users/gustavo/Documents/git/vocalpy'
-out_dir  = os.path.join(root_dir, 'outputs')
-audio_f  = os.path.join(root_dir, 'audio_example.wav')
+root_dir = args.root
+audio_f  = args.filename
+out_dir  = os.path.join(root_dir, audio_f[0:-4] + '_outputs')
 
 if not os.path.exists(out_dir):
     os.makedirs(out_dir, exist_ok=True)
@@ -48,7 +50,7 @@ logger.info('selected file: {}'.format(audio_f))
 
 timeStart       = time()
 audio_recording = Recording(recording_path=audio_f, args=args)
-audio_recording.save_recording_object(path=audio_recording.output_dir)
+# audio_recording.save_recording_object(path=audio_recording.output_dir)
 timeBRecording  = time()
 
 logger.info('recording object created ({:.2f}s) and saved to: "{}"'.format((timeBRecording - timeStart), audio_recording.output_dir))

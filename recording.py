@@ -64,7 +64,7 @@ class Recording(object):
         basepath, filename      = os.path.split(recording_path)
         self.recording_dir      = basepath
         self.recording_name     = filename
-        self.output_dir         = os.path.join(self.recording_dir, 'outputs')
+        self.output_dir         = os.path.join(self.recording_dir, filename[0:-4] + '_outputs')
         self.spectrogram_dir    = os.path.join(self.output_dir, 'spectrogram')
         self.mask_dir           = os.path.join(self.output_dir, 'mask')
 
