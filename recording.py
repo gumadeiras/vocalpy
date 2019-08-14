@@ -149,7 +149,7 @@ class Recording(object):
                                self.frequency_cutoff,
                                self.args))
 
-        # -- samples are now in chuncks, remove from object
+        # -- samples are now in chunks, remove from object
         self.samples  = None
         # self.samples_normalized = None
 
