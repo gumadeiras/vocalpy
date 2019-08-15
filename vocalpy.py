@@ -53,7 +53,8 @@ audio_recording = Recording(recording_path=audio_f, args=args)
 # audio_recording.save_recording_object(path=audio_recording.output_dir)
 timeBRecording  = time()
 
-logger.info('recording object created ({:.2f}s) and saved to: "{}"'.format((timeBRecording - timeStart), audio_recording.output_dir))
+# logger.info('recording object created ({:.2f}s) and saved to: "{}"'.format((timeBRecording - timeStart), audio_recording.output_dir))
+logger.info('recording object created ({:.2f}s)'.format((timeBRecording - timeStart)))
 logger.info('audio duration: {:.2f} seconds'.format(audio_recording.recording_duration))
 logger.info('splitting audio into {} chunks'.format(audio_recording.bins))
 

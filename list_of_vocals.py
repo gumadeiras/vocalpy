@@ -123,7 +123,7 @@ class ListOfVocals(object):
             # -- 1) next vocal starts within 12ms from base vocal start time
             # -- 2) next vocal starts within 12ms from base vocal end time
             # -- 3) next vocal starts within base vocal start/end (harmonic)
-            max_interval = 0.012 # 12ms
+            max_interval = 0.0115 # 12ms - 0.5 error
             next_vocal_is_close = True if (np.abs(base_vocal.end - next_vocal.start) < max_interval or np.abs(base_vocal.start - next_vocal.start) < max_interval or (next_vocal.start >= base_vocal.start and next_vocal.end <= base_vocal.end)) else False
 
             idx  = idx + 1
@@ -136,7 +136,7 @@ class ListOfVocals(object):
                     next_vocal_is_close = False
                 idx  = idx + 1
 
-            new_list_of_vocals.append(new_vocal)
+            new_list_of_vocals.append(new_vocal) # when last vocal is combined, sometimes gets duplicated; check why
 
         try:
             self.vocals_in_recording = np.hstack(new_list_of_vocals)

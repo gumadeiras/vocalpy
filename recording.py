@@ -227,6 +227,7 @@ class Recording(object):
         if self.has_list_of_vocals != True and list_of_vocals is None:
             return -1
         list_of_vocals = list_of_vocals if list_of_vocals is not None else self.load_list_of_vocals()
+        path           = path if path is not None else self.output_dir
         list_of_vocals.save_spectrograms(output_dir=path)
         list_of_vocals.save_masks(output_dir=path)
         return 0
