@@ -91,7 +91,7 @@ def imadjust(src, tol=1, vin=[0,255], vout=(0,255)):
         if tol > 0:
             # Compute in and out limits
             # Histogram
-            hist = np.histogram(src, bins=list(range(256)),range=(0,255))[0]
+            hist = np.histogram(src,bins=list(range(256)),range=(0,255))[0]
 
             # Cumulative histogram
             cum = hist.copy()
@@ -104,11 +104,6 @@ def imadjust(src, tol=1, vin=[0,255], vout=(0,255)):
             vin[0] = bisect.bisect_left(cum, low_bound)
             vin[1] = bisect.bisect_left(cum, upp_bound)
 
-        print(np.min(src))
-        print(np.max(src))
-
-        print(vin[0])
-        print(vin[1])
         # Stretching
         scale = (vout[1] - vout[0]) / (vin[1] - vin[0])
         vs = src-vin[0]
@@ -125,7 +120,7 @@ def bradley_roth(image, s=None, t=None):
 
     # -- default window size is round(width/8)
     if s is None:
-        s = np.round(img.shape[1]/8)
+        s = np.round(img.shape[0]/8)
 
     # -- default threshold is 15% of the total area in the window
     if t is None:
@@ -190,6 +185,21 @@ def bradley_roth(image, s=None, t=None):
 
     return out
 
+def faster_bradley_threshold(image, threshold=75, window_r=8):
+    from scipy import ndimage
+    percentage = threshold / 100.
+    window_diam = 2*window_r + 1
+    # convert image to numpy array of grayscale values
+    img = np.array(image).astype(np.float) # float for mean precision 
+    # matrix of local means with scipy
+    means = ndimage.uniform_filter(img, window_diam)
+    # result: 0 for entry less than percentage*mean, 255 otherwise 
+    height, width = img.shape[:2]
+    result = np.zeros((height,width), np.uint8)   # initially all 0
+    result[img >= percentage * means] = 255       # numpy magic :)
+    # convert back to PIL image
+    return result
+
 def parallel_audio_processing(chunk):
     timeBinA = time()
 
@@ -224,27 +234,33 @@ def parallel_audio_processing(chunk):
                                                                                                                        start_range / sample_rate,
                                                                                                                        end_range / sample_rate))
     # -- spectrogram to be used to apply morphological operations
-    # dtype     = np.int16
-    # ii16      = np.iinfo(dtype)
-    # f, t, Sxx = signal.spectrogram(np.interp(sample_range, (sample_range.min(), sample_range.max()), (ii16.min, ii16.max)), fs=fs,
-    f, t, Pxx = signal.spectrogram(sample_range, fs=fs,
+    f, t, Sxx = signal.spectrogram(sample_range, fs=fs,
                                                  window=window,
                                                  noverlap=noverlap,
                                                  nfft=nfft,
                                                  mode='psd')
 
     # -- spectrogram for vocal intensities (dB) is done over the normalized sample
-    # sample_range_norm = sample_range / np.iinfo(np.int16).max
+    # sample_min = np.min(sample_range)
+    # sample_max = np.max(sample_range)
+    # print(np.min(sample_range))
+    # print(np.max(sample_range))
+    # sample_range_norm = (sample_range - sample_min) / (sample_max - sample_min)
+    # sample_range_norm = np.interp(sample_range, (sample_range.min(), sample_range.max()), (-1, +1))
+    # print(np.min(sample_range_norm))
+    # print(np.max(sample_range_norm))
     # _, _, PSD = signal.spectrogram(sample_range_norm, fs=fs,
+    # f, t, Sxx = signal.spectrogram(sample_range_norm, fs=fs,
     #                                                   window=window,
     #                                                   noverlap=noverlap,
     #                                                   nfft=nfft,
     #                                                   mode='psd')
+
     # logger.info(Sxx.shape)
     # logger.info(PSD.shape)
 
     # -- apply frequency cutoff
-    Pxx = Pxx[(f>frequency_cutoff)]
+    PSD = Sxx = Sxx[(f>frequency_cutoff)]
     # PSD = PSD[(f>frequency_cutoff)]
     f   = f[(f>frequency_cutoff)]
 
@@ -257,57 +273,80 @@ def parallel_audio_processing(chunk):
 
 
     # -- convert to dB
-    Pxx = 10*np.log10(Pxx)
+    B       = Sxx
+    B[B==0] = 1
+    B       = 10*np.log10(B)
+    print(np.min(B))
+    print(np.max(B))
+    print(B)
     # PSD = 10*np.log10(PSD)
-    # PSD = Pxx
     if args.plot:
-        plt.pcolormesh(t[35000:40000], f, Pxx[:,35000:40000], cmap='gray')
+        plt.pcolormesh(t[35000:40000], f, B[:,35000:40000], cmap='gray')
         plt.title('Pxx (dB)')
         plt.show()
 
     # -- rescale to save spectrograms in grayscale
     dtype      = np.uint8
-    Pxx_scaled = exposure.rescale_intensity(Pxx, in_range='image', out_range=dtype)
+    # Pxx_scaled = exposure.rescale_intensity(Pxx, in_range='image', out_range=dtype)
 
     # -- normalize data
-    # B = Pxx
-    # Bmax = np.max(B)
-    # Bmin = np.min(B)
-    # B    = (B - Bmin) / (Bmax - Bmin)
-    B = np.abs(Pxx)
-    B = B/np.max(B)
+    B = np.abs(B)
+    B = B/np.max(B[:])
+    print(np.min(B))
+    print(np.max(B))
+    print(B)
     if args.plot:
         plt.pcolormesh(t[35000:40000], f, B[:,35000:40000], cmap='gray')
-        plt.title('B normalized')
-        plt.show()
-        plt.hist(B.ravel(), bins=256, histtype='step', color='black')
-        plt.title('B normalized histogram')
+        plt.title('B = Pxx normalized')
         plt.show()
 
-    # -- rescale intensity values
+    # -- rescale intensity values to be between (0,1)
     # B = exposure.rescale_intensity(B, in_range='image', out_range=(0,1))
-    # B = exposure.rescale_intensity(B, in_range=(0,1), out_range=dtype)
     # if args.plot:
     #     plt.pcolormesh(t[35000:40000], f, B[:,35000:40000], cmap='gray')
-    #     plt.title('B normalized histogram')
+    #     plt.title('B intensity values rescaled to dtype')
     #     plt.show()
 
-    # -- contrast adjustment
-    p1, p99 = np.percentile(B, (1, 99))
-    B[B<p1] = 0
-    B[B>p99]= 1
+    # -- image complement
+    # ii8 = np.iinfo(dtype)
+    # B   = np.max(B) - B
+    # B = imcomplement(B)
+    B = np.max(B) - (B - np.min(B))
+    print(np.min(B))
+    print(np.max(B))
+    print(B)
     if args.plot:
         plt.pcolormesh(t[35000:40000], f, B[:,35000:40000], cmap='gray')
-        plt.title('B saturated')
-        plt.show()
-        plt.hist(B.ravel(), bins=256, histtype='step', color='black')
-        plt.title('B saturated hist')
+        plt.title('B complement')
         plt.show()
 
+
+    # -- contrast adjustment
+    # B = exposure.adjust_gamma(B)
+    B = exposure.rescale_intensity(B, in_range='image', out_range=np.uint8)
+    print(np.min(B))
+    print(np.max(B))
+    print(B)
+    # B = imadjust(B)
+    # # B   = ii8.max - B
+    # print(np.min(B))
+    # print(np.max(B))
+    # print(B)
+    # if args.plot:
+    #     plt.pcolormesh(t[35000:40000], f, B[:,35000:40000], cmap='gray')
+    #     plt.title('B contrast adjustment')
+    #     plt.show()
+
     # -- binarize spectrogram
-    B = bradley_roth(B, t=20)
-    # B = bradley_roth(np.interp(B, (0,255), (0,1)), t=20)
+    B = bradley_roth(B, t=10)
+    # B = 1 - B
+    print(np.min(B))
+    print(np.max(B))
+    print(B)
     # B = ii8.max - B
+    # print(np.min(B))
+    # print(np.max(B))
+    # print(B)
     if args.plot:
         plt.pcolormesh(t[35000:40000], f, B[:,35000:40000], cmap='gray')
         plt.title('B binarized bradley roth')
@@ -341,7 +380,7 @@ def parallel_audio_processing(chunk):
         plt.title('+ erode (4,1)')
         plt.show()
 
-    timeAConnectedComponents = time()
+    timeAConnectedComponents        = time()
     connectivity = 4
     num_cc, output, stats, centroids = cv2.connectedComponentsWithStats(erode14, connectivity, cv2.CV_32S)
 
@@ -371,7 +410,7 @@ def parallel_audio_processing(chunk):
     grain        = cv2.dilate(grain, kernel_line3, iterations=1)
 
     # -- get spectrogram area using the segmentation mask
-    B_masked = Pxx * (((255 - grain) > 0) * 1)
+    B_masked = PSD * (((255 - grain) > 0) * 1)
     if args.plot:
         plt.subplot(411)
         plt.pcolormesh(t[35000:40000], f, Pxx[:,35000:40000], cmap='gray')
@@ -398,7 +437,7 @@ def parallel_audio_processing(chunk):
     timeARegionProps = time()
     labels = measure.label(grain, background=0)
 
-    props  = measure.regionprops(labels, intensity_image=Pxx, cache=True, coordinates='rc')
+    props  = measure.regionprops(labels, intensity_image=PSD, cache=True, coordinates='rc')
     props  = sorted(props, key=lambda p: np.min(p.coords[:,1]), reverse=False)
     timeBRegionProps = time()
     logger.info('[bin {}]: region props runtime: {:.2f}s'.format(this_bin, timeBRegionProps - timeARegionProps))
@@ -428,11 +467,11 @@ def parallel_audio_processing(chunk):
         end      = np.max(prop.coords[:,1])
         duration = end - start
 
-        if duration < 6:
+        if duration < 5:
             continue
 
         # -- get spectrogram and mask around each vocalization
-        spectro_range = 164 + 200  # 164 for square, extra 200 padding for combining vocals later
+        spectro_range = 164 + 100  # 164 for square, extra 100 padding for combining vocals later
         centroid_time = ceil(prop.centroid[1])
 
         # -- edge conditions, spectro_range goes over the spectrom vector limit (for this bin)
@@ -440,15 +479,15 @@ def parallel_audio_processing(chunk):
         with warnings.catch_warnings():
             warnings.filterwarnings('error')
             try:
-                bg_intensity  = np.mean(Pxx[:,centroid_time-spectro_range:centroid_time+spectro_range])
+                bg_intensity  = np.mean(PSD[:,centroid_time-spectro_range:centroid_time+spectro_range])
             except RuntimeWarning:
                 left_end_idx = centroid_time-spectro_range
                 if left_end_idx < 0:
                     centroid_time = centroid_time + np.abs(left_end_idx)
-                    bg_intensity  = np.mean(Pxx[:,centroid_time-spectro_range:centroid_time+spectro_range])
+                    bg_intensity  = np.mean(PSD[:,centroid_time-spectro_range:centroid_time+spectro_range])
                 else:
                     centroid_time = centroid_time - np.abs(left_end_idx)
-                    bg_intensity  = np.mean(Pxx[:,centroid_time-spectro_range:centroid_time+spectro_range])
+                    bg_intensity  = np.mean(PSD[:,centroid_time-spectro_range:centroid_time+spectro_range])
             warnings.simplefilter('ignore')
             warnings.filterwarnings('ignore')
 

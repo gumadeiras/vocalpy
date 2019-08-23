@@ -10,8 +10,9 @@ import os
 import argparse
 import logging
 
-import numpy    as     np
-import pandas   as     pd
+import numpy     as    np
+import pandas    as    pd
+import soundfile as    sf
 
 from   time     import time
 from   math     import ceil
@@ -35,6 +36,8 @@ class Recording(object):
 
         self.sample_rate          = None
         self.samples              = None
+        self.samples_min          = None
+        self.samples_max          = None
         # self.samples_normalized = None
         self.recording_duration   = None
 
@@ -45,6 +48,9 @@ class Recording(object):
         self.bins                 = ceil(self.recording_duration / self.bin_size)
         self.chunks               = self.create_chunks()
         self._has_list_of_vocals  = None
+
+    def __str__(self):
+        return "{}:\n sample_rate: {} \n samples min: {} \n samples max: {}".format(self.__class__.__name__, self.sample_rate, self.samples_min, self.samples_max)
     
     @property
     def has_list_of_vocals(self):
@@ -82,9 +88,12 @@ class Recording(object):
         '''
         read audio and metadata
         '''
-        sample_rate, samples    = wavfile.read(self.recording_path)
+        # sample_rate, samples    = wavfile.read(self.recording_path)
+        samples, sample_rate    = sf.read(self.recording_path)
         self.sample_rate        = sample_rate
         self.samples            = samples
+        self.samples_min        = np.min(samples)
+        self.samples_max        = np.max(samples)
         self.recording_duration = self.samples.shape[0] / self.sample_rate
         # self.samples_normalized = self.samples / np.iinfo(np.int16).max # -- recordings are 16bit, might need to change
 
@@ -95,8 +104,8 @@ class Recording(object):
         chunks = []
         ############## CREATE A BASELINE CHUNK WITH REPETITIVE INFO AND CONCATENATE
         for this_bin in range(1, self.bins+1):
-            if this_bin == 1: # -- first bin, remove first 0.3 seconds of recording (noisy)
-                start_range       = ceil(0.3 * self.sample_rate)
+            if this_bin == 1: # -- first bin, remove first 0.5 second of recording (noisy)
+                start_range       = ceil(0.5 * self.sample_rate)
                 end_range         = self.bin_size * self.sample_rate
                 sample_range      = self.samples[start_range:end_range]
                 # sample_range_norm = self.samples_normalized[start_range:end_range]

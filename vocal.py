@@ -254,7 +254,7 @@ class Vocal(object):
 
         img = Image.fromarray(self.spectrogram)
         img = img.convert('L')
-        img.save(os.path.join(path, 'spectrogram', str(self.bin_number) + '_' + filename + '.jpg'))
+        img.save(os.path.join(path, 'spectrogram', str(self.bin_number) + '_' + filename + '.png'))
 
     def save_mask_as_image(self, path=None, filename='vocal'):
         if os.path.exists(path)==False:
@@ -262,7 +262,7 @@ class Vocal(object):
 
         img = Image.fromarray(self.mask)
         img = img.convert('L')
-        img.save(os.path.join(path, 'mask', str(self.bin_number) + '_' + filename + '.jpg'))
+        img.save(os.path.join(path, 'mask', str(self.bin_number) + '_' + filename + '.png'))
 
     def save_cnn_mask_as_image(self, path=None, filename='vocal'):
         if os.path.exists(path)==False:
@@ -270,4 +270,4 @@ class Vocal(object):
 
         img = Image.fromarray(self.cnn_mask)
         img = img.convert('L')
-        img.save(os.path.join(path, 'cnn_mask', str(self.bin_number) + '_' + filename + '.jpg'))
+        img.save(os.path.join(path, 'cnn_mask', str(self.bin_number) + '_' + filename + '.png'))

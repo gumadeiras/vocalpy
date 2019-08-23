@@ -47,10 +47,11 @@ class ListOfVocals(object):
         for vocal in self.vocals_in_recording:
             x_size = vocal.spectrogram.shape[1]
             if x_size > 328:
-                vocal.centroid[0] = 164
+                centroid_coord    = 200
+                vocal.centroid[0] = centroid_coord
                 new_x_centroid    = np.int(np.ceil(x_size/2))
-                vocal.spectrogram = vocal.spectrogram[:,new_x_centroid-164:new_x_centroid+164]
-                vocal.mask        = vocal.mask[:,new_x_centroid-164:new_x_centroid+164]
+                vocal.spectrogram = vocal.spectrogram[:,new_x_centroid-centroid_coord:new_x_centroid+centroid_coord]
+                vocal.mask        = vocal.mask[:,new_x_centroid-centroid_coord:new_x_centroid+centroid_coord]
 
         self.centroid_spectro_fixed = True
         return 0
@@ -91,8 +92,8 @@ class ListOfVocals(object):
             combined_vocal.duration  = combined_vocal.end - combined_vocal.start
             combined_vocal.bandwidth = combined_vocal.max_freq - combined_vocal.min_freq
 
-            original_range = 164 + 100
-            spectro_range  = 164
+            original_range = 164 + 200
+            spectro_range  = 200
             new_x_centroid = original_range - centroid_x_skew
             # if centroid_x_skew < 50:
             combined_vocal.spectrogram = second_vocal.spectrogram[:,new_x_centroid-spectro_range:new_x_centroid+spectro_range]
@@ -123,7 +124,7 @@ class ListOfVocals(object):
             # -- 1) next vocal starts within 12ms from base vocal start time
             # -- 2) next vocal starts within 12ms from base vocal end time
             # -- 3) next vocal starts within base vocal start/end (harmonic)
-            max_interval = 0.0115 # 12ms - 0.5 error
+            max_interval = 0.011 # 12ms - 1ms error
             next_vocal_is_close = True if (np.abs(base_vocal.end - next_vocal.start) < max_interval or np.abs(base_vocal.start - next_vocal.start) < max_interval or (next_vocal.start >= base_vocal.start and next_vocal.end <= base_vocal.end)) else False
 
             idx  = idx + 1

@@ -127,6 +127,7 @@ dmypy.json
 
 *.wav
 .DS_Store
-audio_example_vocalmat/*
+*audio*/*
 *outputs*/*
 archive/*
+training/dataset/*
