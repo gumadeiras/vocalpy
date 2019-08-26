@@ -92,7 +92,7 @@ class ListOfVocals(object):
             combined_vocal.duration  = combined_vocal.end - combined_vocal.start
             combined_vocal.bandwidth = combined_vocal.max_freq - combined_vocal.min_freq
 
-            original_range = 164 + 200
+            original_range = 164 + 250
             spectro_range  = 200
             new_x_centroid = original_range - centroid_x_skew
             # if centroid_x_skew < 50:

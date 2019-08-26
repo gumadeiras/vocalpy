@@ -432,7 +432,7 @@ def parallel_audio_processing(chunk):
             continue
 
         # -- get spectrogram and mask around each vocalization
-        spectro_range = 164 + 200  # 164 for square, extra 200 padding for combining vocals later
+        spectro_range = 164 + 250  # 164 for square, extra 220 padding for combining vocals later
         centroid_time = ceil(prop.centroid[1])
 
         # -- edge conditions, spectro_range goes over the spectrom vector limit (for this bin)
