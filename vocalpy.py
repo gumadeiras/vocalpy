@@ -38,6 +38,10 @@ p.add_argument('-t', '--threads', help='number of threads', type=int, default=0)
 args = p.parse_args()
 
 audio_path = args.audio_path
+
+# -- ToDo:
+# -- if its a dir, run all audios in that dir
+# -- if its a file, run that audio only
 if os.path.isdir(audio_path):
     print('path is a directory')
 elif os.path.isfile(audio_path):
@@ -83,14 +87,15 @@ list_of_vocals = ListOfVocals()
 list_of_vocals.combine_list_of_list_of_vocals(list_of_list_of_vocals=results)
 list_of_vocals.update_intervals()
 list_of_vocals.update_centroids_and_spectrograms()
-list_of_vocals.save_list_of_vocals_object(path=audio_recording.output_dir)
+# list_of_vocals.save_list_of_vocals_object(path=audio_recording.output_dir)
 print(list_of_vocals)
 
 # -- update recording object and save data (images and excel)
-audio_recording.has_list_of_vocals = True
+audio_recording._has_list_of_vocals = True
+audio_recording._list_of_vocals    = list_of_vocals
 audio_recording.save_recording_object(path=audio_recording.output_dir)
-audio_recording.save_spectrograms_and_masks(list_of_vocals=list_of_vocals, path=audio_recording.output_dir)
-audio_recording.save_recording_data_to_excel(list_of_vocals=list_of_vocals)
+audio_recording.save_spectrograms_and_masks(path=audio_recording.output_dir)
+audio_recording.save_recording_data_to_excel()
 
 timeEnd   = time() - timeStart
 logger.info('total time: {:.0f}m {:.0f}s'.format(timeEnd//60,timeEnd%60))

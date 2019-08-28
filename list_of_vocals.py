@@ -56,9 +56,9 @@ class ListOfVocals(object):
         self.centroid_spectro_fixed = True
         return 0
 
-    def connect_vocals(self):
+    def connect_vocals(self, combine_pass='first'):
     # -- connects vocals that are at most 12ms apart
-        def combine_vocals(first_vocal, second_vocal):
+        def combine_vocals(first_vocal, second_vocal, combine_pass='first'):
             # -- combines two vocals into one
             start_difference = first_vocal.start - second_vocal.start
             end_difference   = first_vocal.end   - second_vocal.end
@@ -88,12 +88,17 @@ class ListOfVocals(object):
                                      bg_intensity  = np.mean((first_vocal.bg_intensity, second_vocal.bg_intensity)),
                                      area          = first_vocal.area + second_vocal.area,
                                      centroid      = [new_centroid[0], new_centroid[1]],
-                                     orientation   = None)
+                                     )
             combined_vocal.duration  = combined_vocal.end - combined_vocal.start
             combined_vocal.bandwidth = combined_vocal.max_freq - combined_vocal.min_freq
 
-            original_range = 164 + 250
-            spectro_range  = 200
+            if combine_pass == 'first':
+                original_range = 200 + 500
+                spectro_range  = 500
+            else:
+                spectro_range  = 500
+                spectro_range  = 200
+
             new_x_centroid = original_range - centroid_x_skew
             # if centroid_x_skew < 50:
             combined_vocal.spectrogram = second_vocal.spectrogram[:,new_x_centroid-spectro_range:new_x_centroid+spectro_range]
@@ -125,7 +130,7 @@ class ListOfVocals(object):
             # -- 2) next vocal starts within 12ms from base vocal end time
             # -- 3) next vocal starts within base vocal start/end (harmonic)
             max_interval = 0.011 # 12ms - 1ms error
-            next_vocal_is_close = True if (np.abs(base_vocal.end - next_vocal.start) < max_interval or np.abs(base_vocal.start - next_vocal.start) < max_interval or (next_vocal.start >= base_vocal.start and next_vocal.end <= base_vocal.end)) else False
+            next_vocal_is_close = True if (np.abs(base_vocal.end - next_vocal.start) < max_interval or np.abs(base_vocal.start - next_vocal.start) < max_interval or (next_vocal.start >= base_vocal.start and next_vocal.start <= base_vocal.end)) else False
 
             idx  = idx + 1
             while next_vocal_is_close == True:

@@ -432,7 +432,7 @@ def parallel_audio_processing(chunk):
             continue
 
         # -- get spectrogram and mask around each vocalization
-        spectro_range = 164 + 250  # 164 for square, extra 220 padding for combining vocals later
+        spectro_range = 200 + 500  # 200 normal spectrogram range, extra 500 padding for combining vocals later
         centroid_time = ceil(prop.centroid[1])
 
         # -- edge conditions, spectro_range goes over the spectrom vector limit (for this bin)
@@ -478,7 +478,7 @@ def parallel_audio_processing(chunk):
                           bg_intensity    = bg_intensity,
                           area            = prop.area,
                           centroid        = [ceil(prop.centroid[1]), ceil(prop.centroid[0])],
-                          orientation     = prop.orientation)
+                          )
 
         img = np.flipud(Pxx_scaled[:,centroid_time-spectro_range:centroid_time+spectro_range])
         new_vocal.spectrogram = img
@@ -495,7 +495,8 @@ def parallel_audio_processing(chunk):
         # -- if list is not empty, create a list of vocals
         vocal_list = ListOfVocals(vocals_in_recording=np.asarray(vocal_list))
         timeAConnectVocals = time()
-        vocal_list.connect_vocals()
+        vocal_list.connect_vocals(combine_pass='first')
+        vocal_list.connect_vocals(combine_pass='second')
         timeBConnectVocals = time()
         logger.info('[bin {}]: connecting vocals runtime: {:.2f}s'.format(this_bin, timeBConnectVocals - timeAConnectVocals))
 

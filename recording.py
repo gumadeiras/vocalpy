@@ -47,10 +47,11 @@ class Recording(object):
         self.bin_size             = self.args.bin_size
         self.bins                 = ceil(self.recording_duration / self.bin_size)
         self.chunks               = self.create_chunks()
+        self._list_of_vocals      = None
         self._has_list_of_vocals  = None
 
     def __str__(self):
-        return "{}:\n sample_rate: {} \n samples min: {} \n samples max: {}".format(self.__class__.__name__, self.sample_rate, self.samples_min, self.samples_max)
+        return "{}:\n sample rate: {} \n samples min: {} \n samples max: {}".format(self.__class__.__name__, self.sample_rate, self.samples_min, self.samples_max)
     
     @property
     def has_list_of_vocals(self):
@@ -59,6 +60,14 @@ class Recording(object):
     @has_list_of_vocals.setter
     def has_list_of_vocals(self, new_has_list_of_vocals):
         self._has_list_of_vocals = new_has_list_of_vocals
+    
+    @property
+    def list_of_vocals(self):
+        return self._has_list_of_vocals
+    
+    @list_of_vocals.setter
+    def has_list_of_vocals(self, new_list_of_vocals):
+        self._list_of_vocals = new_list_of_vocals
 
     def save_recording_object(self, path):
         save_file(self, 'recording', path)
@@ -176,9 +185,9 @@ class Recording(object):
 
     def save_recording_data_to_excel(self, list_of_vocals=None):
         # -- save metadata to an excel file
-        if self.has_list_of_vocals != True:
+        if self._has_list_of_vocals != True:
             return -1
-        list_of_vocals = list_of_vocals if list_of_vocals is not None else self.load_list_of_vocals()
+        list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
 
         if list_of_vocals.intervals_fixed == False:
             list_of_vocals.update_intervals()
@@ -203,7 +212,6 @@ class Recording(object):
                                              'area',
                                              # 'points',
                                              'centroid',
-                                             'orientation',
                                              ])
         
         for this_vocal in list_of_vocals.vocals_in_recording:
@@ -224,7 +232,6 @@ class Recording(object):
                                                 'area'            : this_vocal.area,
                                                 # 'points'        : this_vocal.points,
                                                 'centroid'        : this_vocal.centroid,
-                                                'orientation'     : this_vocal.orientation,
                                                 }, ignore_index=True)
 
         # -- sort vocalizations by start time and save to excel
@@ -233,9 +240,9 @@ class Recording(object):
         return 0
 
     def save_spectrograms_and_masks(self, list_of_vocals=None, path=None):
-        if self.has_list_of_vocals != True and list_of_vocals is None:
+        if self._has_list_of_vocals != True and list_of_vocals is None:
             return -1
-        list_of_vocals = list_of_vocals if list_of_vocals is not None else self.load_list_of_vocals()
+        list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
         path           = path if path is not None else self.output_dir
         list_of_vocals.save_spectrograms(output_dir=path)
         list_of_vocals.save_masks(output_dir=path)
