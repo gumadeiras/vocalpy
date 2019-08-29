@@ -29,8 +29,6 @@ class CreateClassifier(object):
             self.model = models.alexnet(pretrained=pretrained)
 
 
-
-
 class VocalDataset(data.Dataset):
     """Create a vocalization dataset
 
@@ -41,9 +39,7 @@ class VocalDataset(data.Dataset):
                                  |-- labels/class/*.png (sample images)
 
     Keyword Arguments:
-        transforms {optional} -- A function/transform that takes in an PIL image and
-        returns a transformed version. (default: {None})
-        and transforms it. (default: {None})
+        transforms {optional} -- A function/transform that takes in an PIL image and returns a transformed version. (default: {None})
     """
     def __init__(self,
                  dataset_path,

@@ -61,7 +61,6 @@ class ListOfVocals(object):
             # new_y_centroid     = np.mean([first_centroid[1], second_centroid[1]])
             # new_centroid       = [new_x_centroid, new_y_centroid]
             new_centroid     = np.rint(np.mean(np.vstack((first_vocal.centroid, second_vocal.centroid)), axis=0)).astype(int)
-            # centroid_x_skew  = np.int(np.floor(second_vocal.centroid[0] - new_centroid[0]))
 
             combined_vocal   = Vocal(bin_number    = first_vocal.bin_number if (first_vocal.bin_number < second_vocal.bin_number) else second_vocal.bin_number,
                                      start         = first_vocal.start if (start_difference < 0) else second_vocal.start,
@@ -79,21 +78,6 @@ class ListOfVocals(object):
                                      )
             combined_vocal.duration  = combined_vocal.end - combined_vocal.start
             combined_vocal.bandwidth = combined_vocal.max_freq - combined_vocal.min_freq
-
-            # if combine_pass == 'first':
-            #     original_range = 200 + 500
-            #     spectro_range  = 500
-            # else:
-            #     spectro_range  = 500
-            #     spectro_range  = 200
-
-            # new_x_centroid = original_range - centroid_x_skew
-            # # if centroid_x_skew < 50:
-            # combined_vocal.spectrogram = second_vocal.spectrogram[:,new_x_centroid-spectro_range:new_x_centroid+spectro_range]
-            # combined_vocal.mask        = second_vocal.mask[:,new_x_centroid-spectro_range:new_x_centroid+spectro_range]
-            # # else:
-            #     # combined_vocal.spectrogram = second_vocal.spectrogram[:,new_x_centroid-spectro_range:new_x_centroid+spectro_range]
-            #     # combined_vocal.mask        = second_vocal.mask[:,new_x_centroid-spectro_range:new_x_centroid+spectro_range]
 
             return combined_vocal
 
