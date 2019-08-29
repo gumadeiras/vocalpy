@@ -428,7 +428,7 @@ def parallel_audio_processing(chunk):
         end      = np.max(prop.coords[:,1])
         duration = end - start
 
-        if duration < 6:
+        if duration < 5:
             continue
 
         # -- get spectrogram and mask around each vocalization
@@ -452,6 +452,7 @@ def parallel_audio_processing(chunk):
             warnings.simplefilter('ignore')
             warnings.filterwarnings('ignore')
 
+        # ToDo implement local median filter
         if (prop.mean_intensity/bg_intensity) > 0.92:
             continue
 
@@ -477,7 +478,8 @@ def parallel_audio_processing(chunk):
                           avg_intensity   = prop.mean_intensity,
                           bg_intensity    = bg_intensity,
                           area            = prop.area,
-                          centroid        = [ceil(prop.centroid[1]), ceil(prop.centroid[0])],
+                          # centroid        = [ceil(prop.centroid[1]), ceil(prop.centroid[0])],
+                          centroid        = prop.centroid,
                           )
 
         img = np.flipud(Pxx_scaled[:,centroid_time-spectro_range:centroid_time+spectro_range])

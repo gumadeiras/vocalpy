@@ -4,6 +4,7 @@ import time
 import logging
 import numpy             as     np
 import matplotlib.pyplot as     plt
+from   tqdm              import tqdm
 
 import torch
 import torch.nn                 as     nn
@@ -36,40 +37,50 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, num_epochs=
             running_corrects = 0
 
             # Iterate over data.
-            for inputs, labels in dataloaders[phase]:
-                inputs = inputs.to(device)
-                labels = labels.to(device)
+            with tqdm(total=len(dataloaders[phase].dataset)*0.9/128) as t:
+                for itr, (inputs, labels) in enumerate(dataloaders[phase]):
+                    inputs = inputs.to(device)
+                    labels = labels.to(device)
 
-                # zero the parameter gradients
-                optimizer.zero_grad()
+                    # zero the parameter gradients
+                    optimizer.zero_grad()
 
-                # forward
-                # track history if only in train
-                with torch.set_grad_enabled(phase == 'train'):
-                    outputs = model(inputs)
-                    _, preds = torch.max(outputs, 1)
-                    loss = criterion(outputs, labels)
+                    # forward
+                    # track history if only in train
+                    with torch.set_grad_enabled(phase == 'train' or (itr+1)%4 ==0):
+                        outputs = model(inputs)
+                        _, preds = torch.max(outputs, 1)
+                        loss = criterion(outputs, labels)
 
-                    # backward + optimize only if in training phase
-                    if phase == 'train':
-                        loss.backward()
-                        optimizer.step()
+                        # backward + optimize only if in training phase
+                        if phase == 'train' or (itr+1)%4 ==0:
+                            loss.backward()
+                            optimizer.step()
 
-                # statistics
-                running_loss += loss.item() * inputs.size(0)
-                running_corrects += torch.sum(preds == labels.data)
+                    # statistics
+                    running_loss += loss.item() * inputs.size(0)
+                    running_corrects += torch.sum(preds == labels.data)
 
-            epoch_loss = running_loss / dataset_sizes[phase]
-            epoch_acc = running_corrects.double() / dataset_sizes[phase]
+                    running_avg_loss = running_loss/((itr+1)*128)
+                    t.set_postfix(loss='{:05.3f}'.format(running_avg_loss))
+                    t.update()
 
-            print('{} Loss: {:.4f} Acc: {:.4f}'.format(
-                phase, epoch_loss, epoch_acc))
+                if phase == 'train':
+                    epoch_loss = running_loss / len(dataloaders[phase].dataset)*0.9
+                    epoch_acc  = running_corrects.double() / len(dataloaders[phase].dataset)*0.9
+                else:
+                    epoch_loss = running_loss / len(dataloaders[phase].dataset)*0.1
+                    epoch_acc  = running_corrects.double() / len(dataloaders[phase].dataset)*0.1
 
-            # deep copy the model
-            if phase == 'val' and epoch_acc > best_acc:
-                best_acc = epoch_acc
-                best_model_wts = copy.deepcopy(model.state_dict())
-                torch.save(best_model_wts, 'resnet50_trained.pth')
+
+                print('{} Loss: {:.4f} Acc: {:.4f}'.format(
+                    phase, epoch_loss, epoch_acc))
+
+                # deep copy the model
+                if phase == 'val' and epoch_acc > best_acc:
+                    best_acc = epoch_acc
+                    best_model_wts = copy.deepcopy(model.state_dict())
+                    torch.save(best_model_wts, 'alexnet_trained.pth')
 
     time_elapsed = time.time() - since
     print('Training complete in {:.0f}m {:.0f}s'.format(
@@ -82,8 +93,8 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, num_epochs=
 
 if __name__ == '__main__':
     # -- training parameters
-    dataset_dir      = 'dataset/18-november-dirty-augment'
-    batch_size       = 64
+    dataset_dir      = '../dataset/18-november-dirty-augment'
+    batch_size       = 128
     validation_split = .2 # -- split training set into train/val sets
     epochs           = 100
     print('training params:\n dataset dir: {}\n batch size: {}\n val split: {}\n epochs: {}'.format(dataset_dir, batch_size, validation_split, epochs))
@@ -119,7 +130,7 @@ if __name__ == '__main__':
     }
 
     # -- load pre-trained resnet50
-    model    = models.resnet50(pretrained=True)
+    model    = models.alexnet(pretrained=True)
 
     # -- replace FC layer to match number of classes
     # model.fc = nn.Sequential(nn.Linear(2048, 512),
@@ -128,22 +139,21 @@ if __name__ == '__main__':
     #                          nn.Linear(512, num_classes),
     #                          nn.LogSoftmax(dim=1))
     # criterion        = nn.NLLLoss()
-    model.fc  = nn.Sequential(nn.Linear(2048, 512),
-                              nn.ReLU(inplace=True),
-                              nn.Dropout(0.2),
-                              nn.Linear(512, num_classes))
+    # model.fc  = nn.Sequential(nn.Linear(4096, 512),
+    #                           nn.ReLU(inplace=True),
+    #                           nn.Dropout(0.2),
+    #                           nn.Linear(512, num_classes))
+    model.classifier[6] = nn.Linear(4096, num_classes)
     criterion = nn.CrossEntropyLoss()
     # print('model: {}'.format(model))
 
     # -- optimizer
-    optimizer        = optim.Adam(model.parameters())
-    scheduler        = lrs.ReduceLROnPlateau(optimizer, mode='min', factor=0.01, patience=10)
+    optimizer        = optim.SGD(model.parameters(), lr=1e-3, momentum=0.9)
+    scheduler        = lrs.ReduceLROnPlateau(optimizer, mode='min', factor=0.01, patience=5)
     device           = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
     
     model = train_model(model, criterion, optimizer, scheduler, dataloaders, num_epochs=epochs)
-
-
 
     # -- train the model
     # running_loss             = 0
