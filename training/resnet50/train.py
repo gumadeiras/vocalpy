@@ -66,11 +66,11 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, num_epochs=
                     t.update()
 
                 if phase == 'train':
-                    epoch_loss = running_loss / len(dataloaders[phase].dataset)*0.9
-                    epoch_acc  = running_corrects.double() / len(dataloaders[phase].dataset)*0.9
+                    epoch_loss = running_loss / (len(dataloaders[phase].dataset)*0.9)
+                    epoch_acc  = running_corrects.double() / (len(dataloaders[phase].dataset)*0.9)
                 else:
-                    epoch_loss = running_loss / len(dataloaders[phase].dataset)*0.1
-                    epoch_acc  = running_corrects.double() / len(dataloaders[phase].dataset)*0.1
+                    epoch_loss = running_loss / (len(dataloaders[phase].dataset)*0.1)
+                    epoch_acc  = running_corrects.double() / (len(dataloaders[phase].dataset)*0.1)
 
 
                 print('{} Loss: {:.4f} Acc: {:.4f}'.format(
@@ -154,104 +154,3 @@ if __name__ == '__main__':
     model.to(device)
     
     model = train_model(model, criterion, optimizer, scheduler, dataloaders, num_epochs=epochs)
-
-
-
-    # -- train the model
-    # running_loss             = 0
-    # print_every              = 1
-    # train_losses, val_losses = [], []
-    # for epoch in range(epochs):
-    #     for itr (inputs, labels) in enumerate(dataloaders['train']):
-    #         inputs, labels = inputs.to(device), labels.to(device)
-    #         optimizer.zero_grad()
-    #         logps = model.forward(inputs)
-    #         loss = criterion(logps, labels)
-    #         loss.backward()
-    #         optimizer.step()
-    #         running_loss += loss.item()
-            
-    #         if itr % print_every == 0:
-    #             val_loss = 0
-    #             accuracy = 0
-    #             model.eval()
-    #             with torch.no_grad():
-    #                 for inputs, labels in dataloaders['val']:
-    #                     inputs, labels = inputs.to(device), labels.to(device)
-    #                     logps          = model.forward(inputs)
-    #                     batch_loss     = criterion(logps, labels)
-    #                     val_loss      += batch_loss.item()
-                        
-    #                     ps               = torch.exp(logps)
-    #                     top_p, top_class = ps.topk(1, dim=1)
-    #                     equals           = top_class == labels.view(*top_class.shape)
-    #                     accuracy        += torch.mean(equals.type(torch.FloatTensor)).item()
-                
-    #             train_losses.append(running_loss/len(dataloaders['train']))
-    #             val_losses.append(val_loss/len(dataloaders['val']))                    
-                
-    #             print(f"Epoch {epoch+1}/{epochs}.. "
-    #                   f"Train loss: {running_loss/print_every:.3f}.. "
-    #                   f"Test loss: {val_loss/len(dataloaders['val']):.3f}.. "
-    #                   f"Test accuracy: {accuracy/len(dataloaders['val']):.3f}")
-    #             running_loss = 0
-    #             model.train()
-    # torch.save(model, 'resnet50_trained.pth')
-
-
-
-
-
-
-    # for i in range(epochs):
-    #     for phase in ['train', 'val']:
-    #         if phase == 'train':
-    #             model.train()
-    #         else:
-    #             model.eval()
-            
-    #         samples     = 0
-    #         loss_sum    = 0
-    #         correct_sum = 0
-
-    #         for j, batch in enumerate(dataloaders[phase]):
-    #             X      = batch['image']
-    #             labels = batch['label']
-    #             if device == 'cuda':
-    #                 X      = X.cuda()
-    #                 labels = labels.cuda()
-
-    #             optimizer.zero_grad()
-
-    #             with torch.set_grad_enabled(phase == 'train'):
-    #                 y = model(X)
-    #                 loss = criterion(y, labels.view(-1, 1).float())
-
-    #                 if phase == 'train':
-    #                     loss.backward()
-    #                     optimizer.step()
-                        
-    #                 loss_sum     += loss.item() * X.shape[0] # We need to multiple by batch size as loss is the mean loss of the samples in the batch
-    #                 samples      += X.shape[0]
-    #                 num_corrects  = torch.sum((y >= 0.5).float() == labels.view(-1, 1).float())
-    #                 correct_sum  += num_corrects
-                    
-    #                 # Print batch statistics every 50 batches
-    #                 if j % 50 == 49 and phase == 'train':
-    #                     print('{}:{} - loss: {}, acc: {}'.format(
-    #                         i + 1, 
-    #                         j + 1, 
-    #                         float(loss_sum) / float(samples), 
-    #                         float(correct_sum) / float(samples)
-    #                     ))
-                    
-    #         # Print epoch statistics
-    #         epoch_acc = float(correct_sum) / float(samples)
-    #         epoch_loss = float(loss_sum) / float(samples)
-    #         print('epoch: {} - {} loss: {}, {} acc: {}'.format(i + 1, phase, epoch_loss, phase, epoch_acc))
-            
-    #         # Deep copy the model
-    #         if phase == 'val' and epoch_acc > best_acc:
-    #             best_acc = epoch_acc
-    #             best_model_wts = copy.deepcopy(model.state_dict())
-    #             torch.save(best_model_wts, 'resnet50.pth')

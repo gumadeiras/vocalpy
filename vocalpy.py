@@ -86,16 +86,14 @@ logger.info('recording parallel processing ({:.0f}m {:.0f}s)'.format(timeBParall
 list_of_vocals = ListOfVocals()
 list_of_vocals.combine_list_of_list_of_vocals(list_of_list_of_vocals=results)
 list_of_vocals.update_intervals()
-list_of_vocals.update_centroids_and_spectrograms()
-# list_of_vocals.save_list_of_vocals_object(path=audio_recording.output_dir)
 print(list_of_vocals)
 
 # -- update recording object and save data (images and excel)
 audio_recording._has_list_of_vocals = True
-audio_recording._list_of_vocals    = list_of_vocals
+audio_recording._list_of_vocals     = list_of_vocals
 audio_recording.save_recording_object(path=audio_recording.output_dir)
 audio_recording.save_spectrograms_and_masks(path=audio_recording.output_dir)
-audio_recording.save_recording_data_to_excel()
+audio_recording.save_recording_data_to_excel(path=audio_recording.output_dir)
 
 timeEnd   = time() - timeStart
 logger.info('total time: {:.0f}m {:.0f}s'.format(timeEnd//60,timeEnd%60))

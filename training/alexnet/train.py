@@ -66,12 +66,11 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, num_epochs=
                     t.update()
 
                 if phase == 'train':
-                    epoch_loss = running_loss / len(dataloaders[phase].dataset)*0.9
-                    epoch_acc  = running_corrects.double() / len(dataloaders[phase].dataset)*0.9
+                    epoch_loss = running_loss / (len(dataloaders[phase].dataset)*0.9)
+                    epoch_acc  = running_corrects.double() / (len(dataloaders[phase].dataset)*0.9)
                 else:
-                    epoch_loss = running_loss / len(dataloaders[phase].dataset)*0.1
-                    epoch_acc  = running_corrects.double() / len(dataloaders[phase].dataset)*0.1
-
+                    epoch_loss = running_loss / (len(dataloaders[phase].dataset)*0.1)
+                    epoch_acc  = running_corrects.double() / (len(dataloaders[phase].dataset)*0.1)
 
                 print('{} Loss: {:.4f} Acc: {:.4f}'.format(
                     phase, epoch_loss, epoch_acc))

@@ -265,10 +265,6 @@ def parallel_audio_processing(chunk):
         plt.title('Pxx (dB)')
         plt.show()
 
-    # -- rescale to save spectrograms in grayscale
-    dtype      = np.uint8
-    Pxx_scaled = exposure.rescale_intensity(Pxx, in_range='image', out_range=dtype)
-
     # -- normalize data
     # B = Pxx
     # Bmax = np.max(B)
@@ -323,6 +319,7 @@ def parallel_audio_processing(chunk):
     dilate12 = cv2.dilate(erode11, kernel_rect, iterations=1)
     dilate13 = cv2.dilate(dilate12, kernel_line2, iterations=1)
     erode14  = cv2.erode(dilate13, kernel_line1, iterations=2)
+
     if args.plot:
         plt.subplot(511)
         plt.pcolormesh(t[35000:40000], f, B[:,35000:40000], cmap='gray')
@@ -341,9 +338,15 @@ def parallel_audio_processing(chunk):
         plt.title('+ erode (4,1)')
         plt.show()
 
+    del B
+    del erode11
+    del dilate12
+    del dilate13
+
     timeAConnectedComponents = time()
     connectivity = 4
     num_cc, output, stats, centroids = cv2.connectedComponentsWithStats(erode14, connectivity, cv2.CV_32S)
+    del erode14
 
     # -- remove background stats
     num_cc = num_cc - 1
@@ -370,9 +373,12 @@ def parallel_audio_processing(chunk):
     kernel_line3 = np.ones((1,3), dtype=np.uint8)
     grain        = cv2.dilate(grain, kernel_line3, iterations=1)
 
-    # -- get spectrogram area using the segmentation mask
-    B_masked = Pxx * (((255 - grain) > 0) * 1)
+    # -- rescale to save spectrograms in 8bit grayscale
+    dtype      = np.uint8
+    Pxx_scaled = exposure.rescale_intensity(Pxx, in_range='image', out_range=dtype)
     if args.plot:
+        # -- get spectrogram area using the segmentation mask
+        B_masked = Pxx_scaled * (((255 - grain) > 0) * 1)
         plt.subplot(411)
         plt.pcolormesh(t[35000:40000], f, Pxx[:,35000:40000], cmap='gray')
         # plt.pcolormesh(t, f, Pxx, cmap='gray')
@@ -390,6 +396,7 @@ def parallel_audio_processing(chunk):
         # plt.pcolormesh(t, f, B_masked, cmap='gray')
         plt.title('B_masked')
         plt.show()
+        del B_masked
 
     # -- get connected components stats
     # --
@@ -432,7 +439,8 @@ def parallel_audio_processing(chunk):
             continue
 
         # -- get spectrogram and mask around each vocalization
-        spectro_range = 200 + 500  # 200 normal spectrogram range, extra 500 padding for combining vocals later
+        # spectro_range = 200 + 500  # 200 normal spectrogram range, extra 500 padding for combining vocals later
+        spectro_range = 200  # 200 normal spectrogram range, extra 500 padding for combining vocals later
         centroid_time = ceil(prop.centroid[1])
 
         # -- edge conditions, spectro_range goes over the spectrom vector limit (for this bin)
@@ -479,15 +487,15 @@ def parallel_audio_processing(chunk):
                           bg_intensity    = bg_intensity,
                           area            = prop.area,
                           # centroid        = [ceil(prop.centroid[1]), ceil(prop.centroid[0])],
-                          centroid        = prop.centroid,
+                          centroid        = np.rint(prop.centroid).astype(int),
                           )
 
-        img = np.flipud(Pxx_scaled[:,centroid_time-spectro_range:centroid_time+spectro_range])
-        new_vocal.spectrogram = img
+        # img = np.flipud(Pxx_scaled[:,centroid_time-spectro_range:centroid_time+spectro_range])
+        # new_vocal.spectrogram = img
         # new_vocal.save_spectrogram_as_image(path=output_dir, filename=str(vocal_id))
 
-        img = np.flipud(grain[:,centroid_time-spectro_range:centroid_time+spectro_range])
-        new_vocal.mask = img
+        # img = np.flipud(grain[:,centroid_time-spectro_range:centroid_time+spectro_range])
+        # new_vocal.mask = img
         # new_vocal.save_mask_as_image(path=output_dir, filename=str(vocal_id))
 
         vocal_list.append(new_vocal)
@@ -497,8 +505,9 @@ def parallel_audio_processing(chunk):
         # -- if list is not empty, create a list of vocals
         vocal_list = ListOfVocals(vocals_in_recording=np.asarray(vocal_list))
         timeAConnectVocals = time()
-        vocal_list.connect_vocals(combine_pass='first')
-        vocal_list.connect_vocals(combine_pass='second')
+        vocal_list.connect_vocals()
+        vocal_list.connect_vocals()
+        vocal_list.add_spectrograms_to_vocals(full_spectrogram=np.flipud(Pxx_scaled), full_mask=grain, spec_range=200)
         timeBConnectVocals = time()
         logger.info('[bin {}]: connecting vocals runtime: {:.2f}s'.format(this_bin, timeBConnectVocals - timeAConnectVocals))
 
