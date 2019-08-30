@@ -1,17 +1,18 @@
-import os
+#import os
 import copy
 import time
-import logging
+#import logging
 import numpy             as     np
-import matplotlib.pyplot as     plt
+#import matplotlib.pyplot as     plt
 
 import torch
 import torch.nn                 as     nn
 import torch.optim              as     optim
 from   torch.optim              import lr_scheduler as lrs
 from   torch.utils.data.sampler import SubsetRandomSampler
+import matplotlib.pyplot as plt
 
-import torchvision
+#import torchvision
 from   torchvision       import datasets, models, transforms
 
 def train_model(model, criterion, optimizer, scheduler, dataloaders, num_epochs=25):
@@ -23,6 +24,7 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, num_epochs=
     for epoch in range(num_epochs):
         print('Epoch {}/{}'.format(epoch, num_epochs - 1))
         print('-' * 10)
+
 
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
@@ -59,8 +61,8 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, num_epochs=
                 running_loss += loss.item() * inputs.size(0)
                 running_corrects += torch.sum(preds == labels.data)
 
-            epoch_loss = running_loss / dataset_sizes[phase]
-            epoch_acc = running_corrects.double() / dataset_sizes[phase]
+            epoch_loss = running_loss / dataset_size#[phase]
+            epoch_acc = running_corrects.double() / dataset_size#[phase]
 
             print('{} Loss: {:.4f} Acc: {:.4f}'.format(
                 phase, epoch_loss, epoch_acc))
@@ -82,8 +84,9 @@ def train_model(model, criterion, optimizer, scheduler, dataloaders, num_epochs=
 
 if __name__ == '__main__':
     # -- training parameters
-    dataset_dir      = 'dataset/18-november-dirty-augment'
-    batch_size       = 64
+    plt.ion()
+    dataset_dir      = 'Z:\\Dietrich_Server\\Gustavo\\dataset\\18-november-dirty-augment'
+    batch_size       = 32
     validation_split = .2 # -- split training set into train/val sets
     epochs           = 100
     print('training params:\n dataset dir: {}\n batch size: {}\n val split: {}\n epochs: {}'.format(dataset_dir, batch_size, validation_split, epochs))
@@ -133,7 +136,7 @@ if __name__ == '__main__':
                               nn.Dropout(0.2),
                               nn.Linear(512, num_classes))
     criterion = nn.CrossEntropyLoss()
-    # print('model: {}'.format(model))
+#    print('model: {}'.format(model))
 
     # -- optimizer
     optimizer        = optim.Adam(model.parameters())
