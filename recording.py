@@ -183,11 +183,14 @@ class Recording(object):
     def load_list_of_vocals(self):
         return load_file('list_of_vocals', self.output_dir)
 
-    def save_recording_data_to_excel(self, list_of_vocals=None):
+    def save_recording_data_to_excel(self, list_of_vocals=None, path=None):
         # -- save metadata to an excel file
-        if self._has_list_of_vocals != True:
+        if list_of_vocals is None and self._has_list_of_vocals != True:
             return -1
         list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
+
+        if path is None:
+            path = self.output_dir
 
         if list_of_vocals.intervals_fixed == False:
             list_of_vocals.update_intervals()
