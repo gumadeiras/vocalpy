@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-'''VocalPy - A python version based on (VocalMat by Antonio Fonseca)'''
+'''VocalPy - A python version based on VocalMat'''
 
-__author__    = 'Gustavo Madeira Santana'
 __email__     = 'gustavo.santana@yale.edu'
+__license__   = 'Apache License, Version 2.0'
 __copyright__ = '2019 Dietrich Lab - Yale University School of Medicine'
 
 
