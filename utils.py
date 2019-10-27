@@ -23,7 +23,7 @@ from PIL                 import Image
 from time                import time
 from math                import floor, ceil
 
-from scipy               import signal
+from scipy               import signal, ndimage
 from skimage             import exposure, measure
 
 
@@ -234,10 +234,14 @@ def parallel_audio_processing(chunk):
     B = bradley_roth(B, t=20)
     # B = bradley_roth(np.interp(B, (0,255), (0,1)), t=20)
     # B = ii8.max - B
+
     if args.plot:
         plt.pcolormesh(t[35000:40000], f, B[:,35000:40000], cmap='gray')
         plt.title('B binarized bradley roth')
-        plt.show()
+        plt.show()    
+
+    # -- median filter
+    B = ndimage.median_filter(B, size=(3,3))
 
     # -- kernels for morphological operations
     kernel_rect  = np.ones((4,2), np.uint8)
@@ -341,8 +345,8 @@ def parallel_audio_processing(chunk):
         plt.pcolormesh(t[35000:40000], f, Pxx[:,35000:40000], cmap='gray')
         plt.title('Pxx')
         plt.subplot(312)
-        plt.pcolormesh(t[35000:40000], f, B[:,35000:40000], cmap='gray')
-        plt.title('B')
+        plt.pcolormesh(t[35000:40000], f, grain[:,35000:40000], cmap='gray')
+        plt.title('grain')
         plt.subplot(313)
         plt.pcolormesh(t[35000:40000], f, labels[:,35000:40000], cmap='nipy_spectral')
         plt.title('Labels')
