@@ -178,6 +178,37 @@ class Viz(object):
 
         return data_values
 
+    def pointplot(self, dataname='avg_freq', inner='box'):
+        # -- visualize vocalization data throughtout the recording using a pointplot
+
+        data_column = self.get_data_column(dataname)
+        data_split  = self.split_data_by_indices(data_column)
+        data_values = pd.DataFrame([data for data in data_split]).T
+        
+        # -- shift row and columns to start at 1 instead of 0
+        data_values.index   = np.arange(1, len(data_values)+1)
+        data_values.columns = np.arange(1, len(data_values.columns)+1)
+
+        sns.set(style="whitegrid", palette="muted", color_codes=True)
+        f, ax = plt.subplots(1, 1, figsize=(12, 7), dpi=300)
+
+        sns.pointplot(data=data_values, color="coral", capsize=.1)
+
+        plt.title(dataname + " | " + self._recording_data.recording_name)
+        ax.set_xlabel('Bin')
+        ax.set_xlim(-1, self._bins)
+        
+        if dataname[-4:] == 'freq':
+            ax.set_ylim(40000, 125001)
+            ax.set_yticks(range(40000, 125001, 17000))
+        else:
+            ax.set_ylim(0)
+
+        # ax.set_ylabel(object_data.recording_name[0:4], rotation=90)
+        plt.tight_layout()
+
+        return data_values
+
     def violinplot(self, dataname='avg_freq', inner='box'):
         # -- visualize vocalization data throughtout the recording using a violin plot
 
