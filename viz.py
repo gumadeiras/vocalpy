@@ -60,8 +60,10 @@ class Viz(object):
         split_array = []
         dataframe = self._recording_df[['bin_number']]
         for idx in range(1, self._bins):
-            split_array.append(np.where(dataframe==idx*self._bin_size)[0][-1]+1)
-        
+            try:
+                split_array.append(np.where(dataframe==idx*self._bin_size)[0][-1]+1)
+            except:
+                print("recording {} had no vocals in bin {}".format(self._recording_data.recording_name, idx))
         return split_array
 
     def split_data_by_indices(self, dataframe):
@@ -239,3 +241,71 @@ class Viz(object):
         plt.tight_layout()
 
         return data_values
+
+
+class VizGroup(object):
+    '''
+    visualization object for a group of objects
+    '''
+    def __init__(self,
+                 list_of_groups,
+                 group_names    = None,
+                 bin_size       = 1):
+
+        self._list_of_groups    = list_of_groups
+        self._group_names       = np.asarray(group_names)
+        self._bin_size          = bin_size
+        self._number_of_groups  = self._group_names.shape[0]
+        self._list_of_viz       = None
+        self._list_of_group_viz = None
+
+        self.create_viz_for_each_recording()
+        self.create_group_viz()
+
+
+    def combine_viz_dataframes(self, list_of_viz=None):
+        if list_of_viz is None:
+            print("please provide a list_of_viz")
+            return -1
+        
+        dfs = list_of_viz[0]._recording_df
+        for i, viz in enumerate(list_of_viz):
+            if i == 0: continue
+            dfs = pd.concat([dfs, viz._recording_df], axis=0)
+
+        return dfs.sort_values('bin_number')
+
+    def combine_viz(self, list_of_viz, groupname):
+        if len(list_of_viz):
+            combined_df = self.combine_viz_dataframes(list_of_viz)
+            list_of_viz[0]._recording_df   = combined_df
+            list_of_viz[0]._recording_path = None
+            list_of_viz[0]._list_of_vocals = None
+            list_of_viz[0]._bin_size       = self._bin_size
+            number_of_bins_in_df           = combined_df['bin_number'].max()
+            list_of_viz[0]._bins           = int(math.floor(number_of_bins_in_df / self._bin_size)) + 1
+            
+            list_of_viz[0]._recording_data.recording_name = groupname
+            list_of_viz[0]._recording_data._list_of_vocals.number_of_vocals = np.sum([viz._recording_data._list_of_vocals.number_of_vocals for viz in list_of_viz])
+            
+            list_of_viz[0]._split_array    = list_of_viz[0].get_split_indices_for_bin_size()
+
+            return list_of_viz[0]
+        else:
+            return []
+
+    def create_viz_for_each_recording(self):
+        list_of_viz = []
+
+        for group in range(self._number_of_groups):
+            paths   = self._list_of_groups[group]
+            vizobjs = [Viz(recording_path=rec_path, bin_size=self._bin_size) for rec_path in paths]
+            list_of_viz.append(vizobjs)
+
+        self._list_of_viz = np.asarray(list_of_viz)
+        return 0
+
+    def create_group_viz(self):
+        self._list_of_group_viz = [self.combine_viz(group, self._group_names[i]) for i, group in enumerate(self._list_of_viz)]
+        return 0
+

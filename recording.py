@@ -66,11 +66,11 @@ class Recording(object):
         return self._has_list_of_vocals
     
     @list_of_vocals.setter
-    def has_list_of_vocals(self, new_list_of_vocals):
+    def list_of_vocals(self, new_list_of_vocals):
         self._list_of_vocals = new_list_of_vocals
 
-    def save_recording_object(self, path):
-        save_file(self, 'recording', path)
+    def save_recording_object(self, path, filename='recording'):
+        save_file(self, filename, path)
 
     def create_paths(self, recording_path):
         '''
@@ -249,6 +249,14 @@ class Recording(object):
         path           = path if path is not None else self.output_dir
         list_of_vocals.save_spectrograms(output_dir=path)
         list_of_vocals.save_masks(output_dir=path)
+        return 0
+
+    def remove_spectrograms_and_masks(self, list_of_vocals=None):
+        if self._has_list_of_vocals != True and list_of_vocals is None:
+            return -1
+        list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
+        list_of_vocals.remove_spectrograms()
+        list_of_vocals.remove_masks()
         return 0
 
     def create_dataset(self, list_of_vocals=None):

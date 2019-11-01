@@ -161,3 +161,13 @@ class ListOfVocals(object):
         for filename, vocal in enumerate(self.vocals_in_recording):
             vocal.save_mask_as_image(path=output_dir, filename=str(filename))
         return 0
+
+    def remove_spectrograms(self):
+        for vocal in self.vocals_in_recording:
+            vocal._spectrogram = None
+        return 0
+
+    def remove_masks(self):
+        for vocal in self.vocals_in_recording:
+            vocal._mask = None
+        return 0

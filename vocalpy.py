@@ -94,6 +94,8 @@ audio_recording._list_of_vocals     = list_of_vocals
 audio_recording.save_recording_object(path=audio_recording.output_dir)
 audio_recording.save_spectrograms_and_masks(path=audio_recording.output_dir)
 audio_recording.save_recording_data_to_excel(path=audio_recording.output_dir)
+audio_recording.remove_spectrograms_and_masks()
+audio_recording.save_recording_object(filename='recording_wo_spectrograms', path=audio_recording.output_dir)
 
 timeEnd   = time() - timeStart
 logger.info('total time: {:.0f}m {:.0f}s'.format(timeEnd//60,timeEnd%60))
