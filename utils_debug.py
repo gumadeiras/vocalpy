@@ -3,7 +3,7 @@
 
 __author__    = 'Gustavo Madeira Santana'
 __email__     = 'gustavo.santana@yale.edu'
-__copyright__ = '2019 Dietrich Lab - Yale University School of Medicine'
+__copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
 
 #ToDo
 #Numba maybe
