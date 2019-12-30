@@ -12,7 +12,7 @@ from classes.vocal import Vocal
 
 class ListOfVocals(object):
     '''
-    list of vocalizations
+    list of vocalizations (Vocal class)
     '''
 
     def __init__(self, vocals_in_recording=None):
@@ -29,7 +29,11 @@ class ListOfVocals(object):
 
     def __str__(self):
         # return "{}: vocals_in_recording: {} \n number_of_vocals: {} \n vocals_processed: {}".format(self.__class__.__name__, self.vocals_in_recording, self.number_of_vocals, self.vocals_processed)
-        return "{}:\n number_of_vocals: {} \n vocals_combined: {} \n intervals_fixed: {} \n centroid_spectro_fixed: {}".format(self.__class__.__name__, self.number_of_vocals, self.vocals_combined, self.intervals_fixed, self.centroid_spectro_fixed)
+        return "{}:\n number_of_vocals: {} \n vocals_combined: {} \n intervals_fixed: {} \n centroid_spectro_fixed: {}".format(self.__class__.__name__,
+                                                                                                                               self.number_of_vocals,
+                                                                                                                               self.vocals_combined,
+                                                                                                                               self.intervals_fixed,
+                                                                                                                               self.centroid_spectro_fixed)
 
     def save_list_of_vocals_object(self, path):
         from utils import save_file
@@ -40,7 +44,7 @@ class ListOfVocals(object):
         self.vocals_in_recording[0].interval = 0
 
         for idx in range(1, len(self.vocals_in_recording), 1):
-            self.vocals_in_recording[idx].interval = np.abs((self.vocals_in_recording[idx - 1].end - self.vocals_in_recording[idx].start) * 1000)
+            self.vocals_in_recording[idx].interval = np.abs((self.vocals_in_recording[idx - 1].end - self.vocals_in_recording[idx].start))
 
         self.intervals_fixed = True
         return 0
@@ -51,11 +55,6 @@ class ListOfVocals(object):
             # -- combines two vocals into one
             start_difference = first_vocal.start - second_vocal.start
             end_difference = first_vocal.end - second_vocal.end
-
-            first_centroid = first_vocal.centroid
-            first_area = first_vocal.area
-            second_centroid = second_vocal.centroid
-            second_area = second_vocal.area
 
             # -- new centroid will be updated from vocal start/end and min/max frequency
             combined_vocal = Vocal(bin_number=first_vocal.bin_number if (first_vocal.bin_number < second_vocal.bin_number) else second_vocal.bin_number,
@@ -85,7 +84,7 @@ class ListOfVocals(object):
         idx = 0
         there_are_vocals = True
         while there_are_vocals is True:
-            # merge this vocals with vocals that are within 12ms 
+            # merge this vocals with vocals that are within 12ms
             try:
                 base_vocal = self.vocals_in_recording[idx]
                 new_vocal = base_vocal
@@ -134,8 +133,8 @@ class ListOfVocals(object):
             cy = vocal.min_freq_coord + ((vocal.max_freq_coord - vocal.min_freq_coord) // 2)
             vocal.centroid = np.rint([cy, cx]).astype(np.int)
 
+        self.centroid_spectro_fixed = True
         return 0
-
 
     def combine_list_of_list_of_vocals(self, list_of_list_of_vocals):
         new_list_of_vocals = []
@@ -149,6 +148,7 @@ class ListOfVocals(object):
         self.vocals_in_recording = np.hstack(new_list_of_vocals)
         self.number_of_vocals = len(self.vocals_in_recording)
         self.vocals_combined = True
+        self.centroid_spectro_fixed = True
         return 0
 
     def add_spectrograms_to_vocals(self, full_spectrogram, full_mask, spec_range=200):
@@ -184,4 +184,10 @@ class ListOfVocals(object):
     def remove_masks(self):
         for vocal in self.vocals_in_recording:
             vocal._mask = None
+        return 0
+
+    def remove_vocals_classified_as_noise(self, predictions):
+        self.vocals_in_recording = self.vocals_in_recording[predictions]
+        self.number_of_vocals = len(self.vocals_in_recording)
+        self.update_intervals()
         return 0

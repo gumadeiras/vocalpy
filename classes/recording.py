@@ -5,24 +5,23 @@ __email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
 __copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
 
-
-import os
-
 import numpy as np
 import pandas as pd
 import soundfile as sf
 
 from math import ceil
+from os import makedirs
+from os.path import join, split, splitext, exists
 
-from utils.io import save_file, load_file
+from utils.io import save_file, load_file, create_directory, remove_directory
 
 
 class Recording(object):
     '''
-    audio recording object and auxiliary functions to process the recordings
+    audio recording object and auxiliary functions to process the recording
     '''
 
-    def __init__(self, recording_path=None, args=None):
+    def __init__(self, recording_path, args):
         self.args = args
         self.recording_path = recording_path
         self.recording_dir = None
@@ -43,14 +42,16 @@ class Recording(object):
 
         self.low_frequency_cutoff = args.frequency[0]
         self.high_frequency_cutoff = args.frequency[1]
-        self.bin_size = self.args.bin_size
+        self.bin_size = self.args.bin_size if (self.args.bin_size < self.recording_duration) else self.recording_duration
         self.bins = ceil(self.recording_duration / self.bin_size)
         self.chunks = self.create_chunks()
         self._list_of_vocals = None
         self._has_list_of_vocals = None
 
     def __str__(self):
-        return "{}:\n sample rate: {} \n samples min: {} \n samples max: {}".format(self.__class__.__name__, self.sample_rate, self.samples_min, self.samples_max)
+        return "{}:\n duration: {} \n sampling rate: {}".format(self.__class__.__name__,
+                                                                self.recording_duration,
+                                                                self.sample_rate)
 
     @property
     def has_list_of_vocals(self):
@@ -75,22 +76,22 @@ class Recording(object):
         '''
         create directory structure for output files
         '''
-        basepath, filename = os.path.split(recording_path)
+        basepath, filename = split(recording_path)
         self.recording_dir = basepath
         self.recording_name = filename
-        filename = os.path.splitext(filename)[0]
-        self.output_dir = os.path.join(self.recording_dir, filename + '_outputs')
-        self.spectrogram_dir = os.path.join(self.output_dir, 'spectrogram')
-        self.mask_dir = os.path.join(self.output_dir, 'mask')
+        filename = splitext(filename)[0]
+        self.output_dir = join(self.recording_dir, filename + '_outputs')
+        self.spectrogram_dir = join(self.output_dir, 'spectrogram')
+        self.mask_dir = join(self.output_dir, 'mask')
 
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir, exist_ok=True)
+        if not exists(self.output_dir):
+            makedirs(self.output_dir, exist_ok=True)
 
-        if not os.path.exists(self.spectrogram_dir):
-            os.makedirs(self.spectrogram_dir, exist_ok=True)
+        if not exists(self.spectrogram_dir):
+            makedirs(self.spectrogram_dir, exist_ok=True)
 
-        if not os.path.exists(self.mask_dir):
-            os.makedirs(self.mask_dir, exist_ok=True)
+        if not exists(self.mask_dir):
+            makedirs(self.mask_dir, exist_ok=True)
 
     def read_audio(self):
         '''
@@ -179,8 +180,8 @@ class Recording(object):
     def load_list_of_vocals(self):
         return load_file('list_of_vocals', self.output_dir)
 
-    def save_recording_data_to_excel(self, list_of_vocals=None, path=None):
-        # -- save metadata to an excel file
+    def save_recording_data_to_csv(self, list_of_vocals=None, path=None):
+        # -- save metadata to a csv file
         if list_of_vocals is None and self._has_list_of_vocals is not True:
             return -1
         list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
@@ -192,14 +193,13 @@ class Recording(object):
             list_of_vocals.update_intervals()
 
         recording_df = pd.DataFrame(columns=['bin_number',
-                                             'start',
-                                             'end',
-                                             'duration',
-                                             'interval',
+                                             'start(s)',
+                                             'end(s)',
+                                             'duration(ms)',
+                                             'interval(s)',
                                              'min_freq',
                                              'max_freq',
                                              'avg_freq',
-                                             'median_freq',
                                              'bandwidth',
                                              'min_intensity',
                                              'max_intensity',
@@ -211,14 +211,13 @@ class Recording(object):
 
         for this_vocal in list_of_vocals.vocals_in_recording:
             recording_df = recording_df.append({'bin_number': this_vocal.bin_number,
-                                                'start': this_vocal.start,
-                                                'end': this_vocal.end,
-                                                'duration': this_vocal.duration,
-                                                'interval': this_vocal.interval,
+                                                'start(s)': this_vocal.start,
+                                                'end(s)': this_vocal.end,
+                                                'duration(ms)': this_vocal.duration,
+                                                'interval(s)': this_vocal.interval,
                                                 'min_freq': this_vocal.min_freq,
                                                 'max_freq': this_vocal.max_freq,
                                                 'avg_freq': this_vocal.avg_freq,
-                                                'median_freq': this_vocal.median_freq,
                                                 'bandwidth': this_vocal.bandwidth,
                                                 'min_intensity': this_vocal.min_intensity,
                                                 'max_intensity': this_vocal.max_intensity,
@@ -228,13 +227,23 @@ class Recording(object):
                                                 'centroid': this_vocal.centroid,
                                                 }, ignore_index=True)
 
-        # -- sort vocalizations by start time and save to excel
-        recording_df.sort_values(by='start',
+        # -- sort vocalizations by start time and save csv
+        recording_df.sort_values(by='start(s)',
                                  ascending=True,
                                  inplace=True,
                                  kind='quicksort',
                                  na_position='last')
-        recording_df.to_excel(os.path.join(self.output_dir, 'recording_stats.xlsx'))
+        recording_df.to_csv(join(self.output_dir, 'recording_stats.csv'))
+        return 0
+
+    def save_spectrograms(self, list_of_vocals=None, path=None):
+        if self._has_list_of_vocals is not True and list_of_vocals is None:
+            return -1
+        list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
+        path = path if path is not None else self.output_dir
+        remove_directory(join(path, 'spectrogram'))
+        create_directory(join(path, 'spectrogram'))
+        list_of_vocals.save_spectrograms(output_dir=path)
         return 0
 
     def save_spectrograms_and_masks(self, list_of_vocals=None, path=None):
@@ -242,11 +251,15 @@ class Recording(object):
             return -1
         list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
         path = path if path is not None else self.output_dir
+        remove_directory(join(path, 'spectrogram'))
+        create_directory(join(path, 'spectrogram'))
         list_of_vocals.save_spectrograms(output_dir=path)
+        remove_directory(join(path, 'mask'))
+        create_directory(join(path, 'mask'))
         list_of_vocals.save_masks(output_dir=path)
         return 0
 
-    def remove_spectrograms_and_masks(self, list_of_vocals=None):
+    def remove_spectrograms_and_masks_from_object(self, list_of_vocals=None):
         if self._has_list_of_vocals is not True and list_of_vocals is None:
             return -1
         list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals

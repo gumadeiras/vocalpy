@@ -148,8 +148,8 @@ def parallel_audio_processing(chunk):
 
     time_res = sample_range_secs / t.shape[0]
     freq_res = (np.max(f) - low_frequency_cutoff) / f.shape[0]
-    timeBSpectrogram = time()
-    logger.info('[bin {}]: spectrogram runtime: {:.2f}s'.format(this_bin, timeBSpectrogram - timeASpectrogram))
+
+    logger.info('[bin {}]: spectrogram runtime: {:.2f}s'.format(this_bin, time() - timeASpectrogram))
     logger.info('[bin {}]: time resolution: {:.2f}ms'.format(this_bin, time_res * 1000))
     logger.info('[bin {}]: freq resolution: {:.2f}Hz'.format(this_bin, freq_res))
 
@@ -208,34 +208,44 @@ def parallel_audio_processing(chunk):
     kernel_line1 = np.ones((4, 1), np.uint8)
     kernel_line2 = np.ones((5, 1), np.uint8)
 
-    # -- morphological operations
-    erode11 = cv2.erode(B, kernel_line1, iterations=1)
-    dilate12 = cv2.dilate(erode11, kernel_rect, iterations=1)
-    dilate13 = cv2.dilate(dilate12, kernel_line2, iterations=1)
-    erode14 = cv2.erode(dilate13, kernel_line1, iterations=2)
-
     if args.plot:
         plt.subplot(511)
         plt.pcolormesh(t[print_range_a:print_range_b], f, B[:, print_range_a:print_range_b], cmap='gray')
         plt.title('B')
+
+    # -- morphological operations
+    erode11 = cv2.erode(B, kernel_line1, iterations=1)
+    del B
+
+    if args.plot:
         plt.subplot(512)
         plt.pcolormesh(t[print_range_a:print_range_b], f, erode11[:, print_range_a:print_range_b], cmap='gray')
         plt.title('B + erode (4,1)')
+
+    dilate12 = cv2.dilate(erode11, kernel_rect, iterations=1)
+    del erode11
+
+    if args.plot:
         plt.subplot(513)
         plt.pcolormesh(t[print_range_a:print_range_b], f, dilate12[:, print_range_a:print_range_b], cmap='gray')
         plt.title('+ dilate (4,2)')
+
+    dilate13 = cv2.dilate(dilate12, kernel_line2, iterations=1)
+    del dilate12
+
+    if args.plot:
         plt.subplot(514)
         plt.pcolormesh(t[print_range_a:print_range_b], f, dilate13[:, print_range_a:print_range_b], cmap='gray')
         plt.title('+ dilate (5,1)')
+
+    erode14 = cv2.erode(dilate13, kernel_line1, iterations=2)
+    del dilate13
+
+    if args.plot:
         plt.subplot(515)
         plt.pcolormesh(t[print_range_a:print_range_b], f, erode14[:, print_range_a:print_range_b], cmap='gray')
         plt.title('+ erode (4,1)')
         plt.show()
-
-    del B
-    del erode11
-    del dilate12
-    del dilate13
 
     timeAConnectedComponents = time()
     connectivity = 4
@@ -285,6 +295,7 @@ def parallel_audio_processing(chunk):
         plt.title('B_masked')
         plt.show()
         del B_masked
+    del Pxx_scaled
 
     # -- get connected components stats
     timeARegionProps = time()
@@ -294,10 +305,9 @@ def parallel_audio_processing(chunk):
                                 intensity_image=Pxx,
                                 cache=True,
                                 coordinates='rc')
-    props = sorted(props, key=lambda p: np.min(p.coords[:, 1]), reverse=False)
-    timeBRegionProps = time()
-    logger.info('[bin {}]: region props runtime: {:.2f}s'.format(
-        this_bin, timeBRegionProps - timeARegionProps))
+    props = sorted(props, key=lambda p: np.min(p.coords[:, 1]), reverse=False) # sort segments by time
+
+    logger.info('[bin {}]: region props runtime: {:.2f}s'.format(this_bin, time() - timeARegionProps))
     if args.plot:
         plt.subplot(311)
         plt.pcolormesh(t[print_range_a:print_range_b], f, Pxx[:, print_range_a:print_range_b], cmap='gray')
@@ -309,6 +319,7 @@ def parallel_audio_processing(chunk):
         plt.pcolormesh(t[print_range_a:print_range_b], f, labels[:, print_range_a:print_range_b], cmap='nipy_spectral')
         plt.title('Labels')
         plt.show()
+    del labels
 
     timeAVocal = time()
     vocal_id = 0
@@ -332,7 +343,8 @@ def parallel_audio_processing(chunk):
         centroid_time = ceil(prop.centroid[1])
 
         # -- edge conditions, spectro_range goes over the spectrom vector limit (for this bin)
-        # with warnings.catch_warnings():
+        # -- left edge: -200 is before vector start index
+        # -- right edge: +200 is after vector end index
         with warnings.catch_warnings():
             warnings.filterwarnings('error')
             try:
@@ -358,8 +370,6 @@ def parallel_audio_processing(chunk):
         min_freq = (min_freq_coord * freq_res) + low_frequency_cutoff
         max_freq = (max_freq_coord * freq_res) + low_frequency_cutoff
         avg_freq = (np.mean(prop.coords[:, 0]) * freq_res) + low_frequency_cutoff
-        median_freq = np.median(prop.coords[:, 0])
-        median_freq = (median_freq * freq_res) + low_frequency_cutoff
         bandwidth = max_freq - min_freq
 
         new_vocal = Vocal(bin_number=this_bin,
@@ -374,7 +384,6 @@ def parallel_audio_processing(chunk):
                           min_freq_coord=min_freq_coord,
                           max_freq_coord=max_freq_coord,
                           avg_freq=avg_freq,
-                          median_freq=median_freq,
                           bandwidth=bandwidth,
                           min_intensity=prop.min_intensity,
                           max_intensity=prop.max_intensity,
@@ -387,6 +396,8 @@ def parallel_audio_processing(chunk):
         vocal_list.append(new_vocal)
         vocal_id = vocal_id + 1
 
+    del props
+
     # -- if list is not empty, create a list of vocals
     if len(vocal_list):
         vocal_list = ListOfVocals(vocals_in_recording=np.asarray(vocal_list))
@@ -394,7 +405,12 @@ def parallel_audio_processing(chunk):
         vocal_list.connect_vocals()
         vocal_list.connect_vocals()
         vocal_list.update_centroids()
-        vocal_list.add_spectrograms_to_vocals(full_spectrogram=np.flipud(Pxx_scaled), full_mask=np.flipud(grain), spec_range=200)
+
+        # -- rescale pixel values to save spectrograms in 8bits
+        dtype = np.uint8
+        Pxx = exposure.rescale_intensity(Pxx, in_range='image', out_range=dtype)
+        vocal_list.add_spectrograms_to_vocals(full_spectrogram=np.flipud(Pxx), full_mask=np.flipud(grain), spec_range=206) # 206 ~ 210ms @ 0.51ms resolution
+
         logger.info('[bin {}]: connecting vocals runtime: {:.2f}s'.format(this_bin, time() - timeAConnectVocals))
 
     logger.info('[bin {}]: list of vocals runtime: {:.2f}s'.format(this_bin, time() - timeAVocal))

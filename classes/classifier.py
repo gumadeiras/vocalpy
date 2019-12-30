@@ -5,39 +5,116 @@ __email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
 __copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
 
-import glob
+import os
+import torch
 
 import numpy as np
-
-from PIL import Image
-
-import torch
+import torch.nn as nn
 import torch.utils.data as data
-
 import torchvision.models as models
 import torchvision.transforms as transforms
 
+from PIL import Image
+from glob import glob
+from torch.autograd import Variable
+from os.path import join, basename, splitext
+
 from utils.io import load_checkpoint
 
-class NoiseClassifier(object):
+
+class VocalNoiseClassifier(object):
     '''
     CNN noise classifier class
     '''
 
-    def __init__(self):
-        self.model = load_pretrained_noise_model()
+    def __init__(self, path_to_spectrograms, batch_size=32, path_to_checkpoint=None):
+        self.path_to_spectrograms = path_to_spectrograms
+        self.batch_size = batch_size
+        self.path_to_checkpoint = path_to_checkpoint
 
-    def load_pretrained_noise_model(self):
+        self.cuda_available = torch.cuda.is_available()
+        self.device = torch.device('cuda' if self.cuda_available else 'cpu')
+
+        self.model = self.load_pretrained_noise_model(self.path_to_checkpoint, self.device)
+        self.dataset = self.create_dataset(self.path_to_spectrograms)
+        self.dataloader = self.create_dataloader(self.dataset, self.batch_size)
+
+    def load_pretrained_noise_model(self, path_to_checkpoint, device):
         '''
-        load MobileNet-V2 pretrained model
-        trained to classify spectrograms as Vocal or Noise
+        load MobileNet-V2 pretrained model,
+        trained to classify spectrograms as Vocal or Noise;
+        or model at path provided by the user.
         '''
-        print('load_pretrained_noise_model not implemented')
-        model = load_checkpoint("../models/noise_classifier.pth")
+        if path_to_checkpoint is None:
+            model = models.mobilenet_v2()
+            model.classifier    = nn.Sequential(nn.Dropout(0.2),
+                                                nn.Linear(1280, 1024),
+                                                nn.ReLU(inplace=True),
+                                                nn.Linear(1024, 2))
+
+            model_path = "../models/mobilenet_v2_noise_checkpoint.pth.tar"
+            classifier_dir_path = os.path.dirname(os.path.abspath(__file__))
+            model_path = join(classifier_dir_path, model_path)
+            load_checkpoint(model_path, model, device)
+            model.eval()
+
+        else:
+            load_checkpoint(path_to_checkpoint, model, device)
+
         return model
 
+    def create_dataset(self, path_to_spectrograms):
+        '''
+        create a dataset by instantiating the VocalDatasetFromFolder class
 
-class ClassClassifier(object):
+        Args:
+            path_to_spectrograms: (string) path to directory that
+                contains the spectrogram images used to create the dataset
+        '''
+        return VocalDatasetFromFolder(path_to_spectrograms)
+
+    def create_dataloader(self, dataset, batch_size):
+        '''
+        create a DataLoader to load data from the dataset
+
+        Args:
+            dataset: (VocalDatasetFromFolder) dataset class instance
+            batch_size: (int) batch size number
+        '''
+        return data.DataLoader(dataset,
+                               batch_size=batch_size,
+                               shuffle=False,
+                               num_workers=0)
+
+    def classify_list_of_vocals(self, list_of_vocals):
+        '''
+        classify candidate vocalizations found in the recording;
+        candidates are classified as vocal or noise;
+
+        Args:
+            list_of_vocals: (ListOfVocals) list of candidate vocals
+
+        returns class probabilities for all vocals in the list of vocals
+        '''
+        predictions = []
+
+        # compute metrics over the dataset
+        for itr, image in enumerate(self.dataloader):
+            image = image.to(self.device)
+            image = Variable(image)
+
+            score = self.model(image)
+            _, predicted = torch.max(score.data, 1)
+            predictions.append(predicted.numpy())
+
+        return np.hstack(predictions).astype('bool')
+
+    def remove_candidates_classified_as_noise(self, classifications, list_of_vocals):
+        print("remove_candidates_classified_as_noise() not implemented")
+        return 0
+
+
+class VocalClassClassifier(object):
     '''
     CNN class classifier class
     '''
@@ -53,33 +130,35 @@ class ClassClassifier(object):
 
 
 class VocalDatasetFromFolder(data.Dataset):
-    """Create a vocalization dataset
+    '''Create a vocalization dataset
 
     Arguments:
         dataset_path {string} -- path to the dataset
 
     Keyword Arguments:
-        transforms {optional} -- A function/transform that takes in an PIL image and returns a transformed version. (default: {None})
-    """
+        transforms {optional} -- A function/transform that takes in a PIL
+        image and returns a transformed version. (default: {None})
+    '''
 
     def __init__(self, dataset_path):
         self.dataset_path = dataset_path
-        self.transforms = transforms
-        self.file_names = [f for f in glob.glob("*.png")]
-        self.images = [os.path.join(self.dataset_path, f + '.png') for f in file_names]
+        # -- get file names and sort ascending
+        self.filenames = sorted([basename(splitext(f)[0]) for f in glob(join(self.dataset_path, '*.png'))], key=int)
+        # -- build back full path to images
+        self.images = [join(self.dataset_path, f + '.png') for f in self.filenames]
 
     def __getitem__(self, index):
-        img = Image.open(self.images[index])
-        transToTensor = transforms.Compose([transforms.ToTensor()])
-        img = transToTensor(Image.fromarray(img))
-
+        img = Image.open(self.images[index]).convert('RGB')
+        transToTensor = transforms.Compose([transforms.Resize((224,224)),
+                                            transforms.ToTensor()])
+        img = transToTensor(img)
         return img
 
     def __len__(self):
         return len(self.images)
 
 # class VocalDataset(data.Dataset):
-#     """Create a vocalization dataset
+#     '''Create a vocalization dataset
 
 #     Arguments:
 #         dataset_path {string} -- path to the dataset, expects the following structure:
@@ -89,7 +168,7 @@ class VocalDatasetFromFolder(data.Dataset):
 
 #     Keyword Arguments:
 #         transforms {optional} -- A function/transform that takes in an PIL image and returns a transformed version. (default: {None})
-#     """
+#     '''
 #     def __init__(self,
 #                  dataset_path,
 #                  transforms=None):
