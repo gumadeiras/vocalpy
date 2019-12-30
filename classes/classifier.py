@@ -22,12 +22,18 @@ from os.path import join, basename, splitext
 from utils.io import load_checkpoint
 
 
-class VocalNoiseClassifier(object):
+class VocalClassifier(object):
     '''
     CNN noise classifier class
     '''
 
-    def __init__(self, path_to_spectrograms, batch_size=32, path_to_checkpoint=None):
+    def __init__(self, type, path_to_spectrograms, batch_size=32, path_to_checkpoint=None):
+        if type in ['noise', 'class']:
+            self.type = type
+        else:
+            print('VocalClassifiier type must be \'noise\' or \'class\'')
+            print('provided value {}'.format(type))
+
         self.path_to_spectrograms = path_to_spectrograms
         self.batch_size = batch_size
         self.path_to_checkpoint = path_to_checkpoint
@@ -35,11 +41,15 @@ class VocalNoiseClassifier(object):
         self.cuda_available = torch.cuda.is_available()
         self.device = torch.device('cuda' if self.cuda_available else 'cpu')
 
-        self.model = self.load_pretrained_noise_model(self.path_to_checkpoint, self.device)
+        if self.type is 'noise':
+            self.model = self.load_pretrained_noise_model(self.path_to_checkpoint, self.device)
+        else:
+            self.model = self.load_pretrained_class_model(self.path_to_checkpoint, self.device)
+
         self.dataset = self.create_dataset(self.path_to_spectrograms)
         self.dataloader = self.create_dataloader(self.dataset, self.batch_size)
 
-    def load_pretrained_noise_model(self, path_to_checkpoint, device):
+    def load_pretrained_noise_model(self, path_to_checkpoint, device, model=None):
         '''
         load MobileNet-V2 pretrained model,
         trained to classify spectrograms as Vocal or Noise;
@@ -47,12 +57,37 @@ class VocalNoiseClassifier(object):
         '''
         if path_to_checkpoint is None:
             model = models.mobilenet_v2()
-            model.classifier    = nn.Sequential(nn.Dropout(0.2),
-                                                nn.Linear(1280, 1024),
-                                                nn.ReLU(inplace=True),
-                                                nn.Linear(1024, 2))
+            model.classifier = nn.Sequential(nn.Dropout(0.2),
+                                             nn.Linear(1280, 1024),
+                                             nn.ReLU(inplace=True),
+                                             nn.Linear(1024, 2))
 
-            model_path = "../models/mobilenet_v2_noise_checkpoint.pth.tar"
+            model_path = '../models/mobilenet_v2_noise_checkpoint.pth.tar'
+            classifier_dir_path = os.path.dirname(os.path.abspath(__file__))
+            model_path = join(classifier_dir_path, model_path)
+            load_checkpoint(model_path, model, device)
+            model.eval()
+
+        else:
+            load_checkpoint(path_to_checkpoint, model, device)
+
+        return model
+
+    def load_pretrained_class_model(self, path_to_checkpoint, device, model=None):
+        '''
+        load MobileNet-V2 pretrained model,
+        trained to classify spectrograms as one of eleven classes:
+        chevron, complex, down_fm, flat, mult_steps, rev_chevron, short, step_down, step_up, two_steps, up_fm
+        or model at path provided by the user.
+        '''
+        if path_to_checkpoint is None:
+            model = models.mobilenet_v2()
+            model.classifier = nn.Sequential(nn.Dropout(0.2),
+                                             nn.Linear(1280, 1024),
+                                             nn.ReLU(inplace=True),
+                                             nn.Linear(1024, 2))
+
+            model_path = '../models/mobilenet_v2_noise_checkpoint.pth.tar'
             classifier_dir_path = os.path.dirname(os.path.abspath(__file__))
             model_path = join(classifier_dir_path, model_path)
             load_checkpoint(model_path, model, device)
@@ -87,6 +122,35 @@ class VocalNoiseClassifier(object):
                                num_workers=0)
 
     def classify_list_of_vocals(self, list_of_vocals):
+        if self.type is 'noise':
+            return self.classify_list_of_vocals_noise(list_of_vocals)
+        else:
+            return self.classify_list_of_vocals_class(list_of_vocals)
+
+    def classify_list_of_vocals_class(self, list_of_vocals):
+        '''
+        classify candidate vocalizations found in the recording;
+        candidates are classified as vocal or noise;
+
+        Args:
+            list_of_vocals: (ListOfVocals) list of candidate vocals
+
+        returns class probabilities for all vocals in the list of vocals
+        '''
+        predictions = []
+
+        # compute metrics over the dataset
+        for itr, image in enumerate(self.dataloader):
+            image = image.to(self.device)
+            image = Variable(image)
+
+            score = self.model(image)
+            _, predicted = torch.max(score.data, 1)
+            predictions.append(predicted.numpy())
+
+        return np.hstack(predictions).astype('bool')
+
+    def classify_list_of_vocals_noise(self, list_of_vocals):
         '''
         classify candidate vocalizations found in the recording;
         candidates are classified as vocal or noise;
@@ -110,7 +174,7 @@ class VocalNoiseClassifier(object):
         return np.hstack(predictions).astype('bool')
 
     def remove_candidates_classified_as_noise(self, classifications, list_of_vocals):
-        print("remove_candidates_classified_as_noise() not implemented")
+        print('remove_candidates_classified_as_noise() not implemented')
         return 0
 
 
@@ -178,7 +242,7 @@ class VocalDatasetFromFolder(data.Dataset):
 
 #         file_list = os.path.join(dataset_path, 'filenames.txt')
 
-#         with open(file_list, "r") as f:
+#         with open(file_list, 'r') as f:
 #             file_names = [x.strip() for x in f.readlines()]
 
 #         self.images = [os.path.join(self.image_path, x + '.png') for x in file_names]

@@ -49,7 +49,7 @@ class Recording(object):
         self._has_list_of_vocals = None
 
     def __str__(self):
-        return "{}:\n duration: {} \n sampling rate: {}".format(self.__class__.__name__,
+        return '{}:\n duration: {} \n sampling rate: {}'.format(self.__class__.__name__,
                                                                 self.recording_duration,
                                                                 self.sample_rate)
 
@@ -205,8 +205,9 @@ class Recording(object):
                                              'max_intensity',
                                              'avg_intensity',
                                              'bg_intensity',
-                                             'area',
-                                             'centroid',
+                                             'area(pixels)',
+                                             'centroid_x',
+                                             'centroid_y',
                                              ])
 
         for this_vocal in list_of_vocals.vocals_in_recording:
@@ -223,8 +224,9 @@ class Recording(object):
                                                 'max_intensity': this_vocal.max_intensity,
                                                 'avg_intensity': this_vocal.avg_intensity,
                                                 'bg_intensity': this_vocal.bg_intensity,
-                                                'area': this_vocal.area,
-                                                'centroid': this_vocal.centroid,
+                                                'area(pixels)': this_vocal.area,
+                                                'centroid_x': this_vocal.centroid[1],
+                                                'centroid_y': this_vocal.centroid[0],
                                                 }, ignore_index=True)
 
         # -- sort vocalizations by start time and save csv
@@ -233,6 +235,9 @@ class Recording(object):
                                  inplace=True,
                                  kind='quicksort',
                                  na_position='last')
+
+        # -- start index from 1 instead of 0
+        recording_df.index = np.arange(1, len(recording_df)+1)
         recording_df.to_csv(join(self.output_dir, 'recording_stats.csv'))
         return 0
 
@@ -275,5 +280,5 @@ class Recording(object):
             return -1
         list_of_vocals = list_of_vocals if list_of_vocals is not None else self.load_list_of_vocals()
 
-        print("create_dataset not implemented")
+        print('create_dataset not implemented')
         return 0

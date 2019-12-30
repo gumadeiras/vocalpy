@@ -71,7 +71,7 @@ class Vocal(object):
         self._probabilities = probabilities
 
     def __str__(self):
-        return "{}:\n bin_number: {} \n start: {} \n end: {} \n duration: {} \n interval: {} \n min_freq: {} \n max_freq: {} \n avg_freq: {} \n bandwidth: {} \n min_intensity: {} \n max_intensity: {} \n avg_intensity: {} \n bg_intensity: {} \n area: {} \n centroid: {} \n orientation: {} \n".format(self.__class__.__name__,
+        return '{}:\n bin_number: {} \n start: {} \n end: {} \n duration: {} \n interval: {} \n min_freq: {} \n max_freq: {} \n avg_freq: {} \n bandwidth: {} \n min_intensity: {} \n max_intensity: {} \n avg_intensity: {} \n bg_intensity: {} \n area: {} \n centroid: {} \n orientation: {} \n'.format(self.__class__.__name__,
                                                                                                                                                                                                                                                                                                            self.bin_number,
                                                                                                                                                                                                                                                                                                            self.start,
                                                                                                                                                                                                                                                                                                            self.end,
@@ -160,10 +160,6 @@ class Vocal(object):
     @property
     def area(self):
         return self._area
-
-    # @property
-    # def points(self):
-    #     return self._points
 
     @property
     def centroid(self):
@@ -299,7 +295,7 @@ class Vocal(object):
 
     def save_spectrogram_as_image(self, path=None, filename='vocal'):
         if exists(path) is False:
-            raise ValueError("path does not existe: {}".format(path))
+            raise ValueError('path does not exist: {}'.format(path))
 
         img = Image.fromarray(self.spectrogram)
         img = img.convert('L')
@@ -307,7 +303,7 @@ class Vocal(object):
 
     def save_mask_as_image(self, path=None, filename='vocal'):
         if exists(path) is False:
-            raise ValueError("path does not existe: {}".format(path))
+            raise ValueError('path does not exist: {}'.format(path))
 
         img = Image.fromarray(self.mask)
         img = img.convert('L')
@@ -315,7 +311,7 @@ class Vocal(object):
 
     def save_cnn_mask_as_image(self, path=None, filename='vocal'):
         if exists(path) is False:
-            raise ValueError("path does not existe: {}".format(path))
+            raise ValueError('path does not exist: {}'.format(path))
 
         img = Image.fromarray(self.cnn_mask)
         img = img.convert('L')

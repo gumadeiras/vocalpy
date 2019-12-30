@@ -12,7 +12,7 @@ from joblib import Parallel, delayed
 
 from classes.recording import Recording
 from classes.list_of_vocals import ListOfVocals
-from classes.classifier import VocalNoiseClassifier
+from classes.classifier import VocalClassifier
 from utils.processing import parallel_audio_processing
 from utils.misc import create_logger, get_core_count, validate_arguments
 from utils.io import parse_input_path, create_output_directory_structure, create_directory
@@ -28,8 +28,8 @@ if __name__ == '__main__':
     args = p.parse_args()
 
     # -- let the user know about the help menu and verbose output
-    print("run \"python vocalpy.py -h\" to show the help menu")
-    print("use \"-v\" to enable verbose output (recommended)")
+    print('run \'python vocalpy.py -h\' to show the help menu')
+    print('use \'-v\' to enable verbose output (recommended)')
 
     # -- get core count for parallelization
     num_cores = get_core_count(args.threads)
@@ -54,8 +54,8 @@ if __name__ == '__main__':
         create_directory(output_dir)
         create_logger(args, output_dir)
         logger = getLogger()
-        logger.info('selected file: {}'.format(audio_path))
-        logger.info('output files will be saved to: {}'.format(output_dir))
+        logger.info('selected file:\n\t{}'.format(audio_path))
+        logger.info('output files will be saved to:\n\t{}'.format(output_dir))
 
         # -- create Recording object
         timeStart = time()
@@ -94,7 +94,7 @@ if __name__ == '__main__':
         # -- classify candidate vocalizations as Vocal or Noise; remove Noise
         logger.info('classifying candidate vocalizations as vocal or noise')
         timeAclassification = time()
-        NoiseClassifier = VocalNoiseClassifier(recording.spectrogram_dir)
+        NoiseClassifier = VocalClassifier(type='noise', path_to_spectrograms=recording.spectrogram_dir)
         predictions = NoiseClassifier.classify_list_of_vocals(recording.list_of_vocals)
         recording._list_of_vocals.remove_vocals_classified_as_noise(predictions)
         recording._list_of_vocals.update_intervals()

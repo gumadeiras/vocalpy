@@ -55,8 +55,8 @@ def validate_arguments(args, num_cores):
 
 def validate_bin_size(bin_size):
     if bin_size < 0:
-        print("bin_size must be a positive integer.")
-        print("provided value: {:2f}".format(bin_size))
+        print('bin_size must be a positive integer.')
+        print('provided value: {:2f}'.format(bin_size))
         exit()
     return 0
 
@@ -64,22 +64,22 @@ def validate_bin_size(bin_size):
 def validate_frequency_range(frequency_range):
     low_freq, high_freq = frequency_range
     if (low_freq > high_freq) & (high_freq != -1):
-        print("low frequency cutoff must be lower than the high frequency cutoff.")
-        print("provided values: low_freq={}; high_freq={}".format(low_freq, high_freq))
+        print('low frequency cutoff must be lower than the high frequency cutoff.')
+        print('provided values: low_freq={}; high_freq={}'.format(low_freq, high_freq))
         exit()
     return 0
 
 
 def validate_thread_count(threads, num_cores):
     if threads < 0:
-        print("number of threads must be a positive integer.")
-        print("provded value: {}".format(threads))
-        print("computer core count: {}".format(num_cores))
+        print('number of threads must be a positive integer.')
+        print('provded value: {}'.format(threads))
+        print('computer core count: {}'.format(num_cores))
         exit()
     if threads > num_cores:
-        print("WARNING: number of threads is higher than number of available cores.")
-        print("provded value: {}".format(threads))
-        print("computer core count: {}".format(num_cores))
+        print('WARNING: number of threads is higher than number of available cores.')
+        print('provded value: {}'.format(threads))
+        print('computer core count: {}'.format(num_cores))
     return 0
 
 

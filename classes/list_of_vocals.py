@@ -28,8 +28,8 @@ class ListOfVocals(object):
         self.centroid_spectro_fixed = False
 
     def __str__(self):
-        # return "{}: vocals_in_recording: {} \n number_of_vocals: {} \n vocals_processed: {}".format(self.__class__.__name__, self.vocals_in_recording, self.number_of_vocals, self.vocals_processed)
-        return "{}:\n number_of_vocals: {} \n vocals_combined: {} \n intervals_fixed: {} \n centroid_spectro_fixed: {}".format(self.__class__.__name__,
+        # return '{}: vocals_in_recording: {} \n number_of_vocals: {} \n vocals_processed: {}'.format(self.__class__.__name__, self.vocals_in_recording, self.number_of_vocals, self.vocals_processed)
+        return '{}:\n number_of_vocals: {} \n vocals_combined: {} \n intervals_fixed: {} \n centroid_spectro_fixed: {}'.format(self.__class__.__name__,
                                                                                                                                self.number_of_vocals,
                                                                                                                                self.vocals_combined,
                                                                                                                                self.intervals_fixed,
@@ -99,7 +99,7 @@ class ListOfVocals(object):
             # -- 1) next vocal starts within 12ms from base vocal start time
             # -- 2) next vocal starts within 12ms from base vocal end time
             # -- 3) next vocal starts within base vocal start/end (harmonic)
-            max_interval = 0.011  # 12ms - 1ms error because of morphological ops
+            max_interval = 0.011  # 12ms - 1ms error because morph ops increase area
             next_vocal_is_close = True if (np.abs(base_vocal.end - next_vocal.start) < max_interval or np.abs(base_vocal.start - next_vocal.start) < max_interval or (next_vocal.start >= base_vocal.start and next_vocal.start <= base_vocal.end)) else False
 
             idx = idx + 1
@@ -167,12 +167,12 @@ class ListOfVocals(object):
         return 0
 
     def save_spectrograms(self, output_dir=None):
-        for filename, vocal in enumerate(self.vocals_in_recording):
+        for filename, vocal in enumerate(self.vocals_in_recording, start=1):
             vocal.save_spectrogram_as_image(path=output_dir, filename=str(filename))
         return 0
 
     def save_masks(self, output_dir=None):
-        for filename, vocal in enumerate(self.vocals_in_recording):
+        for filename, vocal in enumerate(self.vocals_in_recording, start=1):
             vocal.save_mask_as_image(path=output_dir, filename=str(filename))
         return 0
 
