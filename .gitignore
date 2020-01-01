@@ -124,11 +124,7 @@ dmypy.json
 .pyre/
 
 # Custom 
-
-*.wav
 .DS_Store
-*audio*/*
-*outputs*/*
 archive/*
-dataset/*
+audios/audio_example_outputs/*
 notebooks/debug.ipynb
