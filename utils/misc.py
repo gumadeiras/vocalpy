@@ -36,20 +36,10 @@ def create_logger(args=None, out_dir=None):
                             ])
 
 
-def get_core_count(threads=0):
-    '''
-    use number of threads provided by the user or get the cpu core count
-    '''
-    if threads > 0:
-        return threads
-    else:
-        return cpu_count()
-
-
-def validate_arguments(args, num_cores):
+def validate_arguments(args):
     validate_bin_size(args.bin_size)
     validate_frequency_range(args.frequency)
-    validate_thread_count(args.threads, num_cores)
+    validate_thread_count(args.threads)
     return 0
 
 
@@ -70,16 +60,18 @@ def validate_frequency_range(frequency_range):
     return 0
 
 
-def validate_thread_count(threads, num_cores):
+def validate_thread_count(threads):
+    num_cores = cpu_count()
     if threads < 0:
         print('number of threads must be a positive integer.')
-        print('provded value: {}'.format(threads))
+        print('provided value: {}'.format(threads))
         print('computer core count: {}'.format(num_cores))
         exit()
     if threads > num_cores:
-        print('WARNING: number of threads is higher than number of available cores.')
-        print('provded value: {}'.format(threads))
-        print('computer core count: {}'.format(num_cores))
+        print('WARNING: number of threads is equal or higher than number of available cores.')
+        print('WARNING: if your CPU has hyperthreading, use number of physical cores for better performance.' )
+        print('provided value: {}'.format(threads))
+        print('computer thread count: {}'.format(num_cores))
     return 0
 
 

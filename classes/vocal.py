@@ -41,7 +41,9 @@ class Vocal(object):
                  mask=None,
                  cnn_mask=None,
                  label=None,
-                 probabilities=None):
+                 probabilities=None,
+                 top1=None,
+                 top2=None):
 
         self._bin_number = bin_number
         self._start = start
@@ -69,6 +71,8 @@ class Vocal(object):
         self._cnn_mask = cnn_mask
         self._label = label
         self._probabilities = probabilities
+        self._top1 = top1
+        self._top2 = top2
 
     def __str__(self):
         return '{}:\n bin_number: {} \n start: {} \n end: {} \n duration: {} \n interval: {} \n min_freq: {} \n max_freq: {} \n avg_freq: {} \n bandwidth: {} \n min_intensity: {} \n max_intensity: {} \n avg_intensity: {} \n bg_intensity: {} \n area: {} \n centroid: {} \n orientation: {} \n'.format(self.__class__.__name__,
@@ -189,6 +193,14 @@ class Vocal(object):
     def probabilities(self):
         return self._probabilities
 
+    @property
+    def top1(self):
+        return self._top1
+
+    @property
+    def top2(self):
+        return self._top2
+
     @bin_number.setter
     def bin_number(self, new_bin_number):
         self._bin_number = new_bin_number
@@ -261,10 +273,6 @@ class Vocal(object):
     def area(self, new_area):
         self._area = new_area
 
-    # @points.setter
-    # def points(self, new_points):
-        #     self._points  = new_points
-
     @centroid.setter
     def centroid(self, new_centroid):
         self._centroid = new_centroid
@@ -292,6 +300,14 @@ class Vocal(object):
     @probabilities.setter
     def probabilities(self, new_probabilities):
         self._probabilities = new_probabilities
+
+    @top1.setter
+    def top1(self, new_top1):
+        self._top1 = new_top1
+
+    @top2.setter
+    def top2(self, new_top2):
+        self._top2 = new_top2
 
     def save_spectrogram_as_image(self, path=None, filename='vocal'):
         if exists(path) is False:

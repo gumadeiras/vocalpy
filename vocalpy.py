@@ -11,10 +11,10 @@ from argparse import ArgumentParser
 from joblib import Parallel, delayed
 
 from classes.recording import Recording
-from classes.list_of_vocals import ListOfVocals
 from classes.classifier import VocalClassifier
+from classes.list_of_vocals import ListOfVocals
 from utils.processing import parallel_audio_processing
-from utils.misc import create_logger, get_core_count, validate_arguments
+from utils.misc import create_logger, validate_arguments
 from utils.io import parse_input_path, create_output_directory_structure, create_directory
 
 if __name__ == '__main__':
@@ -31,17 +31,21 @@ if __name__ == '__main__':
     print('run \'python vocalpy.py -h\' to show the help menu')
     print('use \'-v\' to enable verbose output (recommended)')
 
-    # -- get core count for parallelization
-    num_cores = get_core_count(args.threads)
 
     # -- parse input audio path provided by the user
     list_of_files = parse_input_path(args.audio_path)
     list_of_output_dirs = create_output_directory_structure(list_of_files)
     # -- assert the number of input files and output dirs are the same
-    assert len(list_of_files) == len(list_of_output_dirs)
+    try:
+        assert len(list_of_files) == len(list_of_output_dirs)
+    except AssertionError:
+        print("list of audio files provided and list to be processed are different")
+        print("number of audio files: {}; number of files to be processed: {}".format(len(list_of_files), 
+                                                                                      len(list_of_output_dirs)))
+        exit()
 
     # -- validate arguments provided by the user
-    validate_arguments(args, num_cores)
+    validate_arguments(args)
 
     # -- process each input file sequentially
     # -- each file is broken into chunks
@@ -54,8 +58,8 @@ if __name__ == '__main__':
         create_directory(output_dir)
         create_logger(args, output_dir)
         logger = getLogger()
-        logger.info('selected file:\n\t{}'.format(audio_path))
-        logger.info('output files will be saved to:\n\t{}'.format(output_dir))
+        logger.info('selected file:\n{}'.format(audio_path))
+        logger.info('output files will be saved to:\n{}'.format(output_dir))
 
         # -- create Recording object
         timeStart = time()
@@ -70,7 +74,7 @@ if __name__ == '__main__':
         # -- distribute Recording chunks to available cores
         # -- process each chunk and find candidate vocalizations
         timeAParallel = time()
-        results = Parallel(n_jobs=num_cores, require='sharedmem')(delayed(parallel_audio_processing)(i) for i in recording.chunks)
+        results = Parallel(n_jobs=args.threads, require='sharedmem')(delayed(parallel_audio_processing)(i) for i in recording.chunks)
         recording.recording_processing_finished()
         logger.info('recording parallel processing ({:.0f}m {:.0f}s)'.format((time() - timeAParallel) // 60, (time() - timeAParallel) % 60))
 
@@ -96,17 +100,25 @@ if __name__ == '__main__':
         timeAclassification = time()
         NoiseClassifier = VocalClassifier(type='noise', path_to_spectrograms=recording.spectrogram_dir)
         predictions = NoiseClassifier.classify_list_of_vocals(recording.list_of_vocals)
-        recording._list_of_vocals.remove_vocals_classified_as_noise(predictions)
-        recording._list_of_vocals.update_intervals()
-        logger.info('done classifying ({:.0f}s)'.format(time() - timeAclassification))
+        logger.info('removing candidates classified as noise')
+        recording.remove_vocals_classified_as_noise_from_list_of_vocals(predictions)
+        recording.save_spectrograms_and_masks(path=recording.output_dir)
+        logger.info('done classifying and removing ({:.0f}s)'.format(time() - timeAclassification))
         logger.info(recording._list_of_vocals)
+
+        logger.info('classifying vocalizations')
+        timeAclassification = time()
+        ClassClassifier = VocalClassifier(type='class', path_to_spectrograms=recording.spectrogram_dir)
+        predictions = ClassClassifier.classify_list_of_vocals(recording.list_of_vocals)
+        logger.info('adding classification to vocals')
+        recording.update_vocals_with_class_classification(predictions, ClassClassifier.classes)
+        logger.info('done classifying and updating vocals({:.0f}s)'.format(time() - timeAclassification))
 
         # -- we are done :)
         # -- save output files
         logger.info('saving recording object, vocalizations, and csv file')
         timeAsaving = time()
         recording.save_recording_object(path=recording.output_dir)
-        recording.save_spectrograms_and_masks(path=recording.output_dir)
         recording.remove_spectrograms_and_masks_from_object()
         recording.save_recording_object(filename='recording_without_spectrograms', path=recording.output_dir)
         recording.save_recording_data_to_csv(path=recording.output_dir)

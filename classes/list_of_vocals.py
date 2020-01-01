@@ -5,6 +5,8 @@ __email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
 __copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
 
+import torch
+
 import numpy as np
 
 from classes.vocal import Vocal
@@ -62,7 +64,7 @@ class ListOfVocals(object):
                                    start_coord=first_vocal.start_coord if (start_difference < 0) else second_vocal.start_coord,
                                    end=first_vocal.end if (end_difference > 0) else second_vocal.end,
                                    end_coord=first_vocal.end_coord if (end_difference > 0) else second_vocal.end_coord,
-                                   interval=-1,
+                                   interval=-1, # -- updated after noise candidates are removed
                                    min_freq=first_vocal.min_freq if (first_vocal.min_freq < second_vocal.min_freq) else second_vocal.min_freq,
                                    max_freq=first_vocal.max_freq if (first_vocal.max_freq > second_vocal.max_freq) else second_vocal.max_freq,
                                    min_freq_coord=first_vocal.min_freq_coord if (first_vocal.min_freq_coord < second_vocal.min_freq_coord) else second_vocal.min_freq_coord,
@@ -190,4 +192,17 @@ class ListOfVocals(object):
         self.vocals_in_recording = self.vocals_in_recording[predictions]
         self.number_of_vocals = len(self.vocals_in_recording)
         self.update_intervals()
+        return 0
+
+    def add_classification_to_vocals(self, predictions, classes):
+        for idx, vocal in enumerate(self.vocals_in_recording):
+            vocal.probabilities = predictions[idx]
+
+            # -- convert numpy to torch, to use TopK function
+            preds = torch.tensor(predictions[idx])
+            # -- get top2 probabilities and their class names
+            top1, top2 = preds.topk(2).indices.numpy()
+            vocal.top1 = classes[top1]
+            vocal.top2 = classes[top2]
+
         return 0

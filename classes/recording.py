@@ -63,7 +63,7 @@ class Recording(object):
 
     @property
     def list_of_vocals(self):
-        return self._has_list_of_vocals
+        return self._list_of_vocals
 
     @list_of_vocals.setter
     def list_of_vocals(self, new_list_of_vocals):
@@ -206,8 +206,9 @@ class Recording(object):
                                              'avg_intensity',
                                              'bg_intensity',
                                              'area(pixels)',
-                                             'centroid_x',
                                              'centroid_y',
+                                             'class_top1',
+                                             'class_top2'
                                              ])
 
         for this_vocal in list_of_vocals.vocals_in_recording:
@@ -225,8 +226,9 @@ class Recording(object):
                                                 'avg_intensity': this_vocal.avg_intensity,
                                                 'bg_intensity': this_vocal.bg_intensity,
                                                 'area(pixels)': this_vocal.area,
-                                                'centroid_x': this_vocal.centroid[1],
                                                 'centroid_y': this_vocal.centroid[0],
+                                                'class_top1': this_vocal.top1,
+                                                'class_top2': this_vocal.top2,
                                                 }, ignore_index=True)
 
         # -- sort vocalizations by start time and save csv
@@ -238,7 +240,7 @@ class Recording(object):
 
         # -- start index from 1 instead of 0
         recording_df.index = np.arange(1, len(recording_df)+1)
-        recording_df.to_csv(join(self.output_dir, 'recording_stats.csv'))
+        recording_df.to_csv(join(self.output_dir, 'recording_stats.csv'), float_format='%.6f')
         return 0
 
     def save_spectrograms(self, list_of_vocals=None, path=None):
@@ -281,4 +283,23 @@ class Recording(object):
         list_of_vocals = list_of_vocals if list_of_vocals is not None else self.load_list_of_vocals()
 
         print('create_dataset not implemented')
+        return 0
+
+    def remove_vocals_classified_as_noise_from_list_of_vocals(self, predictions):
+        # -- remove vocals that were classifier as noise
+        self._list_of_vocals.remove_vocals_classified_as_noise(predictions)
+        # -- update inter-vocal intervals after removing noise
+        self._list_of_vocals.update_intervals()
+        return 0
+
+    def update_vocals_with_class_classification(self, predictions, classes):
+        # -- make sure number of predictions is the same as number of vocals
+        try:
+            assert self._list_of_vocals.number_of_vocals == predictions.shape[0]
+        except AssertionError:
+            print("[error] number of vocals: {}; number of predictions: {}".format(self._list_of_vocals.number_of_vocals, predictions.shape[0]))
+            exit()
+
+        # -- add probability distribution for each vocal, top1 and top2 classes
+        self._list_of_vocals.add_classification_to_vocals(predictions, classes)
         return 0
