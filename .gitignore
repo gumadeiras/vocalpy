@@ -131,3 +131,4 @@ dmypy.json
 *outputs*/*
 archive/*
 training/dataset/*
+notebooks/debug.ipynb
