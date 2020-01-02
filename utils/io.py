@@ -10,6 +10,8 @@ import torch
 import shutil
 import pickle
 
+import numpy as np
+
 from sys import exit
 from os import makedirs
 from os.path import basename, exists, isdir, isfile, join, splitext
@@ -27,6 +29,10 @@ def load_file(filename, path):
         raise ValueError('path does not existe: {}'.format(path))
 
     return pickle.load(open(join(path, filename + '.vocalpy'), 'rb'))
+
+
+def load_recording_data(path):
+    return np.load(path, allow_pickle=True)
 
 
 def load_checkpoint(checkpoint, model, device, optimizer=None):

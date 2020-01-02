@@ -45,6 +45,7 @@ class Recording(object):
         self.bin_size = self.args.bin_size if (self.args.bin_size < self.recording_duration) else self.recording_duration
         self.bins = ceil(self.recording_duration / self.bin_size)
         self.chunks = self.create_chunks()
+        self._group_name = 'not set'
         self._list_of_vocals = None
         self._has_list_of_vocals = None
 
@@ -68,6 +69,14 @@ class Recording(object):
     @list_of_vocals.setter
     def list_of_vocals(self, new_list_of_vocals):
         self._list_of_vocals = new_list_of_vocals
+
+    @property
+    def group_name(self):
+        return self._group_name
+
+    @group_name.setter
+    def group_name(self, new_group_name):
+        self._group_name = new_group_name
 
     def save_recording_object(self, path, filename='recording'):
         save_file(self, filename, path)

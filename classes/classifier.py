@@ -85,10 +85,10 @@ class VocalClassifier(object):
         if model is None:
             model = models.mobilenet_v2()
             # -- add extra layers after the 'classifier' sequence
-            model.fc = nn.Sequential(nn.Dropout(0.2),
-                                     nn.Linear(1280, 1024),
-                                     nn.ReLU(inplace=True),
-                                     nn.Linear(1024, 11))
+            model.classifier = nn.Sequential(nn.Dropout(0.2),
+                               nn.Linear(1280, 1024),
+                               nn.ReLU(inplace=True),
+                               nn.Linear(1024, 11))
 
             model_path = '../models/class_model.pth.tar'
             classifier_dir_path = os.path.dirname(os.path.abspath(__file__))

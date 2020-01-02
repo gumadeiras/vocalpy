@@ -50,6 +50,7 @@ if __name__ == '__main__':
     # -- process each input file sequentially
     # -- each file is broken into chunks
     # -- chunks are processed in parallel
+    timeAllRecordings = time()
     for file_idx in range(0, len(list_of_files)):
         audio_path = list_of_files[file_idx]
         output_dir = list_of_output_dirs[file_idx]
@@ -112,7 +113,7 @@ if __name__ == '__main__':
         predictions = ClassClassifier.classify_list_of_vocals(recording.list_of_vocals)
         logger.info('adding classification to vocals')
         recording.update_vocals_with_class_classification(predictions, ClassClassifier.classes)
-        logger.info('done classifying and updating vocals({:.0f}s)'.format(time() - timeAclassification))
+        logger.info('done classifying and updating vocals ({:.0f}s)'.format(time() - timeAclassification))
 
         # -- we are done :)
         # -- save output files
@@ -125,3 +126,4 @@ if __name__ == '__main__':
         logger.info('done saving ({:.0f}s)'.format(time() - timeAsaving))
 
         logger.info('total runtime: {:.0f}m {:.0f}s'.format((time() - timeStart) // 60, (time() - timeStart) % 60))
+    logger.info('total runtime for all recordings: {:.0f}m {:.0f}s'.format((time() - timeAllRecordings) // 60, (time() - timeAllRecordings) % 60))
