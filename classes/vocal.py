@@ -34,7 +34,6 @@ class Vocal(object):
                  avg_intensity=None,
                  bg_intensity=None,
                  area=None,
-                 # points        = None,
                  centroid=None,
                  orientation=None,
                  spectrogram=None,
