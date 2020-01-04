@@ -40,8 +40,9 @@ class Recording(object):
 
         self.read_audio()
 
-        self.low_frequency_cutoff = args.frequency[0]
-        self.high_frequency_cutoff = args.frequency[1]
+        low_freq, high_freq = [int(f) for f in args.frequency.split(',')]
+        self.low_frequency_cutoff = low_freq
+        self.high_frequency_cutoff = high_freq
         self.bin_size = self.args.bin_size if (self.args.bin_size < self.recording_duration) else self.recording_duration
         self.bins = ceil(self.recording_duration / self.bin_size)
         self.chunks = self.create_chunks()

@@ -51,7 +51,7 @@ class ListOfVocals(object):
         self.intervals_fixed = True
         return 0
 
-    def connect_vocals(self):
+    def connect_vocals(self, animal):
         # -- connects vocals that are at most 12ms apart
         def combine_vocals(first_vocal, second_vocal):
             # -- combines two vocals into one
@@ -97,19 +97,43 @@ class ListOfVocals(object):
                 there_are_vocals = False
                 break
 
-            # -- conditions to check:
-            # -- 1) next vocal starts within 12ms from base vocal start time
-            # -- 2) next vocal starts within 12ms from base vocal end time
-            # -- 3) next vocal starts within base vocal start/end (harmonic)
-            max_interval = 0.011  # 12ms - 1ms error because morph ops increase area
-            next_vocal_is_close = True if (np.abs(base_vocal.end - next_vocal.start) < max_interval or np.abs(base_vocal.start - next_vocal.start) < max_interval or (next_vocal.start >= base_vocal.start and next_vocal.start <= base_vocal.end)) else False
+            if animal in ['mouse', 'rat']:
+                # -- conditions to check:
+                # -- 1) next vocal starts within 12ms from base vocal start time
+                # -- 2) next vocal starts within 12ms from base vocal end time
+                # -- 3) next vocal starts within base vocal start/end (harmonic)
+                max_interval = 0.011  # 12ms - 1ms error because morph ops increase area
+                condition_1 = np.abs(base_vocal.end - next_vocal.start) < max_interval
+                condition_2 = np.abs(base_vocal.start - next_vocal.start) < max_interval
+                condition_3 = (next_vocal.start >= base_vocal.start) and (next_vocal.end <= base_vocal.end)
+            elif animal == 'guineapig':                
+                # -- conditions to check:
+                # -- 1) next vocal starts within 100ms from base vocal start time AND
+                # -- next vocal frequency is higher than the base vocal frequency
+                # -- 2) next vocal starts within 100ms from base vocal end time AND
+                # -- next vocal frequency is higher than the base vocal frequency
+                # -- 3) next vocal starts/ends within base vocal start/end (harmonic)
+                max_interval = 0.1  # 100ms
+                condition_1 = (np.abs(base_vocal.end - next_vocal.start) < max_interval) and (next_vocal.min_freq > base_vocal.max_freq)
+                condition_2 = (np.abs(base_vocal.start - next_vocal.start) < max_interval) and (next_vocal.min_freq > base_vocal.max_freq)
+                condition_3 = (next_vocal.start >= base_vocal.start and next_vocal.end <= base_vocal.end)
+            next_vocal_is_close = True if (condition_1 or condition_2 or condition_3) else False
 
             idx = idx + 1
             while next_vocal_is_close is True:
                 new_vocal = combine_vocals(new_vocal, next_vocal)
                 try:
                     next_vocal = self.vocals_in_recording[idx + 1]
-                    next_vocal_is_close = True if (np.abs(new_vocal.end - next_vocal.start) < max_interval or np.abs(new_vocal.start - next_vocal.start) < max_interval or (next_vocal.start >= new_vocal.start and next_vocal.end <= new_vocal.end)) else False
+                    if animal in ['mouse', 'rat']:
+                        condition_1 = np.abs(new_vocal.end - next_vocal.start) < max_interval
+                        condition_2 = np.abs(new_vocal.start - next_vocal.start) < max_interval
+                        condition_3 = (next_vocal.start >= new_vocal.start) and (next_vocal.end <= new_vocal.end)
+                        next_vocal_is_close = True if (condition_1 or condition_2 or condition_3) else False
+                    elif animal == 'guineapig':                
+                        condition_1 = (np.abs(new_vocal.end - next_vocal.start) < max_interval) and (next_vocal.min_freq > new_vocal.max_freq)
+                        condition_2 = (np.abs(new_vocal.start - next_vocal.start) < max_interval) and (next_vocal.min_freq > new_vocal.max_freq)
+                        condition_3 = (next_vocal.start >= new_vocal.start and next_vocal.end <= new_vocal.end)
+                    next_vocal_is_close = True if (condition_1 or condition_2 or condition_3) else False
                 except:
                     next_vocal_is_close = False
                 idx = idx + 1

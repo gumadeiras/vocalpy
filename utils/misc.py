@@ -40,6 +40,7 @@ def validate_arguments(args):
     validate_bin_size(args.bin_size)
     validate_frequency_range(args.frequency)
     validate_thread_count(args.threads)
+    validate_animal(args.animal)
     return 0
 
 
@@ -52,7 +53,7 @@ def validate_bin_size(bin_size):
 
 
 def validate_frequency_range(frequency_range):
-    low_freq, high_freq = frequency_range
+    low_freq, high_freq = [int(f) for f in frequency_range.split(',')]
     if (low_freq > high_freq) & (high_freq != -1):
         print('low frequency cutoff must be lower than the high frequency cutoff.')
         print('provided values: low_freq={}; high_freq={}'.format(low_freq, high_freq))
@@ -72,6 +73,14 @@ def validate_thread_count(threads):
         print('WARNING: if your CPU has hyperthreading, use number of physical cores for better performance.' )
         print('provided value: {}'.format(threads))
         print('computer thread count: {}'.format(num_cores))
+    return 0
+
+
+def validate_animal(animal):
+    if animal not in ['mouse', 'rat', 'guineapig']:
+        print("available pipelines are: mouse, rat, guineapig")
+        print("provided value: {}".format(animal))
+        exit()
     return 0
 
 

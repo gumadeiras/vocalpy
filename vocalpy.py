@@ -19,11 +19,11 @@ from utils.io import parse_input_path, create_output_directory_structure, create
 
 if __name__ == '__main__':
     p = ArgumentParser()
-    p.add_argument('-a', '--audio_path', help='audio file name', type=str, default=None)
+    p.add_argument('-a', '--animal', help='choose from [\'mouse\', \'rat\']', type=str, default='mouse')
+    p.add_argument('-p', '--path_to_audio', help='path to audio file or directory', type=str, default=None)
     p.add_argument('-b', '--bin_size', help='bin size in seconds to split spectrogram processing (default=60)', type=int, default=60)
-    p.add_argument('-f', '--frequency', help='frequency range to compute spectrogram; tuple (lower range, upper range); -1 to use maximum range (default=(45000,-1))', type=tuple, default=(45000,-1))
+    p.add_argument('-f', '--frequency', help='frequency range to compute spectrogram; string format: \'lower range, upper range\'; -1 to use maximum range (default=\'45000,-1\')', type=str, default='45000,-1')
     p.add_argument('-t', '--threads', help='number of threads (default=max)', type=int, default=0)
-    p.add_argument('-p', '--plot', help='plot sample spectrogram after each image processing operation', action='store_true')
     p.add_argument('-v', '--verbose', help='enable output verbosity', action='store_true')
     args = p.parse_args()
 
@@ -33,7 +33,7 @@ if __name__ == '__main__':
 
 
     # -- parse input audio path provided by the user
-    list_of_files = parse_input_path(args.audio_path)
+    list_of_files = parse_input_path(args.path_to_audio)
     list_of_output_dirs = create_output_directory_structure(list_of_files)
     # -- assert the number of input files and output dirs are the same
     try:
@@ -75,7 +75,7 @@ if __name__ == '__main__':
         # -- distribute Recording chunks to available cores
         # -- process each chunk and find candidate vocalizations
         timeAParallel = time()
-        results = Parallel(n_jobs=args.threads, require='sharedmem')(delayed(parallel_audio_processing)(i) for i in recording.chunks)
+        results = Parallel(n_jobs=args.threads, require='sharedmem')(delayed(parallel_audio_processing)(animal=args.animal, chunk=i) for i in recording.chunks)
         recording.recording_processing_finished()
         logger.info('recording parallel processing ({:.0f}m {:.0f}s)'.format((time() - timeAParallel) // 60, (time() - timeAParallel) % 60))
 

@@ -128,3 +128,6 @@ dmypy.json
 archive/*
 audios/audio_example_outputs/*
 notebooks/debug.ipynb
+vocalpy_guinea.py
+notebooks/debug*
+notebooks/debug.ipynb
