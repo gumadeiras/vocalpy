@@ -38,10 +38,10 @@ def create_logger(args=None, out_dir=None):
 
 def validate_arguments(args):
     validate_bin_size(args.bin_size)
-    validate_frequency_range(args.frequency)
     validate_thread_count(args.threads)
     validate_animal(args.animal)
-    return 0
+    args.frequency = validate_frequency_range(args.frequency, args.animal)
+    return args
 
 
 def validate_bin_size(bin_size):
@@ -52,12 +52,20 @@ def validate_bin_size(bin_size):
     return 0
 
 
-def validate_frequency_range(frequency_range):
-    low_freq, high_freq = [int(f) for f in frequency_range.split(',')]
-    if (low_freq > high_freq) & (high_freq != -1):
-        print('low frequency cutoff must be lower than the high frequency cutoff.')
-        print('provided values: low_freq={}; high_freq={}'.format(low_freq, high_freq))
-        exit()
+def validate_frequency_range(frequency_range, animal):
+    if frequency_range == 'default':
+        if animal == 'mouse':
+            return '45000,-1'
+        elif animal == 'rat':
+            return '20000,-1'
+        elif animal == 'guineapig':
+            return '0,22000'
+    else:
+        low_freq, high_freq = [int(f) for f in frequency_range.split(',')]
+        if (low_freq > high_freq) & (high_freq != -1):
+            print('low frequency cutoff must be lower than the high frequency cutoff.')
+            print('provided values: low_freq={}; high_freq={}'.format(low_freq, high_freq))
+            exit()
     return 0
 
 
@@ -78,8 +86,8 @@ def validate_thread_count(threads):
 
 def validate_animal(animal):
     if animal not in ['mouse', 'rat', 'guineapig']:
-        print("available pipelines are: mouse, rat, guineapig")
-        print("provided value: {}".format(animal))
+        print('available pipelines are: mouse, rat, guineapig')
+        print('provided value: {}'.format(animal))
         exit()
     return 0
 

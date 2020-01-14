@@ -8,6 +8,9 @@ __copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
 import torch
 
 import numpy as np
+import utils.animals.rat as rat
+import utils.animals.mouse as mouse
+import utils.animals.guineapig as guineapig
 
 from classes.vocal import Vocal
 
@@ -51,42 +54,44 @@ class ListOfVocals(object):
         self.intervals_fixed = True
         return 0
 
+    def combine_vocals(first_vocal, second_vocal):
+        # -- combines two vocals
+        start_difference = first_vocal.start - second_vocal.start
+        end_difference = first_vocal.end - second_vocal.end
+
+        # -- new centroid will be updated from vocal start/end and min/max frequency
+        combined_vocal = Vocal(bin_number=first_vocal.bin_number if (first_vocal.bin_number < second_vocal.bin_number) else second_vocal.bin_number,
+                               start=first_vocal.start if (start_difference < 0) else second_vocal.start,
+                               start_coord=first_vocal.start_coord if (start_difference < 0) else second_vocal.start_coord,
+                               end=first_vocal.end if (end_difference > 0) else second_vocal.end,
+                               end_coord=first_vocal.end_coord if (end_difference > 0) else second_vocal.end_coord,
+                               interval=-1, # -- updated after noise candidates are removed
+                               min_freq=first_vocal.min_freq if (first_vocal.min_freq < second_vocal.min_freq) else second_vocal.min_freq,
+                               max_freq=first_vocal.max_freq if (first_vocal.max_freq > second_vocal.max_freq) else second_vocal.max_freq,
+                               min_freq_coord=first_vocal.min_freq_coord if (first_vocal.min_freq_coord < second_vocal.min_freq_coord) else second_vocal.min_freq_coord,
+                               max_freq_coord=first_vocal.max_freq_coord if (first_vocal.max_freq_coord > second_vocal.max_freq_coord) else second_vocal.max_freq_coord,
+                               avg_freq=np.mean((first_vocal.avg_freq, second_vocal.avg_freq)),
+                               min_intensity=first_vocal.min_intensity if (first_vocal.min_intensity < second_vocal.min_intensity) else second_vocal.min_intensity,
+                               max_intensity=first_vocal.max_intensity if (first_vocal.max_intensity < second_vocal.max_intensity) else second_vocal.max_intensity,
+                               avg_intensity=np.mean((first_vocal.avg_intensity, second_vocal.avg_intensity)),
+                               bg_intensity=np.mean((first_vocal.bg_intensity, second_vocal.bg_intensity)),
+                               area=first_vocal.area + second_vocal.area,
+                               centroid=first_vocal.centroid)
+        combined_vocal.duration = combined_vocal.end - combined_vocal.start
+        combined_vocal.bandwidth = combined_vocal.max_freq - combined_vocal.min_freq
+
+        return combined_vocal
+
     def connect_vocals(self, animal):
-        # -- connects vocals that are at most 12ms apart
-        def combine_vocals(first_vocal, second_vocal):
-            # -- combines two vocals into one
-            start_difference = first_vocal.start - second_vocal.start
-            end_difference = first_vocal.end - second_vocal.end
-
-            # -- new centroid will be updated from vocal start/end and min/max frequency
-            combined_vocal = Vocal(bin_number=first_vocal.bin_number if (first_vocal.bin_number < second_vocal.bin_number) else second_vocal.bin_number,
-                                   start=first_vocal.start if (start_difference < 0) else second_vocal.start,
-                                   start_coord=first_vocal.start_coord if (start_difference < 0) else second_vocal.start_coord,
-                                   end=first_vocal.end if (end_difference > 0) else second_vocal.end,
-                                   end_coord=first_vocal.end_coord if (end_difference > 0) else second_vocal.end_coord,
-                                   interval=-1, # -- updated after noise candidates are removed
-                                   min_freq=first_vocal.min_freq if (first_vocal.min_freq < second_vocal.min_freq) else second_vocal.min_freq,
-                                   max_freq=first_vocal.max_freq if (first_vocal.max_freq > second_vocal.max_freq) else second_vocal.max_freq,
-                                   min_freq_coord=first_vocal.min_freq_coord if (first_vocal.min_freq_coord < second_vocal.min_freq_coord) else second_vocal.min_freq_coord,
-                                   max_freq_coord=first_vocal.max_freq_coord if (first_vocal.max_freq_coord > second_vocal.max_freq_coord) else second_vocal.max_freq_coord,
-                                   avg_freq=np.mean((first_vocal.avg_freq, second_vocal.avg_freq)),
-                                   min_intensity=first_vocal.min_intensity if (first_vocal.min_intensity < second_vocal.min_intensity) else second_vocal.min_intensity,
-                                   max_intensity=first_vocal.max_intensity if (first_vocal.max_intensity < second_vocal.max_intensity) else second_vocal.max_intensity,
-                                   avg_intensity=np.mean((first_vocal.avg_intensity, second_vocal.avg_intensity)),
-                                   bg_intensity=np.mean((first_vocal.bg_intensity, second_vocal.bg_intensity)),
-                                   area=first_vocal.area + second_vocal.area,
-                                   centroid=first_vocal.centroid)
-            combined_vocal.duration = combined_vocal.end - combined_vocal.start
-            combined_vocal.bandwidth = combined_vocal.max_freq - combined_vocal.min_freq
-
-            return combined_vocal
+        # -- combine segmentation blobs that are close
+        # -- consider them as one vocal
 
         new_list_of_vocals = []
 
         idx = 0
         there_are_vocals = True
         while there_are_vocals is True:
-            # merge this vocals with vocals that are within 12ms
+            # merge this blobs with blobs that are close
             try:
                 base_vocal = self.vocals_in_recording[idx]
                 new_vocal = base_vocal
@@ -97,43 +102,28 @@ class ListOfVocals(object):
                 there_are_vocals = False
                 break
 
-            if animal in ['mouse', 'rat']:
-                # -- conditions to check:
-                # -- 1) next vocal starts within 12ms from base vocal start time
-                # -- 2) next vocal starts within 12ms from base vocal end time
-                # -- 3) next vocal starts within base vocal start/end (harmonic)
-                max_interval = 0.011  # 12ms - 1ms error because morph ops increase area
-                condition_1 = np.abs(base_vocal.end - next_vocal.start) < max_interval
-                condition_2 = np.abs(base_vocal.start - next_vocal.start) < max_interval
-                condition_3 = (next_vocal.start >= base_vocal.start) and (next_vocal.end <= base_vocal.end)
-            elif animal == 'guineapig':                
-                # -- conditions to check:
-                # -- 1) next vocal starts within 100ms from base vocal start time AND
-                # -- next vocal frequency is higher than the base vocal frequency
-                # -- 2) next vocal starts within 100ms from base vocal end time AND
-                # -- next vocal frequency is higher than the base vocal frequency
-                # -- 3) next vocal starts/ends within base vocal start/end (harmonic)
-                max_interval = 0.1  # 100ms
-                condition_1 = (np.abs(base_vocal.end - next_vocal.start) < max_interval) and (next_vocal.min_freq > base_vocal.max_freq)
-                condition_2 = (np.abs(base_vocal.start - next_vocal.start) < max_interval) and (next_vocal.min_freq > base_vocal.max_freq)
-                condition_3 = (next_vocal.start >= base_vocal.start and next_vocal.end <= base_vocal.end)
-            next_vocal_is_close = True if (condition_1 or condition_2 or condition_3) else False
+            if animal =='mouse':
+                next_vocal_is_close = mouse.check_if_vocals_are_close(base_vocal, next_vocal)
+            if animal == 'rat':
+                next_vocal_is_close = rat.check_if_vocals_are_close(base_vocal, next_vocal)
+            elif animal == 'guineapig':
+                next_vocal_is_close = guineapig.check_if_vocals_are_close(base_vocal, next_vocal)
 
+            # -- get next vocal (idx)
             idx = idx + 1
             while next_vocal_is_close is True:
-                new_vocal = combine_vocals(new_vocal, next_vocal)
+                '''
+                while there are blobs close by, continue combining them
+                '''
+                new_vocal = self.combine_vocals(new_vocal, next_vocal)
                 try:
                     next_vocal = self.vocals_in_recording[idx + 1]
-                    if animal in ['mouse', 'rat']:
-                        condition_1 = np.abs(new_vocal.end - next_vocal.start) < max_interval
-                        condition_2 = np.abs(new_vocal.start - next_vocal.start) < max_interval
-                        condition_3 = (next_vocal.start >= new_vocal.start) and (next_vocal.end <= new_vocal.end)
-                        next_vocal_is_close = True if (condition_1 or condition_2 or condition_3) else False
-                    elif animal == 'guineapig':                
-                        condition_1 = (np.abs(new_vocal.end - next_vocal.start) < max_interval) and (next_vocal.min_freq > new_vocal.max_freq)
-                        condition_2 = (np.abs(new_vocal.start - next_vocal.start) < max_interval) and (next_vocal.min_freq > new_vocal.max_freq)
-                        condition_3 = (next_vocal.start >= new_vocal.start and next_vocal.end <= new_vocal.end)
-                    next_vocal_is_close = True if (condition_1 or condition_2 or condition_3) else False
+                    if animal =='mouse':
+                        next_vocal_is_close = mouse.check_if_vocals_are_close(new_vocal, next_vocal)
+                    if animal == 'rat':
+                        next_vocal_is_close = rat.check_if_vocals_are_close(new_vocal, next_vocal)
+                    elif animal == 'guineapig':
+                        next_vocal_is_close = guineapig.check_if_vocals_are_close(new_vocal, next_vocal)
                 except:
                     next_vocal_is_close = False
                 idx = idx + 1
@@ -145,6 +135,7 @@ class ListOfVocals(object):
             self.vocals_in_recording = np.hstack(new_list_of_vocals)
         except:
             self.vocals_in_recording = new_list_of_vocals
+
         self.number_of_vocals = len(self.vocals_in_recording)
         self.vocals_combined = True
         return 0
@@ -171,11 +162,15 @@ class ListOfVocals(object):
                 # empty list
                 continue
 
-        self.vocals_in_recording = np.hstack(new_list_of_vocals)
-        self.number_of_vocals = len(self.vocals_in_recording)
-        self.vocals_combined = True
-        self.centroid_spectro_fixed = True
-        return 0
+        if len(new_list_of_vocals):
+            self.vocals_in_recording = np.hstack(new_list_of_vocals)
+            self.number_of_vocals = len(self.vocals_in_recording)
+            self.vocals_combined = True
+            self.centroid_spectro_fixed = True
+            return 0
+        else:
+            print('recording has no vocals')
+            exit()
 
     def add_spectrograms_to_vocals(self, full_spectrogram, full_mask, spec_range=200):
         for vocal in self.vocals_in_recording:
@@ -204,12 +199,12 @@ class ListOfVocals(object):
 
     def remove_spectrograms(self):
         for vocal in self.vocals_in_recording:
-            vocal._spectrogram = None
+            vocal.spectrogram = None
         return 0
 
     def remove_masks(self):
         for vocal in self.vocals_in_recording:
-            vocal._mask = None
+            vocal.mask = None
         return 0
 
     def remove_vocals_classified_as_noise(self, predictions):

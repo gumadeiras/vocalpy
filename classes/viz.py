@@ -51,14 +51,14 @@ class Viz(object):
         group_names = []
         for group in self.list_of_groups:
             for recording in group:
-                # -- get recording name and remove trailing "_outputs" (-8)
+                # -- get recording name and remove trailing '_outputs' (-8)
                 recording_name = os.path.basename(os.path.split(recording)[0])[0:-8]
                 group_names.append(recording_name)
         self._group_names = np.asarray(group_names)
 
     def combine_viz_dataframes(self, list_of_viz=None):
         if list_of_viz is None:
-            print("please provide a list_of_viz")
+            print('please provide a list_of_viz')
             return -1
 
         dfs = list_of_viz[0]._recording_df
@@ -140,7 +140,7 @@ class Viz(object):
         return 0
 
     def group_pointplot(self, dataname='avg_freq'):
-        sns.set(style="whitegrid", palette="muted", color_codes=True)
+        sns.set(style='whitegrid', palette='muted', color_codes=True)
         f, ax = plt.subplots(1, 1, figsize=(12, 4), dpi=150)
         cmap = sns.color_palette()
         font_size = 16
@@ -172,7 +172,7 @@ class SingleViz(object):
                  bin_size=1):
 
         if recording_path is None:
-            print("please provide a recording_path")
+            print('please provide a recording_path')
             exit()
 
         self._recording_path = recording_path
@@ -185,7 +185,7 @@ class SingleViz(object):
         self._split_array = self.get_split_indices_for_bin_size()
 
     def __str__(self):
-        return "{}:\n recording path: {} \n recording duration: {:.2f} \n bin size: {} \n bins: {} \n vocals in recording: {}".format(self.__class__.__name__, self._recording_path, self._duration, self._bin_size, self._bins, self._recording_data._list_of_vocals.number_of_vocals)
+        return '{}:\n recording path: {} \n recording duration: {:.2f} \n bin size: {} \n bins: {} \n vocals in recording: {}'.format(self.__class__.__name__, self._recording_path, self._duration, self._bin_size, self._bins, self._recording_data._list_of_vocals.number_of_vocals)
 
     def create_list_of_vocals(self):
         return self._recording_data._list_of_vocals
@@ -235,7 +235,7 @@ class SingleViz(object):
             try:
                 split_array.append(np.where(bin_column == idx * self._bin_size)[0][-1] + 1)
             except:
-                print("recording {} had no vocals in bin {}".format(self._recording_data.recording_name, idx))
+                print('recording {} had no vocals in bin {}'.format(self._recording_data.recording_name, idx))
         return split_array
 
     def split_data_by_indices(self, dataframe):
@@ -265,10 +265,10 @@ class SingleViz(object):
         # -- visualize vocalizations throughtout the recording using a rug plot
         data_values = self._recording_df[[dataname]] / 60
 
-        sns.set(style="white", palette="muted", color_codes=True)
+        sns.set(style='white', palette='muted', color_codes=True)
 
         f, ax = plt.subplots(1, 1, figsize=(12, 2), dpi=300)
-        sns.rugplot(data_values, height=1, color="coral", alpha=0.5)
+        sns.rugplot(data_values, height=1, color='coral', alpha=0.5)
 
         ax.set_title(self._recording_data.group_name)
         ax.set_xlabel('Time (minutes)')
@@ -283,10 +283,10 @@ class SingleViz(object):
 
         data_values = self.get_datapoints(dataname)
 
-        sns.set(style="whitegrid", palette="muted", color_codes=True)
+        sns.set(style='whitegrid', palette='muted', color_codes=True)
         f, ax = plt.subplots(1, 1, figsize=(12, 7), dpi=300)
 
-        sns.pointplot(data=data_values, color="coral", capsize=.1)
+        sns.pointplot(data=data_values, color='coral', capsize=.1)
 
         ax.set_ylabel(dataname)
         ax.set_xlabel('Bin')
@@ -308,10 +308,10 @@ class SingleViz(object):
 
         data_values = self.get_datapoints(dataname)
 
-        sns.set(style="whitegrid", palette="muted", color_codes=True)
+        sns.set(style='whitegrid', palette='muted', color_codes=True)
         f, ax = plt.subplots(1, 1, figsize=(12, 7), dpi=300)
 
-        sns.violinplot(data=data_values, color="coral", inner=inner)
+        sns.violinplot(data=data_values, color='coral', inner=inner)
 
         ax.set_ylabel(dataname)
         ax.set_xlabel('Bin')

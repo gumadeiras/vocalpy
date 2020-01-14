@@ -22,7 +22,7 @@ if __name__ == '__main__':
     p.add_argument('-a', '--animal', help='choose from [\'mouse\', \'rat\']', type=str, default='mouse')
     p.add_argument('-p', '--path_to_audio', help='path to audio file or directory', type=str, default=None)
     p.add_argument('-b', '--bin_size', help='bin size in seconds to split spectrogram processing (default=60)', type=int, default=60)
-    p.add_argument('-f', '--frequency', help='frequency range to compute spectrogram; string format: \'lower range, upper range\'; -1 to use maximum range (default=\'45000,-1\')', type=str, default='45000,-1')
+    p.add_argument('-f', '--frequency', help='frequency range to compute spectrogram; string format: \'lower range, upper range\'; -1 to use maximum range', type=str, default='default')
     p.add_argument('-t', '--threads', help='number of threads (default=max)', type=int, default=0)
     p.add_argument('-v', '--verbose', help='enable output verbosity', action='store_true')
     args = p.parse_args()
@@ -61,6 +61,7 @@ if __name__ == '__main__':
         logger = getLogger()
         logger.info('selected file:\n{}'.format(audio_path))
         logger.info('output files will be saved to:\n{}'.format(output_dir))
+        logger.info('selected animal pipeline: {}'.format(args.animal))
 
         # -- create Recording object
         timeStart = time()
