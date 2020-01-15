@@ -54,7 +54,7 @@ class ListOfVocals(object):
         self.intervals_fixed = True
         return 0
 
-    def combine_vocals(first_vocal, second_vocal):
+    def combine_vocals(self, first_vocal, second_vocal):
         # -- combines two vocals
         start_difference = first_vocal.start - second_vocal.start
         end_difference = first_vocal.end - second_vocal.end

@@ -16,12 +16,12 @@ from math import ceil
 from scipy import signal, ndimage
 from skimage import exposure, measure
 
-from classes.vocal import Vocal
-from classes.list_of_vocals import ListOfVocals
 from utils.processing import bradley_roth
 
 
 def identifier(chunk):
+    from classes.vocal import Vocal
+    from classes.list_of_vocals import ListOfVocals
     timeBinA = time()
 
     # -- unwrap chunk

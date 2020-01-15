@@ -6,9 +6,6 @@ __license__ = 'Apache License, Version 2.0'
 __copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
 
 import numpy as np
-import utils.animals.rat as rat
-import utils.animals.mouse as mouse
-import utils.animals.guineapig as guineapig
 
 
 def bradley_roth(image, s=None, t=None):
@@ -86,6 +83,10 @@ def bradley_roth(image, s=None, t=None):
 
 
 def parallel_audio_processing(animal, chunk):
+    import utils.animals.rat as rat
+    import utils.animals.mouse as mouse
+    import utils.animals.guineapig as guineapig
+
     if animal == 'mouse':
         return mouse.identifier(chunk)
     elif animal == 'rat':
