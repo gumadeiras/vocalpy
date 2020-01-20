@@ -97,28 +97,25 @@ if __name__ == '__main__':
         recording.save_spectrograms(path=recording.output_dir)
         logger.info('done saving ({:.0f}s)'.format(time() - timeAsaving))
 
-        if args.animal == 'guineapig':
-            logger.info('total runtime: {:.0f}m {:.0f}s'.format((time() - timeStart) // 60, (time() - timeStart) % 60))
-            continue
+        if args.animal in ['mouse', 'rat']:
+            # -- classify candidate vocalizations as Vocal or Noise; remove Noise
+            logger.info('classifying candidate vocalizations as vocal or noise')
+            timeAclassification = time()
+            NoiseClassifier = VocalClassifier(type='noise', path_to_spectrograms=recording.spectrogram_dir)
+            predictions = NoiseClassifier.classify_list_of_vocals(recording.list_of_vocals)
+            logger.info('removing candidates classified as noise')
+            recording.remove_vocals_classified_as_noise_from_list_of_vocals(predictions)
+            recording.save_spectrograms_and_masks(path=recording.output_dir)
+            logger.info('done classifying and removing ({:.0f}s)'.format(time() - timeAclassification))
+            logger.info(recording._list_of_vocals)
 
-        # -- classify candidate vocalizations as Vocal or Noise; remove Noise
-        logger.info('classifying candidate vocalizations as vocal or noise')
-        timeAclassification = time()
-        NoiseClassifier = VocalClassifier(type='noise', path_to_spectrograms=recording.spectrogram_dir)
-        predictions = NoiseClassifier.classify_list_of_vocals(recording.list_of_vocals)
-        logger.info('removing candidates classified as noise')
-        recording.remove_vocals_classified_as_noise_from_list_of_vocals(predictions)
-        recording.save_spectrograms_and_masks(path=recording.output_dir)
-        logger.info('done classifying and removing ({:.0f}s)'.format(time() - timeAclassification))
-        logger.info(recording._list_of_vocals)
-
-        logger.info('classifying vocalizations')
-        timeAclassification = time()
-        ClassClassifier = VocalClassifier(type='class', path_to_spectrograms=recording.spectrogram_dir)
-        predictions = ClassClassifier.classify_list_of_vocals(recording.list_of_vocals)
-        logger.info('adding classification to vocals')
-        recording.update_vocals_with_class_classification(predictions, ClassClassifier.classes)
-        logger.info('done classifying and updating vocals ({:.0f}s)'.format(time() - timeAclassification))
+            logger.info('classifying vocalizations')
+            timeAclassification = time()
+            ClassClassifier = VocalClassifier(type='class', path_to_spectrograms=recording.spectrogram_dir)
+            predictions = ClassClassifier.classify_list_of_vocals(recording.list_of_vocals)
+            logger.info('adding classification to vocals')
+            recording.update_vocals_with_class_classification(predictions, ClassClassifier.classes)
+            logger.info('done classifying and updating vocals ({:.0f}s)'.format(time() - timeAclassification))
 
         # -- we are done :)
         # -- save output files

@@ -83,6 +83,7 @@ def bradley_roth(image, s=None, t=None):
 
 
 def parallel_audio_processing(animal, chunk):
+    # -- import animal pipelines here
     import utils.animals.rat as rat
     import utils.animals.mouse as mouse
     import utils.animals.guineapig as guineapig

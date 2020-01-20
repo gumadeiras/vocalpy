@@ -227,7 +227,7 @@ def identifier(chunk):
         # -- rescale pixel values to save spectrograms in 8bits
         dtype = np.uint8
         Pxx = exposure.rescale_intensity(Pxx, in_range='image', out_range=dtype)
-        vocal_list.add_spectrograms_to_vocals(full_spectrogram=np.flipud(Pxx), full_mask=np.flipud(grain), spec_range=50)
+        vocal_list.add_spectrograms_to_vocals(full_spectrogram=np.flipud(Pxx), full_mask=np.flipud(grain), spec_range=100)
 
         logger.info('[bin {}]: connecting vocals runtime: {:.2f}s'.format(this_bin, time() - timeAConnectVocals))
 

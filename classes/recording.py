@@ -249,8 +249,8 @@ class Recording(object):
                                  na_position='last')
 
         # -- start index from 1 instead of 0
-        recording_df.index = np.arange(1, len(recording_df)+1)
-        recording_df.to_csv(join(self.output_dir, 'recording_stats.csv'), float_format='%.6f')
+        recording_df.index = np.arange(1, len(recording_df) + 1)
+        recording_df.to_csv(join(self.output_dir, splitext(self.recording_name)[0] + '_stats.csv'), float_format='%.6f')
         return 0
 
     def save_spectrograms(self, list_of_vocals=None, path=None):
