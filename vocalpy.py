@@ -31,10 +31,10 @@ if __name__ == '__main__':
     print('run \'python vocalpy.py -h\' to show the help menu')
     print('use \'-v\' to enable verbose output (recommended)')
 
-
     # -- parse input audio path provided by the user
     list_of_files = parse_input_path(args.path_to_audio)
     list_of_output_dirs = create_output_directory_structure(list_of_files)
+
     # -- assert the number of input files and output dirs are the same
     try:
         assert len(list_of_files) == len(list_of_output_dirs)
@@ -86,14 +86,14 @@ if __name__ == '__main__':
         list_of_vocals = ListOfVocals()
         list_of_vocals.combine_list_of_list_of_vocals(list_of_list_of_vocals=results)
         list_of_vocals.update_intervals()
+        recording._has_list_of_vocals = True
+        recording.list_of_vocals = list_of_vocals
         logger.info('done combining ({:.0f}s)'.format(time() - timeAcombining))
         logger.info(list_of_vocals)
 
-        # -- update recording object and save data (images and csv)
+        # -- save spectrograms (used in noise classifier)
         logger.info('saving spectrograms of candidate vocalizations')
         timeAsaving = time()
-        recording._has_list_of_vocals = True
-        recording.list_of_vocals = list_of_vocals
         recording.save_spectrograms(path=recording.output_dir)
         logger.info('done saving ({:.0f}s)'.format(time() - timeAsaving))
 
@@ -109,6 +109,7 @@ if __name__ == '__main__':
             logger.info('done classifying and removing ({:.0f}s)'.format(time() - timeAclassification))
             logger.info(recording._list_of_vocals)
 
+            # -- classify vocalizations into vocal types
             logger.info('classifying vocalizations')
             timeAclassification = time()
             ClassClassifier = VocalClassifier(type='class', path_to_spectrograms=recording.spectrogram_dir)

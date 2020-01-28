@@ -126,6 +126,11 @@ class VocalClassifier(object):
                                num_workers=0)
 
     def classify_list_of_vocals(self, list_of_vocals):
+        # -- is list of vocals is empty, just return
+        if list_of_vocals.number_of_vocals < 1:
+            print("[classify vocals as noise]: list of vocals is empty")
+            return -1
+
         if self.type is 'noise':
             return self.classify_list_of_vocals_noise(list_of_vocals)
         else:

@@ -104,7 +104,7 @@ class ListOfVocals(object):
 
             if animal =='mouse':
                 next_vocal_is_close = mouse.check_if_vocals_are_close(base_vocal, next_vocal)
-            if animal == 'rat':
+            elif animal == 'rat':
                 next_vocal_is_close = rat.check_if_vocals_are_close(base_vocal, next_vocal)
             elif animal == 'guineapig':
                 next_vocal_is_close = guineapig.check_if_vocals_are_close(base_vocal, next_vocal)
@@ -120,7 +120,7 @@ class ListOfVocals(object):
                     next_vocal = self.vocals_in_recording[idx + 1]
                     if animal =='mouse':
                         next_vocal_is_close = mouse.check_if_vocals_are_close(new_vocal, next_vocal)
-                    if animal == 'rat':
+                    elif animal == 'rat':
                         next_vocal_is_close = rat.check_if_vocals_are_close(new_vocal, next_vocal)
                     elif animal == 'guineapig':
                         next_vocal_is_close = guineapig.check_if_vocals_are_close(new_vocal, next_vocal)
@@ -210,7 +210,8 @@ class ListOfVocals(object):
     def remove_vocals_classified_as_noise(self, predictions):
         self.vocals_in_recording = self.vocals_in_recording[predictions]
         self.number_of_vocals = len(self.vocals_in_recording)
-        self.update_intervals()
+        if self.number_of_vocals > 0:
+            self.update_intervals()
         return 0
 
     def add_classification_to_vocals(self, predictions, classes):

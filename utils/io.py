@@ -78,7 +78,7 @@ def parse_input_path(path=None):
         exit()
     elif isdir(path):
         print('audio path is a directory, geting all .wav files')
-        types = (join(path, '*.wav'), join(path, '*.WAV'))
+        types = (join(path, '*.wav'), join(path, '*.WAV'), join(path, '*.flac'), join(path, '*.FLAC'))
         files_found = []
         for files in types:
             files_found.extend(glob.glob(files))

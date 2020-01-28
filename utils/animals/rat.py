@@ -201,6 +201,15 @@ def identifier(chunk):
         if (prop.mean_intensity / bg_intensity) > 0.91:
             continue
 
+        if this_bin == 1:
+            # first 0.5 were removed from recording as they are noisy
+            # make this better
+            start_time = (start * time_res) + ((this_bin - 1) * bin_size) + 0.5
+            end_time = (end * time_res) + ((this_bin - 1) * bin_size) + 0.5
+        else:
+            start_time = (start * time_res) + ((this_bin - 1) * bin_size)
+            end_time = (end * time_res) + ((this_bin - 1) * bin_size)
+
         min_freq_coord = np.min(prop.coords[:, 0])
         max_freq_coord = np.max(prop.coords[:, 0])
         min_freq = (min_freq_coord * freq_res) + low_frequency_cutoff
@@ -209,8 +218,8 @@ def identifier(chunk):
         bandwidth = max_freq - min_freq
 
         new_vocal = Vocal(bin_number=this_bin,
-                          start=(start * time_res) + ((this_bin - 1) * bin_size),
-                          end=(end * time_res) + ((this_bin - 1) * bin_size),
+                          start=start_time,
+                          end=end_time,
                           start_coord=start,
                           end_coord=end,
                           duration=duration * time_res * 1000,

@@ -296,13 +296,21 @@ class Recording(object):
         return 0
 
     def remove_vocals_classified_as_noise_from_list_of_vocals(self, predictions):
+        # -- if list of vocals is empty, there are no predictions
+        if isinstance(predictions, int) and predictions == -1:
+            return predictions
+
         # -- remove vocals that were classifier as noise
         self._list_of_vocals.remove_vocals_classified_as_noise(predictions)
-        # -- update inter-vocal intervals after removing noise
-        self._list_of_vocals.update_intervals()
+        # # -- update inter-vocal intervals after removing noise
+        # self._list_of_vocals.update_intervals()
         return 0
 
     def update_vocals_with_class_classification(self, predictions, classes):
+        # -- if list of vocals is empty, there are no predictions
+        if isinstance(predictions, int) and predictions == -1:
+            return predictions
+
         # -- make sure number of predictions is the same as number of vocals
         try:
             assert self._list_of_vocals.number_of_vocals == predictions.shape[0]
