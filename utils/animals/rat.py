@@ -274,6 +274,6 @@ def check_if_vocals_are_close(base_vocal, next_vocal):
     max_interval = 0.011  # 12ms - 1ms error because morph ops increase area
     condition_1 = np.abs(base_vocal.end - next_vocal.start) < max_interval
     condition_2 = np.abs(base_vocal.start - next_vocal.start) < max_interval
-    condition_3 = (next_vocal.start >= base_vocal.start) and (next_vocal.end <= base_vocal.end)
+    condition_3 = (next_vocal.start >= base_vocal.start) and (next_vocal.start <= base_vocal.end)
 
     return True if (condition_1 or condition_2 or condition_3) else False
