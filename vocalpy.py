@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''VocalPy - A python version based on VocalMat'''
+'''VocalPy - Vocal analysis framework'''
 
 __email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     p.add_argument('-p', '--path_to_audio', help='path to audio file or directory', type=str, default=None)
     p.add_argument('-b', '--bin_size', help='bin size in seconds to split spectrogram processing (default=60)', type=int, default=60)
     p.add_argument('-f', '--frequency', help='frequency range to compute spectrogram; string format: \'lower range,upper range\'; \'0,-1\' to use full range', type=str, default='default')
-    p.add_argument('-t', '--threads', help='number of threads (default=max)', type=int, default=0)
+    p.add_argument('-t', '--threads', help='number of threads (default=max)', type=int, default=-1)
     p.add_argument('-v', '--verbose', help='enable output verbosity', action='store_true')
     args = p.parse_args()
 

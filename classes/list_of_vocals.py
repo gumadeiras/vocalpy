@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''VocalPy - A python version based on VocalMat'''
+'''VocalPy - Vocal analysis framework'''
 
 __email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
@@ -8,9 +8,9 @@ __copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
 import torch
 
 import numpy as np
-import utils.animals.rat as rat
-import utils.animals.mouse as mouse
-import utils.animals.guineapig as guineapig
+import animals.rat as rat
+import animals.mouse as mouse
+import animals.guineapig as guineapig
 
 from classes.vocal import Vocal
 

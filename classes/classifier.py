@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''VocalPy - A python version based on VocalMat'''
+'''VocalPy - Vocal analysis framework'''
 
 __email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
@@ -28,7 +28,11 @@ class VocalClassifier(object):
     CNN noise classifier class
     '''
 
-    def __init__(self, type, path_to_spectrograms, batch_size=32, path_to_checkpoint=None):
+    def __init__(self,
+                 type,
+                 path_to_spectrograms,
+                 batch_size=32,
+                 path_to_checkpoint=None):
         if type in ['noise', 'class']:
             self.type = type
         else:
@@ -50,7 +54,10 @@ class VocalClassifier(object):
         self.dataset = self.create_dataset(self.path_to_spectrograms)
         self.dataloader = self.create_dataloader(self.dataset, self.batch_size)
 
-    def load_pretrained_noise_model(self, path_to_checkpoint, device, model=None):
+    def load_pretrained_noise_model(self,
+                                    path_to_checkpoint,
+                                    device,
+                                    model=None):
         '''
         load pretrained Noise CNN model,
         trained to classify spectrograms as Vocal or Noise;

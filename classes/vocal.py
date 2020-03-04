@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''VocalPy - A python version based on VocalMat'''
+'''VocalPy - Vocal analysis framework'''
 
 __email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
@@ -314,7 +314,7 @@ class Vocal(object):
 
         img = Image.fromarray(self.spectrogram)
         img = img.convert('L')
-        img.save(join(path, 'spectrogram', filename + '_bin_' + str(self.bin_number) + '.png'))
+        img.save(join(path, 'spectrogram', filename + '_' + str(self.bin_number) + '.png'))
 
     def save_mask_as_image(self, path=None, filename='vocal'):
         if exists(path) is False:
@@ -322,7 +322,7 @@ class Vocal(object):
 
         img = Image.fromarray(self.mask)
         img = img.convert('L')
-        img.save(join(path, 'mask', filename + '_bin_' + str(self.bin_number) + '.png'))
+        img.save(join(path, 'mask', filename + '_' + str(self.bin_number) + '.png'))
 
     def save_cnn_mask_as_image(self, path=None, filename='vocal'):
         if exists(path) is False:
@@ -330,4 +330,4 @@ class Vocal(object):
 
         img = Image.fromarray(self.cnn_mask)
         img = img.convert('L')
-        img.save(join(path, 'cnn_mask', filename + '_bin_' + str(self.bin_number) + '.png'))
+        img.save(join(path, 'cnn_mask', filename + '_' + str(self.bin_number) + '.png'))

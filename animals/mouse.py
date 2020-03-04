@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''VocalPy - A python version based on VocalMat'''
+'''VocalPy - Vocal analysis framework'''
 
 __email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
@@ -198,7 +198,7 @@ def identifier(chunk):
 
         # -- if contrast ratio is above treshold
         # -- then it's a false positive
-        if (prop.mean_intensity / bg_intensity) > 0.91:
+        if (prop.mean_intensity / bg_intensity) > 0.90:
             continue
 
         if this_bin == 1:
@@ -247,8 +247,8 @@ def identifier(chunk):
     if len(vocal_list):
         vocal_list = ListOfVocals(vocals_in_recording=np.asarray(vocal_list))
         timeAConnectVocals = time()
-        vocal_list.connect_vocals(animal='rat')
-        vocal_list.connect_vocals(animal='rat')
+        vocal_list.connect_vocals(animal='mouse')
+        vocal_list.connect_vocals(animal='mouse')
         vocal_list.update_centroids()
 
         # -- rescale pixel values to save spectrograms in 8bits

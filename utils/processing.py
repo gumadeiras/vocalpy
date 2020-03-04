@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''VocalPy - A python version based on VocalMat'''
+'''VocalPy - Vocal analysis framework'''
 
 __email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
@@ -84,9 +84,9 @@ def bradley_roth(image, s=None, t=None):
 
 def parallel_audio_processing(animal, chunk):
     # -- import animal pipelines here
-    import utils.animals.rat as rat
-    import utils.animals.mouse as mouse
-    import utils.animals.guineapig as guineapig
+    import animals.rat as rat
+    import animals.mouse as mouse
+    import animals.guineapig as guineapig
 
     if animal == 'mouse':
         return mouse.identifier(chunk)

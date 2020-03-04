@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''VocalPy - A python version based on VocalMat'''
+'''VocalPy - Vocal analysis framework'''
 
 __email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
@@ -109,7 +109,7 @@ class Recording(object):
         '''
         samples, sample_rate = sf.read(self.recording_path)
         self.sample_rate = sample_rate
-        self.samples = samples
+        self.samples = samples if samples.ndim == 1 else samples[:,0] # get one channel if audio is stereo
         self.samples_min = np.min(samples)
         self.samples_max = np.max(samples)
         self.recording_duration = self.samples.shape[0] / self.sample_rate
@@ -127,6 +127,7 @@ class Recording(object):
             if this_bin == 1:
                 start_range = ceil(0.5 * self.sample_rate)
                 end_range = ceil((self.bin_size * self.sample_rate) + (overlap * self.sample_rate))
+                end_range = end_range if end_range < len(self.samples) else len(self.samples)
                 sample_range = self.samples[start_range:end_range]
                 chunks.append((self.output_dir,
                                self.spectrogram_dir,
@@ -143,8 +144,11 @@ class Recording(object):
 
             elif this_bin == self.bins:  # -- last bin
                 start_range = ceil((this_bin - 1) * self.bin_size * self.sample_rate)
+                end_range = end_range if end_range < len(self.samples) else len(self.samples)
                 end_range = self.recording_duration * self.sample_rate
                 sample_range = self.samples[start_range:]
+                if len(sample_range) < (self.sample_rate / 100):
+                    continue  # less than 10ms
                 chunks.append((self.output_dir,
                                self.spectrogram_dir,
                                self.mask_dir,
@@ -161,7 +165,10 @@ class Recording(object):
             else:  # -- all other bins
                 start_range = ceil((this_bin - 1) * self.bin_size * self.sample_rate)
                 end_range = ceil((this_bin * self.bin_size * self.sample_rate) + (overlap * self.sample_rate))
+                end_range = end_range if end_range < len(self.samples) else len(self.samples)
                 sample_range = self.samples[start_range:end_range]
+                if len(sample_range) < (self.sample_rate / 100):
+                    continue  # less than 10ms
                 chunks.append((self.output_dir,
                                self.spectrogram_dir,
                                self.mask_dir,

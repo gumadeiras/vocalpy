@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-'''VocalPy - A python version based on VocalMat'''
+'''VocalPy - Vocal analysis framework'''
 
 __email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
@@ -66,12 +66,12 @@ def validate_frequency_range(frequency_range, animal):
             print('low frequency cutoff must be lower than the high frequency cutoff.')
             print('provided values: low_freq={}; high_freq={}'.format(low_freq, high_freq))
             exit()
-    return 0
+    return frequency_range
 
 
 def validate_thread_count(threads):
     num_cores = cpu_count()
-    if threads < 0:
+    if (threads < -1) or (threads == 0):
         print('number of threads must be a positive integer.')
         print('provided value: {}'.format(threads))
         print('computer core count: {}'.format(num_cores))
