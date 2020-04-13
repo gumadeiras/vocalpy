@@ -49,9 +49,9 @@ def identifier(chunk):
 
     timeASpectrogram = time()
     fs = sample_rate
-    window = signal.get_window('barthann', 1024)
-    noverlap = 512
-    nfft = 2048
+    window = signal.get_window('hamming', 256)
+    noverlap = 128
+    nfft = 1024
     sample_range_secs = sample_range.shape[0] / sample_rate
     logger.info('[bin {}]: computing spectrogram for bin: {}; time range: {:.2f}s; audio range: {:.2f}-{:.2f}s'.format(this_bin, this_bin,
                                                                                                                        sample_range_secs,
@@ -92,15 +92,33 @@ def identifier(chunk):
     B[B > p99] = 1
 
     # -- binarize spectrogram
-    B = bradley_roth(B, t=50)
+    B = bradley_roth(B, t=20)
 
     # -- median filter
-    B = ndimage.median_filter(B, size=(4, 4))
+    B = ndimage.median_filter(B, size=(3, 3))
+
+    # -- kernels for morphological operations
+    kernel_rect = np.ones((4, 2), np.uint8)
+    kernel_line1 = np.ones((4, 1), np.uint8)
+    kernel_line2 = np.ones((5, 1), np.uint8)
+
+    # -- morphological operations
+    erode11 = cv2.erode(B, kernel_line1, iterations=1)
+    del B
+
+    dilate12 = cv2.dilate(erode11, kernel_rect, iterations=1)
+    del erode11
+
+    dilate13 = cv2.dilate(dilate12, kernel_line2, iterations=1)
+    del dilate12
+
+    erode14 = cv2.erode(dilate13, kernel_line1, iterations=2)
+    del dilate13
 
     timeAConnectedComponents = time()
     connectivity = 4
-    num_cc, output, stats, centroids = cv2.connectedComponentsWithStats(B, connectivity, cv2.CV_32S)
-    # del erode14
+    num_cc, output, stats, centroids = cv2.connectedComponentsWithStats(erode14, connectivity, cv2.CV_32S)
+    del erode14
 
     # -- remove background stats
     num_cc = num_cc - 1
@@ -110,7 +128,7 @@ def identifier(chunk):
     grain = np.zeros((output.shape))
 
     # -- threshold connected components by minimum area
-    min_area = 40
+    min_area = 20
     for i in range(0, num_cc):
         if areas[i] >= min_area:
             grain[output == i + 1] = 255
@@ -134,7 +152,9 @@ def identifier(chunk):
                                 intensity_image=Pxx,
                                 cache=True,
                                 coordinates='rc')
-    props = sorted(props, key=lambda p: np.min(p.coords[:, 1]), reverse=False) # sort segments by time
+    
+    # -- sort segments by time
+    props = sorted(props, key=lambda p: np.min(p.coords[:, 1]), reverse=False)
 
     logger.info('[bin {}]: region props runtime: {:.2f}s'.format(this_bin, time() - timeARegionProps))
     del labels
@@ -157,7 +177,7 @@ def identifier(chunk):
             continue
 
         # -- get spectrogram and mask around each vocalization to compute intensity
-        spectro_range = 25  # 2*25 =~ 250ms
+        spectro_range = 200  # 2*200 * 0.51 = 205ms
         centroid_time = ceil(prop.centroid[1])
 
         # -- edge conditions, spectro_range goes over the spectrom vector limit (for this bin)
@@ -180,7 +200,7 @@ def identifier(chunk):
 
         # -- if contrast ratio is above treshold
         # -- then it's a false positive
-        if (prop.mean_intensity / bg_intensity) > 0.91:
+        if (prop.mean_intensity / bg_intensity) > 0.90:
             continue
 
         if this_bin == 1:
@@ -218,6 +238,7 @@ def identifier(chunk):
                           bg_intensity=bg_intensity,
                           area=prop.area,
                           centroid=np.rint(prop.centroid).astype(int),
+                          coords=prop.coords
                           )
 
         vocal_list.append(new_vocal)
@@ -229,14 +250,17 @@ def identifier(chunk):
     if len(vocal_list):
         vocal_list = ListOfVocals(vocals_in_recording=np.asarray(vocal_list))
         timeAConnectVocals = time()
-        vocal_list.connect_vocals(animal='guineapig')
-        vocal_list.connect_vocals(animal='guineapig')
+        vocal_list.connect_vocals(animal='mouse')
+        vocal_list.connect_vocals(animal='mouse')
         vocal_list.update_centroids()
+
+        spectrogram_range = 206 # 206 ~ 210ms @ 0.51ms resolution
+        vocal_list.update_coords(spectrogram_range)
 
         # -- rescale pixel values to save spectrograms in 8bits
         dtype = np.uint8
         Pxx = exposure.rescale_intensity(Pxx, in_range='image', out_range=dtype)
-        vocal_list.add_spectrograms_to_vocals(full_spectrogram=np.flipud(Pxx), full_mask=np.flipud(grain), spec_range=100)
+        vocal_list.add_spectrograms_to_vocals(full_spectrogram=np.flipud(Pxx), full_mask=np.flipud(grain), spec_range=spectrogram_range)
 
         logger.info('[bin {}]: connecting vocals runtime: {:.2f}s'.format(this_bin, time() - timeAConnectVocals))
 
@@ -250,14 +274,12 @@ def identifier(chunk):
 
 def check_if_vocals_are_close(base_vocal, next_vocal):
     # -- conditions to check:
-    # -- 1) next vocal starts within 100ms from base vocal start time AND
-    # -- next vocal frequency is higher than the base vocal frequency
-    # -- 2) next vocal starts within 100ms from base vocal end time AND
-    # -- next vocal frequency is higher than the base vocal frequency
-    # -- 3) next vocal starts/ends within base vocal start/end (harmonic)
-    max_interval = 0.1  # 100ms
-    condition_1 = (np.abs(base_vocal.end - next_vocal.start) < max_interval) and (next_vocal.min_freq > base_vocal.max_freq)
-    condition_2 = (np.abs(base_vocal.start - next_vocal.start) < max_interval) and (next_vocal.min_freq > base_vocal.max_freq)
-    condition_3 = (next_vocal.start >= base_vocal.start and next_vocal.end <= base_vocal.end)
+    # -- 1) next vocal starts within 12ms from base vocal start time
+    # -- 2) next vocal starts within 12ms from base vocal end time
+    # -- 3) next vocal starts within base vocal start/end (harmonic)
+    max_interval = 0.011  # 12ms - 1ms error because morph ops increase area
+    condition_1 = np.abs(base_vocal.end - next_vocal.start) < max_interval
+    condition_2 = np.abs(base_vocal.start - next_vocal.start) < max_interval
+    condition_3 = (next_vocal.start >= base_vocal.start) and (next_vocal.start <= base_vocal.end)
 
     return True if (condition_1 or condition_2 or condition_3) else False

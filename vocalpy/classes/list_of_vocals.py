@@ -31,6 +31,7 @@ class ListOfVocals(object):
         self.vocals_combined = False
         self.intervals_fixed = False
         self.centroid_spectro_fixed = False
+        self.coords_fixed = False
 
     def __str__(self):
         # return '{}: vocals_in_recording: {} \n number_of_vocals: {} \n vocals_processed: {}'.format(self.__class__.__name__, self.vocals_in_recording, self.number_of_vocals, self.vocals_processed)
@@ -76,7 +77,9 @@ class ListOfVocals(object):
                                avg_intensity=np.mean((first_vocal.avg_intensity, second_vocal.avg_intensity)),
                                bg_intensity=np.mean((first_vocal.bg_intensity, second_vocal.bg_intensity)),
                                area=first_vocal.area + second_vocal.area,
-                               centroid=first_vocal.centroid)
+                               centroid=first_vocal.centroid,
+                               coords=np.vstack((first_vocal.coords, second_vocal.coords)),
+                               )
         combined_vocal.duration = combined_vocal.end - combined_vocal.start
         combined_vocal.bandwidth = combined_vocal.max_freq - combined_vocal.min_freq
 
@@ -153,6 +156,22 @@ class ListOfVocals(object):
         self.centroid_spectro_fixed = True
         return 0
 
+    def update_coords(self, spec_range=200):
+        '''
+        update coords for each vocal
+        absolute coords from vocal coordinates start/end, and min/max frequency
+        '''
+        for vocal in self.vocals_in_recording:
+            col_values = vocal.coords[:, 1]
+            # make column values zero-centered by subtracting the mean
+            col_values = col_values - np.int(np.mean(col_values))
+            # col values will be centered in the spectrogram
+            col_values = col_values + spec_range
+            vocal.coords[:, 1] = col_values
+
+        self.coords_fixed = True
+        return 0
+
     def combine_list_of_list_of_vocals(self, list_of_list_of_vocals):
         new_list_of_vocals = []
         for list_of_vocals in list_of_list_of_vocals:
@@ -190,6 +209,11 @@ class ListOfVocals(object):
     def save_spectrograms(self, output_dir=None):
         for filename, vocal in enumerate(self.vocals_in_recording, start=1):
             vocal.save_spectrogram_as_image(path=output_dir, filename=str(filename))
+        return 0
+
+    def save_validation_images(self, output_dir=None):
+        for filename, vocal in enumerate(self.vocals_in_recording, start=1):
+            vocal.save_spectrogram_with_coords_as_image(path=output_dir, filename=str(filename))
         return 0
 
     def save_masks(self, output_dir=None):

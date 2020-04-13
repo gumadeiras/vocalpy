@@ -5,9 +5,13 @@ __email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
 __copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
 
-from os.path import join, exists
+import io
+
+import numpy as np
+import matplotlib.pyplot as plt
 
 from PIL import Image
+from os.path import join, exists
 
 
 class Vocal(object):
@@ -36,6 +40,7 @@ class Vocal(object):
                  area=None,
                  centroid=None,
                  orientation=None,
+                 coords=None,
                  spectrogram=None,
                  mask=None,
                  cnn_mask=None,
@@ -62,9 +67,9 @@ class Vocal(object):
         self._avg_intensity = avg_intensity
         self._bg_intensity = bg_intensity
         self._area = area
-        # self._points        = points
         self._centroid = centroid
         self._orientation = orientation
+        self._coords = coords
         self._spectrogram = spectrogram
         self._mask = mask
         self._cnn_mask = cnn_mask
@@ -171,6 +176,10 @@ class Vocal(object):
     @property
     def orientation(self):
         return self._orientation
+
+    @property
+    def coords(self):
+        return self._coords
 
     @property
     def spectrogram(self):
@@ -280,6 +289,10 @@ class Vocal(object):
     def orientation(self, new_orientation):
         self._orientation = new_orientation
 
+    @coords.setter
+    def coords(self, new_coords):
+        self._coords = new_coords
+
     @spectrogram.setter
     def spectrogram(self, new_spectrogram):
         self._spectrogram = new_spectrogram
@@ -315,6 +328,31 @@ class Vocal(object):
         img = Image.fromarray(self.spectrogram)
         img = img.convert('L')
         img.save(join(path, 'spectrogram', filename + '_' + str(self.bin_number) + '.png'))
+
+    def save_spectrogram_with_coords_as_image(self, path=None, filename='vocal'):
+        if exists(path) is False:
+            raise ValueError('path does not exist: {}'.format(path))
+
+        spectrogram = self.spectrogram
+        row_values = self.coords[:, 0]
+        col_values = self.coords[:, 1]
+
+        plt.figure()
+        # flip spectrogram upside down to match scatter
+        # easier to flip image than to flip scatter coordinates
+        plt.imshow(np.flipud(spectrogram), cmap='gray')
+        plt.scatter(col_values[0:-1:8], row_values[0:-1:8], marker='.', alpha=0.1)
+        plt.axis('off')
+        # save image to buffer, faster than saving to file
+        # matplotlib does not support rotating scatter plots directly
+        buf = io.BytesIO()
+        plt.savefig(buf, bbox_inches='tight', format='png')
+        plt.close()
+        buf.seek(0)
+        img = Image.open(buf)
+        # rotate image back using PIL and save to disk
+        img = img.transpose(Image.FLIP_TOP_BOTTOM)
+        img.save(join(path, 'spectrogram_validation', filename + '_' + str(self.bin_number) + '.png'))
 
     def save_mask_as_image(self, path=None, filename='vocal'):
         if exists(path) is False:

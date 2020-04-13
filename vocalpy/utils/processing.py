@@ -88,6 +88,8 @@ def parallel_audio_processing(animal, chunk):
     import animals.mouse as mouse
     import animals.guineapig as guineapig
 
+    ## create Animal class -> Animal.identifier(animal)
+    ## one less place to be changed when new animals are added
     if animal == 'mouse':
         return mouse.identifier(chunk)
     elif animal == 'rat':

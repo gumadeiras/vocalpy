@@ -152,7 +152,8 @@ def identifier(chunk):
                                 intensity_image=Pxx,
                                 cache=True,
                                 coordinates='rc')
-    props = sorted(props, key=lambda p: np.min(p.coords[:, 1]), reverse=False) # sort segments by time
+    # -- sort segments by time
+    props = sorted(props, key=lambda p: np.min(p.coords[:, 1]), reverse=False)
 
     logger.info('[bin {}]: region props runtime: {:.2f}s'.format(this_bin, time() - timeARegionProps))
     del labels
@@ -198,7 +199,7 @@ def identifier(chunk):
 
         # -- if contrast ratio is above treshold
         # -- then it's a false positive
-        if (prop.mean_intensity / bg_intensity) > 0.90:
+        if (prop.mean_intensity / bg_intensity) > 0.91:
             continue
 
         if this_bin == 1:
@@ -236,6 +237,7 @@ def identifier(chunk):
                           bg_intensity=bg_intensity,
                           area=prop.area,
                           centroid=np.rint(prop.centroid).astype(int),
+                          coords=prop.coords
                           )
 
         vocal_list.append(new_vocal)
@@ -247,14 +249,17 @@ def identifier(chunk):
     if len(vocal_list):
         vocal_list = ListOfVocals(vocals_in_recording=np.asarray(vocal_list))
         timeAConnectVocals = time()
-        vocal_list.connect_vocals(animal='mouse')
-        vocal_list.connect_vocals(animal='mouse')
+        vocal_list.connect_vocals(animal='rat')
+        vocal_list.connect_vocals(animal='rat')
         vocal_list.update_centroids()
+
+        spectrogram_range = 350 # 350 ~ 357ms @ 0.51ms resolution
+        vocal_list.update_coords(spectrogram_range)
 
         # -- rescale pixel values to save spectrograms in 8bits
         dtype = np.uint8
         Pxx = exposure.rescale_intensity(Pxx, in_range='image', out_range=dtype)
-        vocal_list.add_spectrograms_to_vocals(full_spectrogram=np.flipud(Pxx), full_mask=np.flipud(grain), spec_range=206) # 206 ~ 210ms @ 0.51ms resolution
+        vocal_list.add_spectrograms_to_vocals(full_spectrogram=np.flipud(Pxx), full_mask=np.flipud(grain), spec_range=spectrogram_range)
 
         logger.info('[bin {}]: connecting vocals runtime: {:.2f}s'.format(this_bin, time() - timeAConnectVocals))
 

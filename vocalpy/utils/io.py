@@ -6,7 +6,6 @@ __license__ = 'Apache License, Version 2.0'
 __copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
 
 import glob
-import torch
 import shutil
 import pickle
 
@@ -45,6 +44,8 @@ def load_checkpoint(checkpoint, model, device, optimizer=None):
         model: (torch.nn.Module) model for which the parameters are loaded
         optimizer: (torch.optim) optional: resume optimizer from checkpoint
     '''
+    import torch
+
     if not exists(checkpoint):
         print('file does not exist {}'.format(checkpoint))
         exit()
@@ -62,10 +63,11 @@ def load_model(model_path, device):
     '''
     directly load a pretrained model
     '''
+    import torch
     return torch.load(model_path, map_location=torch.device(device))
 
 
-def parse_input_path(path=None):
+def parse_input_path(path=None, search_tree=False):
     ''' parse input path string;
     if it's a directory, return list of files;
     if it's a file, return the file path.
@@ -75,20 +77,23 @@ def parse_input_path(path=None):
     '''
     if path is None:
         print('usage: python vocalpy.py --audio_path=\'/path/to/audio\'')
-        exit()
+        return -1
     elif isdir(path):
         print('audio path is a directory, geting all .wav files')
-        types = (join(path, '*.wav'), join(path, '*.WAV'), join(path, '*.flac'), join(path, '*.FLAC'))
+        if search_tree:
+            types = (join(path, '**/*.wav'), join(path, '**/*.WAV'), join(path, '**/*.flac'), join(path, '**/*.FLAC'))
+        else:
+            types = (join(path, '*.wav'), join(path, '*.WAV'), join(path, '*.flac'), join(path, '*.FLAC'))
         files_found = []
         for files in types:
-            files_found.extend(glob.glob(files))
+            files_found.extend(glob.glob(files, recursive=search_tree))
         return files_found
     elif isfile(path):
         print('audio path is a file.')
         return [path]
     else:
         print('audio path is not a file or directory: {}'.format(path))
-        exit()
+        return -1
 
     return 0
 

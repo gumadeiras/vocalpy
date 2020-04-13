@@ -10,12 +10,12 @@ from logging import getLogger
 from argparse import ArgumentParser
 from joblib import Parallel, delayed
 
-from classes.recording import Recording
-from classes.classifier import VocalClassifier
-from classes.list_of_vocals import ListOfVocals
-from utils.processing import parallel_audio_processing
-from utils.misc import create_logger, validate_arguments
-from utils.io import parse_input_path, create_output_directory_structure, create_directory
+from vocalpy.classes.recording import Recording
+from vocalpy.classes.classifier import VocalClassifier
+from vocalpy.classes.list_of_vocals import ListOfVocals
+from vocalpy.utils.processing import parallel_audio_processing
+from vocalpy.utils.misc import create_logger, validate_arguments
+from vocalpy.utils.io import parse_input_path, create_output_directory_structure, create_directory
 
 if __name__ == '__main__':
     p = ArgumentParser()
@@ -25,6 +25,7 @@ if __name__ == '__main__':
     p.add_argument('-f', '--frequency', help='frequency range to compute spectrogram; string format: \'lower range,upper range\'; \'0,-1\' to use full range', type=str, default='default')
     p.add_argument('-t', '--threads', help='number of threads (default=max)', type=int, default=-1)
     p.add_argument('-v', '--verbose', help='enable output verbosity', action='store_true')
+    p.add_argument('-l', '--validation', help='saves overlay of segmentation on spectrogram for manual verifcation', action='store_true')
     args = p.parse_args()
 
     # -- let the user know about the help menu and verbose output
@@ -122,7 +123,9 @@ if __name__ == '__main__':
         # -- save output files
         logger.info('saving recording object, vocalizations, and csv file')
         timeAsaving = time()
-        recording.save_recording_object(path=recording.output_dir)
+        if args.validation is True:
+            recording.save_validation_images(path=recording.output_dir)
+        # recording.save_recording_object(path=recording.output_dir)
         recording.remove_spectrograms_and_masks_from_object()
         recording.save_recording_object(filename='recording_without_spectrograms', path=recording.output_dir)
         recording.save_recording_data_to_csv(path=recording.output_dir)

@@ -270,6 +270,16 @@ class Recording(object):
         list_of_vocals.save_spectrograms(output_dir=path)
         return 0
 
+    def save_validation_images(self, list_of_vocals=None, path=None):
+        if self._has_list_of_vocals is not True and list_of_vocals is None:
+            return -1
+        list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
+        path = path if path is not None else self.output_dir
+        remove_directory(join(path, 'spectrogram_validation'))
+        create_directory(join(path, 'spectrogram_validation'))
+        list_of_vocals.save_validation_images(output_dir=path)
+        return 0
+
     def save_spectrograms_and_masks(self, list_of_vocals=None, path=None):
         if self._has_list_of_vocals is not True and list_of_vocals is None:
             return -1
