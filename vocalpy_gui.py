@@ -1,10 +1,13 @@
+from PIL import Image
+import numpy as np
+# import matplotlib.pyplot as plt
 import webbrowser
 from pyforms.basewidget import BaseWidget
 from pyforms.controls import ControlDir
 from pyforms.controls import ControlLabel
 from pyforms.controls import ControlCombo
 from pyforms.controls import ControlButton
-from pyforms.controls import ControlVisVis
+from pyforms.controls import ControlMatplotlib
 from pyforms.controls import ControlNumber
 from pyforms.controls import ControlProgress
 from pyforms.controls import ControlCheckBox
@@ -62,19 +65,20 @@ class VocalPy(BaseWidget):
 
         # tab: inspect vocalizations
         self._dir_load_vocalpy_file = ControlDir('choose a recording output directory')
-        self._vis_plot_vocal = ControlVisVis('vocalization')
+        self._image_plot_vocal = ControlMatplotlib('vocalization')
         self._button_previous_vocal = ControlButton('Previous')
         self._button_accept_vocal = ControlButton('Accept')
         self._button_reject_vocal = ControlButton('Reject')
         self._button_next_vocal = ControlButton('Next')
-        self._label_vocal_ID = ControlLabel('')
-        self._label_vocal_start = ControlLabel('')
-        self._label_vocal_end = ControlLabel('')
-        self._label_vocal_duration = ControlLabel('')
-        self._label_vocal_avg_freq = ControlLabel('')
-        self._label_vocal_bandwidth = ControlLabel('')
-        self._label_vocal_label = ControlLabel('')
+        self._label_vocal_ID = ControlLabel('#')
+        self._label_vocal_start = ControlLabel('#')
+        self._label_vocal_end = ControlLabel('#')
+        self._label_vocal_duration = ControlLabel('#')
+        self._label_vocal_avg_freq = ControlLabel('#')
+        self._label_vocal_bandwidth = ControlLabel('#')
+        self._label_vocal_label = ControlLabel('#')
         #   # actions
+        self._dir_load_vocalpy_file.changed_event = self.__loadVocalPyObject
 
         # Define the event called before showing the image in the player
         # self._player.process_frame_event = self.__process_frame
@@ -123,8 +127,8 @@ class VocalPy(BaseWidget):
                     ('_dir_load_vocalpy_file'),
                     (' ', 'ID:', '_label_vocal_ID', 'start:', '_label_vocal_start', 'end:', '_label_vocal_end', 'duration:', '_label_vocal_duration', ' '),
                     (' ', 'average frequency:', '_label_vocal_avg_freq', 'bandwidth:', '_label_vocal_bandwidth', 'label:', '_label_vocal_label', ' '),
-                    ('_vis_plot_vocal'),
                     (' ', '_button_previous_vocal', '_button_accept_vocal', '_button_reject_vocal', '_button_next_vocal', ' '),
+                    (' ', '_image_plot_vocal', ' '),
                     ' '
                 ],
             }
@@ -187,6 +191,15 @@ class VocalPy(BaseWidget):
     def __numberOfAudios(self):
         return 10**6
 
+    def __loadVocalPyObject(self):
+        def draw(figure):
+            axes = figure.add_subplot(111)
+            axes.clear()
+            axes.imshow(np.asarray(img))
+            axes.axis('off')
+        img = Image.open('/Users/gustavo/Downloads/usvseg/vocalmat audios/GT/1773_Agrp-Trpv1_1st_Stage/All/59.png')
+        self._image_plot_vocal.value = draw
+
     def __runVocalPy(self):
         self._run_analysis_label.value = 'analysis running, check terminal for detailed logging information...'
         for i in range(0, 10**6):
@@ -197,4 +210,4 @@ class VocalPy(BaseWidget):
 
 if __name__ == '__main__':
     from pyforms import start_app
-    start_app(VocalPy, geometry=(400, 400, 650, 450))
+    start_app(VocalPy, geometry=(400, 400, 650, 650))
