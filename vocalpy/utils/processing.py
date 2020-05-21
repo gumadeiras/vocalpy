@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''VocalPy - Vocal analysis framework'''
 
-__email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
 __copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
 
@@ -9,6 +8,20 @@ import numpy as np
 
 
 def bradley_roth(image, s=None, t=None):
+    """
+    Implements the Bradley-Roth adaptive thresholding algorithm
+    'Adaptive Thresholding Using the Integral Image'
+    paper: https://people.scs.carleton.ca/~roth/iit-publications-iti/docs/gerh-50002.pdf
+
+    Parameters
+    ----------
+    image : numpy.array
+        image the be tresholded
+    s : int
+        window size
+    t : int
+        thresholding sensitivity
+    """
     # -- from somewhere
     img = np.array(image).astype(np.float)
 
@@ -83,13 +96,23 @@ def bradley_roth(image, s=None, t=None):
 
 
 def parallel_audio_processing(animal, chunk):
-    # -- import animal pipelines here
-    import animals.rat as rat
-    import animals.mouse as mouse
-    import animals.guineapig as guineapig
+    """
+    Parallel processing of audio segments by calling appropriate animal pipeline
 
-    ## create Animal class -> Animal.identifier(animal)
-    ## one less place to be changed when new animals are added
+    Parameters
+    ----------
+    animal : str
+        animal pipeline
+    chunk : List[]
+        list containing the audio segment and metadata
+    """
+    # -- import animal pipelines here
+    import vocalpy.pipelines.rat as rat
+    import vocalpy.pipelines.mouse as mouse
+    import vocalpy.pipelines.guineapig as guineapig
+
+    # -- create Animal class -> Animal.identifier(animal)
+    # -- one less place to be changed when new animals are added
     if animal == 'mouse':
         return mouse.identifier(chunk)
     elif animal == 'rat':

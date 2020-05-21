@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 '''VocalPy - Vocal analysis framework'''
 
-__email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
 __copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
 
-import cv2
 import logging
-import numpy as np
-import matplotlib.pyplot as plt
 
 from os.path import join
 from multiprocessing import cpu_count
 
 
 def create_logger(args=None, out_dir=None):
+    """
+    Creates a logger to log information during execution
+    """
     if args.verbose:
         logging.basicConfig(level=logging.INFO,
                             format='%(asctime)s [%(levelname)-5.5s]  %(message)s',
@@ -37,6 +36,13 @@ def create_logger(args=None, out_dir=None):
 
 
 def validate_arguments(args):
+    """
+    Validates arguments passed by the user
+
+    Parameter
+    ---------
+    args : ArgumentParser
+    """
     validate_bin_size(args.bin_size)
     validate_thread_count(args.threads)
     validate_animal(args.animal)
@@ -78,7 +84,7 @@ def validate_thread_count(threads):
         exit()
     if threads > num_cores:
         print('WARNING: number of threads is equal or higher than number of available cores.')
-        print('WARNING: if your CPU has hyperthreading, use number of physical cores for better performance.' )
+        print('WARNING: if your CPU has hyperthreading, use number of physical cores for better performance.')
         print('provided value: {}'.format(threads))
         print('computer thread count: {}'.format(num_cores))
     return 0
@@ -90,19 +96,3 @@ def validate_animal(animal):
         print('provided value: {}'.format(animal))
         exit()
     return 0
-
-
-def imshow_components(labels):
-    # Map component labels to hue val
-    label_hue = np.uint8(179 * labels / np.max(labels))
-    blank_ch = 255 * np.ones_like(label_hue)
-    labeled_img = cv2.merge([label_hue, blank_ch, blank_ch])
-
-    # cvt to BGR for display
-    labeled_img = cv2.cvtColor(labeled_img, cv2.COLOR_HSV2BGR)
-
-    # set bg label to black
-    labeled_img[label_hue == 0] = 0
-
-    plt.imshow(labeled_img)
-    plt.show()

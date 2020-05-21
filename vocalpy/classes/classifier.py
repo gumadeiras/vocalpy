@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''VocalPy - Vocal analysis framework'''
 
-__email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
 __copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
 
@@ -20,13 +19,24 @@ from torch.autograd import Variable
 from torch.nn.functional import softmax
 from os.path import join, basename, splitext
 
-from utils.io import load_checkpoint
+from vocalpy.utils.io import load_checkpoint
 
 
 class VocalClassifier(object):
-    '''
-    CNN noise classifier class
-    '''
+    """
+    Vocalization classifier
+
+    Parameters
+    ----------
+    type : str
+        vocal classifier type ('noise', or 'class')
+    path_to_spectrograms : str
+        path to directory with spectrograms to be classified
+    batch_size : str, optional
+        batch size to use with the neural network
+    path_to_checkpoint : str, optional
+        path to checkpoint to laod pretrained neural network model
+    """
 
     def __init__(self,
                  type,
@@ -47,22 +57,27 @@ class VocalClassifier(object):
         self.device = torch.device('cuda' if self.cuda_available else 'cpu')
 
         if self.type is 'noise':
-            self.model = self.load_pretrained_noise_model(self.path_to_checkpoint, self.device)
+            self.model = self.load_pretrained_noise_model(self.device, self.path_to_checkpoint)
         else:
-            self.model = self.load_pretrained_class_model(self.path_to_checkpoint, self.device)
+            self.model = self.load_pretrained_class_model(self.device, self.path_to_checkpoint)
 
         self.dataset = self.create_dataset(self.path_to_spectrograms)
         self.dataloader = self.create_dataloader(self.dataset, self.batch_size)
 
     def load_pretrained_noise_model(self,
-                                    path_to_checkpoint,
                                     device,
                                     model=None):
-        '''
-        load pretrained Noise CNN model,
-        trained to classify spectrograms as Vocal or Noise;
-        or model at path provided by the user.
-        '''
+        """
+        Loads pretrained Class CNN model by default, trained to classify spectrograms
+        as Vocal or Noise; or model at path provided by the user
+
+        Parameters
+        ----------
+        device : torch.device
+            device to run (CPU or GPU)
+        model : str, optional
+            path to checkpoint for a neural network model
+        """
         if model is None:
             model = models.mobilenet_v2()
             model.classifier = nn.Sequential(nn.Dropout(0.2),
@@ -77,25 +92,33 @@ class VocalClassifier(object):
             model.eval()
 
         else:
-            load_checkpoint(path_to_checkpoint, model, device)
+            load_checkpoint(model, device)
 
         self.classes = ['noise', 'vocal']
         return model
 
-    def load_pretrained_class_model(self, path_to_checkpoint, device, model=None):
-        '''
-        load pretrained Class CNN model,
-        trained to classify spectrograms as one of eleven classes:
-        chevron, complex, down_fm, flat, mult_steps, rev_chevron, short, step_down, step_up, two_steps, up_fm
-        or model at path provided by the user.
-        '''
+    def load_pretrained_class_model(self, device, model=None):
+        """
+        Loads pretrained Class CNN model by default, trained to classify spectrograms
+        as one of eleven classes:
+            chevron, complex, down_fm, flat, mult_steps, rev_chevron,
+            short, step_down, step_up, two_steps, up_fm
+        or model at path provided by the user
+
+        Parameters
+        ----------
+        device : torch.device
+            device to run (CPU or GPU)
+        model : str, optional
+            path to checkpoint for a neural network model
+        """
         if model is None:
             model = models.mobilenet_v2()
             # -- add extra layers after the 'classifier' sequence
             model.classifier = nn.Sequential(nn.Dropout(0.2),
-                               nn.Linear(1280, 1024),
-                               nn.ReLU(inplace=True),
-                               nn.Linear(1024, 11))
+                                             nn.Linear(1280, 1024),
+                                             nn.ReLU(inplace=True),
+                                             nn.Linear(1024, 11))
 
             model_path = '../models/class_model.pth.tar'
             classifier_dir_path = os.path.dirname(os.path.abspath(__file__))
@@ -104,35 +127,45 @@ class VocalClassifier(object):
             model.eval()
 
         else:
-            load_checkpoint(path_to_checkpoint, model, device)
+            load_checkpoint(model, device)
 
         self.classes = ['chevron', 'complex', 'down_fm', 'flat', 'mult_steps', 'rev_chevron', 'short', 'step_down', 'step_up', 'two_steps', 'up_fm']
         return model
 
     def create_dataset(self, path_to_spectrograms):
-        '''
-        create a dataset by instantiating the VocalDatasetFromFolder class
+        """
+        Creates a dataset by instantiating the VocalDatasetFromFolder class
 
-        Args:
-            path_to_spectrograms: (string) path to directory that
-                contains the spectrogram images used to create the dataset
-        '''
+        Parameters
+        ----------
+        path_to_spectrograms : str
+            path to directory that contains the spectrogram images used to create the dataset
+        """
         return VocalDatasetFromFolder(path_to_spectrograms)
 
     def create_dataloader(self, dataset, batch_size):
-        '''
-        create a DataLoader to load data from the dataset
+        """
+        Creates a DataLoader to load data from the dataset
 
-        Args:
-            dataset: (VocalDatasetFromFolder) dataset class instance
-            batch_size: (int) batch size number
-        '''
+        Parameters
+        ----------
+        dataset : :class:`VocalDatasetFromFolder`
+        batch_size : int
+        """
         return data.DataLoader(dataset,
                                batch_size=batch_size,
                                shuffle=False,
                                num_workers=0)
 
     def classify_list_of_vocals(self, list_of_vocals):
+        """
+        Classify a :class:`ListOfVocals` using a Neural Network
+
+        Parameters
+        ----------
+        list_of_vocals : :class:`ListOfVocals`
+            list of vocals to be classified
+        """
         # -- is list of vocals is empty, just return
         if list_of_vocals.number_of_vocals < 1:
             print("[classify vocals as noise]: list of vocals is empty")
@@ -144,15 +177,14 @@ class VocalClassifier(object):
             return self.classify_list_of_vocals_class(list_of_vocals)
 
     def classify_list_of_vocals_class(self, list_of_vocals):
-        '''
-        classify candidate vocalizations found in the recording;
-        candidates are classified as vocal or noise;
+        """
+        Classify a :class:`ListOfVocals` into vocal classes using a Neural Network
 
-        Args:
-            list_of_vocals: (ListOfVocals) list of candidate vocals
-
-        returns class probabilities for all vocals in the list of vocals
-        '''
+        Parameters
+        ----------
+        list_of_vocals : :class:`ListOfVocals`
+            list of vocals to be classified
+        """
         predictions = []
 
         # compute metrics over the dataset
@@ -167,15 +199,14 @@ class VocalClassifier(object):
         return np.vstack(predictions)
 
     def classify_list_of_vocals_noise(self, list_of_vocals):
-        '''
-        classify candidate vocalizations found in the recording;
-        candidates are classified as vocal or noise;
+        """
+        Classify a :class:`ListOfVocals` as Vocal or Noise using a Neural Network
 
-        Args:
-            list_of_vocals: (ListOfVocals) list of candidate vocals
-
-        returns class probabilities for all vocals in the list of vocals
-        '''
+        Parameters
+        ----------
+        list_of_vocals : :class:`ListOfVocals`
+            list of vocals to be classified
+        """
         predictions = []
 
         # compute metrics over the dataset
@@ -194,31 +225,15 @@ class VocalClassifier(object):
         return 0
 
 
-class VocalClassClassifier(object):
-    '''
-    CNN class classifier class
-    '''
-
-    def __init__(self,
-                 model='resnet50',
-                 pretrained=True):
-
-        if model == 'resnet50':
-            self.model = models.resnet50(pretrained=pretrained)
-        elif model == 'alexnet':
-            self.model = models.alexnet(pretrained=pretrained)
-
-
 class VocalDatasetFromFolder(data.Dataset):
-    '''Create a vocalization dataset
+    """
+    Creates a vocalization dataset from a directory containing spectrograms
 
-    Arguments:
-        dataset_path {string} -- path to the dataset
-
-    Keyword Arguments:
-        transforms {optional} -- A function/transform that takes in a PIL
-        image and returns a transformed version. (default: {None})
-    '''
+    Parameters
+    ----------
+    dataset_path : str
+        path to the directory containing the spectrograms
+    """
 
     def __init__(self, dataset_path):
         self.dataset_path = dataset_path
@@ -229,7 +244,7 @@ class VocalDatasetFromFolder(data.Dataset):
 
     def __getitem__(self, index):
         img = Image.open(self.images[index]).convert('RGB')
-        transToTensor = transforms.Compose([transforms.Resize((224,224)),
+        transToTensor = transforms.Compose([transforms.Resize((224, 224)),
                                             transforms.ToTensor()])
         img = transToTensor(img)
         return img

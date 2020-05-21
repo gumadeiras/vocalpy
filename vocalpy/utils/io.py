@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''VocalPy - Vocal analysis framework'''
 
-__email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
 __copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
 
@@ -17,6 +16,23 @@ from os.path import basename, exists, isdir, isfile, join, splitext
 
 
 def save_file(file, filename, path):
+    """
+    Saves vocalpy object to a path
+
+    Parameters
+    ----------
+    file : Object
+        object to be saved
+    filename : str
+        filename to be used
+    path : str
+        path to save the object
+
+    Raises
+    ------
+    ValueError
+        if the path does not exist
+    """
     if exists(path) is False:
         raise ValueError('path does not existe: {}'.format(path))
 
@@ -24,6 +40,21 @@ def save_file(file, filename, path):
 
 
 def load_file(filename, path):
+    """
+    Loads vocalpy object from a path
+
+    Parameters
+    ----------
+    filename : str
+        object filename
+    path : str
+        path to object
+
+    Raises
+    ------
+    ValueError
+        if the path does not exist
+    """
     if exists(path) is False:
         raise ValueError('path does not existe: {}'.format(path))
 
@@ -31,11 +62,26 @@ def load_file(filename, path):
 
 
 def load_recording_data(path):
+    """
+    Loads vocalpy recording object from a path
+
+    Parameters
+    ----------
+    path : str
+        full path to object
+
+    Raises
+    ------
+    ValueError
+        if the file does not exist
+    """
+    if exists(path) is False:
+        raise ValueError('file does not existe: {}'.format(path))
     return np.load(path, allow_pickle=True)
 
 
 def load_checkpoint(checkpoint, model, device, optimizer=None):
-    '''Loads model parameters (state_dict) from file_path.
+    """Loads model parameters (state_dict) from file_path.
     If optimizer is provided, loads state_dict of
     optimizer assuming it is present in checkpoint.
 
@@ -43,7 +89,7 @@ def load_checkpoint(checkpoint, model, device, optimizer=None):
         checkpoint: (string) filename which needs to be loaded
         model: (torch.nn.Module) model for which the parameters are loaded
         optimizer: (torch.optim) optional: resume optimizer from checkpoint
-    '''
+    """
     import torch
 
     if not exists(checkpoint):
@@ -60,21 +106,30 @@ def load_checkpoint(checkpoint, model, device, optimizer=None):
 
 
 def load_model(model_path, device):
-    '''
-    directly load a pretrained model
-    '''
+    """
+    Directly load a pretrained pytorch model
+
+    Parameters
+    ----------
+    model_path : str
+        path to model
+    device : torch.device
+        device to run (CPU or GPU)
+    """
     import torch
     return torch.load(model_path, map_location=torch.device(device))
 
 
 def parse_input_path(path=None, search_tree=False):
-    ''' parse input path string;
-    if it's a directory, return list of files;
-    if it's a file, return the file path.
+    """
+    Parse input path. If it is a directory, return list of files; if it
+    is a file, return the file path
 
-    Args:
-        path: (string) path provided by the user
-    '''
+    Parameters
+    ----------
+    path : str
+        path provided by the user
+    """
     if path is None:
         print('usage: python vocalpy.py --audio_path=\'/path/to/audio\'')
         return -1
@@ -98,15 +153,15 @@ def parse_input_path(path=None, search_tree=False):
     return 0
 
 
-def create_output_directory_structure(list_of_files=None):
-    ''' create directory structure for output files from VocalPy
+def create_output_directory_structure(list_of_files):
+    """
+    Creates directory structure for output files from VocalPy
 
-    Args:
-        list_of_files: (list <string>) list of files provided by the user
-    '''
-    if list_of_files is None:
-        print('list of input files can not be None')
-        exit()
+    Parameters
+    ----------
+    list_of_files : List[str]
+        list of files provided by the user
+    """
 
     list_of_output_dirs = []
     print('list of files detected:')
@@ -122,11 +177,27 @@ def create_output_directory_structure(list_of_files=None):
 
 
 def create_directory(path):
+    """
+    Creates a directory at the provided path
+
+    Parameters
+    ----------
+    path : str
+        path to be created
+    """
     if not exists(path):
         makedirs(path, exist_ok=True)
     return 0
 
 
 def remove_directory(path):
+    """
+    Removes a directory at the provided path
+
+    Parameters
+    ----------
+    path : str
+        path to be removed
+    """
     shutil.rmtree(path, ignore_errors=True)
     return 0

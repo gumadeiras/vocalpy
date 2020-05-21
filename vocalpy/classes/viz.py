@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''VocalPy - Vocal analysis framework'''
 
-__email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
 __copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
 
@@ -15,7 +14,7 @@ import matplotlib.pyplot as plt
 
 from matplotlib.lines import Line2D
 
-from utils.io import load_recording_data
+from vocalpy.utils.io import load_recording_data
 
 
 class Viz(object):

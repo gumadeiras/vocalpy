@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''VocalPy - Vocal analysis framework'''
 
-__email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
 __copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
 
@@ -15,12 +14,70 @@ from os.path import join, exists
 
 
 class Vocal(object):
-    '''
-    vocalization object
-    individualized vocal metadata
-    '''
+    """
+    Vocalization object stores metadata about each vocal identified in the recording
 
-    def __init__(self, bin_number=None,
+    Parameters
+    ----------
+    bin_number : float, int
+        bin number for this vocal (if recording uses 1 minute bins, bin
+        indicates which minute the vocal happened)
+    start : float, optional
+        vocal start time in the recording
+    end : float, optional
+        vocal end time in the recording
+    start_coord : float, optional
+        vocal start coordinate in the recording spectrogram
+    end_coord : float, optional
+        vocal end coordinate in the recording spectrogram
+    duration : float, optional
+        vocal duration in seconds
+    interval : float, optional
+        distance from last vocal in seconds
+    min_freq : float, optional
+        vocal minimum frequency
+    max_freq : float, optional
+        vocal maximum frequency
+    min_freq_coord : float, optional
+        vocal minimum frequency coordinate in the spectrogram
+    max_freq_coord : float, optional
+        vocal maximum frequency coordinate in the spectrogram
+    avg_freq : float, optional
+        vocal average frequency
+    bandwidth : float, optional
+        vocal bandwidth (maximum frequency - minimum frequency)
+    min_intensity : float, optional
+        vocal minimum intensity in decibel
+    max_intensity : float, optional
+        vocal maximum intensity in decibel
+    avg_intensity : float, optional
+        vocal average intensity in decibel
+    bg_intensity : float, optional
+        background average intensity in decibel
+    area : float, optional
+        vocal area in pixels
+    centroid : float, optional
+        vocal centroid coordinates in the spectrogram
+    orientation : float, optional
+        vocal orientation (slope)
+    coords : float, optional
+        vocal coordinates in the spectrogram
+    spectrogram : numpy.array, optional
+        spectrogram (image)
+    mask : numpy.array, optional
+        segmentation (image)
+    cnn_mask : numpy.array, optional
+        segmentation from neural network (image)
+    probabilities : List[float], optional
+        classes probability distribution from the neural network
+    top1 : str, optional
+        top 1 class from the neural network
+    top2 : str, optional
+        top 2 class from the neural network
+    """
+
+    def __init__(self,
+                 bin_number=None,
                  start=None,
                  end=None,
                  start_coord=None,
@@ -44,7 +101,6 @@ class Vocal(object):
                  spectrogram=None,
                  mask=None,
                  cnn_mask=None,
-                 label=None,
                  probabilities=None,
                  top1=None,
                  top2=None):
@@ -73,7 +129,6 @@ class Vocal(object):
         self._spectrogram = spectrogram
         self._mask = mask
         self._cnn_mask = cnn_mask
-        self._label = label
         self._probabilities = probabilities
         self._top1 = top1
         self._top2 = top2
@@ -194,10 +249,6 @@ class Vocal(object):
         return self._cnn_mask
 
     @property
-    def label(self):
-        return self._label
-
-    @property
     def probabilities(self):
         return self._probabilities
 
@@ -304,10 +355,6 @@ class Vocal(object):
     @cnn_mask.setter
     def cnn_mask(self, new_cnn_mask):
         self._cnn_mask = new_cnn_mask
-
-    @label.setter
-    def label(self, new_label):
-        self._label = new_label
 
     @probabilities.setter
     def probabilities(self, new_probabilities):

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''VocalPy - Vocal analysis framework'''
 
-__email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
 __copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
 
@@ -16,12 +15,12 @@ from math import ceil
 from scipy import signal, ndimage
 from skimage import exposure, measure
 
-from utils.processing import bradley_roth
+from vocalpy.utils.processing import bradley_roth
 
 
 def identifier(chunk):
-    from classes.vocal import Vocal
-    from classes.list_of_vocals import ListOfVocals
+    from vocalpy.classes.vocal import Vocal
+    from vocalpy.classes.list_of_vocals import ListOfVocals
     timeBinA = time()
 
     # -- unwrap chunk

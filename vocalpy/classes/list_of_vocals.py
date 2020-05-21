@@ -1,24 +1,28 @@
 # -*- coding: utf-8 -*-
 '''VocalPy - Vocal analysis framework'''
 
-__email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
 __copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
 
 import torch
 
 import numpy as np
-import animals.rat as rat
-import animals.mouse as mouse
-import animals.guineapig as guineapig
+import vocalpy.pipelines.rat as rat
+import vocalpy.pipelines.mouse as mouse
+import vocalpy.pipelines.guineapig as guineapig
 
-from classes.vocal import Vocal
+from vocalpy.classes.vocal import Vocal
 
 
 class ListOfVocals(object):
-    '''
-    list of vocalizations (Vocal class)
-    '''
+    """
+    List of vocalizations identified in the recording. Each vocal if an instance of :class:`Vocals`
+
+    Parameters
+    ----------
+    vocals_in_recording : List[:class:`Vocal`]
+        list of vocals identified in the recording
+    """
 
     def __init__(self, vocals_in_recording=None):
         if vocals_in_recording is not None:
@@ -42,11 +46,22 @@ class ListOfVocals(object):
                                                                                                                                self.centroid_spectro_fixed)
 
     def save_list_of_vocals_object(self, path):
+        """
+        Saves a :class:`ListOfVocals` Object to file
+
+        Parameters
+        ----------
+        path : str
+            path to save the object
+        """
         from utils import save_file
         save_file(self, 'list_of_vocals', path)
 
     def update_intervals(self):
-            # -- go through vocals and update inter vocal times
+        """
+        Updates the interval (silence) between vocals. Usually used after combining or removing vocals
+        """
+        # -- go through vocals and update inter vocal times
         self.vocals_in_recording[0].interval = 0
 
         for idx in range(1, len(self.vocals_in_recording), 1):
@@ -56,6 +71,15 @@ class ListOfVocals(object):
         return 0
 
     def combine_vocals(self, first_vocal, second_vocal):
+        """
+        Combines two vocals
+
+        Parameters
+        ----------
+        first_vocal : :class:`Vocal`
+        second_vocal : :class:`Vocal`
+            vocals to be combined
+        """
         # -- combines two vocals
         start_difference = first_vocal.start - second_vocal.start
         end_difference = first_vocal.end - second_vocal.end
@@ -66,7 +90,7 @@ class ListOfVocals(object):
                                start_coord=first_vocal.start_coord if (start_difference < 0) else second_vocal.start_coord,
                                end=first_vocal.end if (end_difference > 0) else second_vocal.end,
                                end_coord=first_vocal.end_coord if (end_difference > 0) else second_vocal.end_coord,
-                               interval=-1, # -- updated after noise candidates are removed
+                               interval=-1,  # -- updated after noise candidates are removed
                                min_freq=first_vocal.min_freq if (first_vocal.min_freq < second_vocal.min_freq) else second_vocal.min_freq,
                                max_freq=first_vocal.max_freq if (first_vocal.max_freq > second_vocal.max_freq) else second_vocal.max_freq,
                                min_freq_coord=first_vocal.min_freq_coord if (first_vocal.min_freq_coord < second_vocal.min_freq_coord) else second_vocal.min_freq_coord,
@@ -86,6 +110,15 @@ class ListOfVocals(object):
         return combined_vocal
 
     def connect_vocals(self, animal):
+        """
+        Checks segmentation and combines segments that belong to the same vocalization. Uses predefined
+        constraints. Can have different contrainsts for different animal pipelines
+
+        Parameters
+        ----------
+        animal : str
+            animal pipeline (constraints) to use
+        """
         # -- combine segmentation blobs that are close
         # -- consider them as one vocal
 
@@ -105,7 +138,7 @@ class ListOfVocals(object):
                 there_are_vocals = False
                 break
 
-            if animal =='mouse':
+            if animal == 'mouse':
                 next_vocal_is_close = mouse.check_if_vocals_are_close(base_vocal, next_vocal)
             elif animal == 'rat':
                 next_vocal_is_close = rat.check_if_vocals_are_close(base_vocal, next_vocal)
@@ -121,7 +154,7 @@ class ListOfVocals(object):
                 new_vocal = self.combine_vocals(new_vocal, next_vocal)
                 try:
                     next_vocal = self.vocals_in_recording[idx + 1]
-                    if animal =='mouse':
+                    if animal == 'mouse':
                         next_vocal_is_close = mouse.check_if_vocals_are_close(new_vocal, next_vocal)
                     elif animal == 'rat':
                         next_vocal_is_close = rat.check_if_vocals_are_close(new_vocal, next_vocal)
@@ -144,10 +177,10 @@ class ListOfVocals(object):
         return 0
 
     def update_centroids(self):
-        '''
-        update centroids for each vocal
-        absolute centroid from vocal coordinates start/end, and min/max frequency
-        '''
+        """
+        Updates centroid coordinates for each vocal. Usually called after combining vocals. Absolute
+        centroid from vocal coordinates start/end, and min/max frequency
+        """
         for vocal in self.vocals_in_recording:
             cx = vocal.start_coord + ((vocal.end_coord - vocal.start_coord) // 2)
             cy = vocal.min_freq_coord + ((vocal.max_freq_coord - vocal.min_freq_coord) // 2)
@@ -157,10 +190,15 @@ class ListOfVocals(object):
         return 0
 
     def update_coords(self, spec_range=200):
-        '''
-        update coords for each vocal
-        absolute coords from vocal coordinates start/end, and min/max frequency
-        '''
+        """
+        Updates coordinates for each vocal after cropping area around a vocal. Absolute
+        coords from vocal coordinates start/end, and min/max frequency
+
+        Parameters
+        spec_range : int, optional
+            range before/after vocal used to crop and generate spectrograms
+        ----------
+        """
         for vocal in self.vocals_in_recording:
             col_values = vocal.coords[:, 1]
             # make column values zero-centered by subtracting the mean
@@ -173,6 +211,15 @@ class ListOfVocals(object):
         return 0
 
     def combine_list_of_list_of_vocals(self, list_of_list_of_vocals):
+        """
+        Combines a list of :class:`ListOfVocals` into one :class:`ListOfVocals`. Usually called
+        to combine several lists of parallel processing of a recording
+
+        Parameters
+        ----------
+        list_of_list_of_vocals : List[:class:`ListOfVocals`]
+            list of :class:`ListOfVocals`
+        """
         new_list_of_vocals = []
         for list_of_vocals in list_of_list_of_vocals:
             try:
@@ -192,6 +239,18 @@ class ListOfVocals(object):
             exit()
 
     def add_spectrograms_to_vocals(self, full_spectrogram, full_mask, spec_range=200):
+        """
+        Stores the spectrogram in each :class:`Vocal` class object in the :class:`ListOfVocals`
+
+        Parameters
+        ----------
+        full_spectrogram : numpy.array
+            complete spectrogram ranging the recording segment
+        full_mask : numpy.array
+            complete segmentation mask ranging the recording segment
+        spec_range : int, optional
+            range to crop the spectrogram/segmentation around the vocal (+-200)
+        """
         for vocal in self.vocals_in_recording:
             cy, cx = vocal.centroid
             spec_max = full_spectrogram.shape[1]
@@ -207,31 +266,70 @@ class ListOfVocals(object):
         return 0
 
     def save_spectrograms(self, output_dir=None):
+        """
+        Saves the spectrogram image to the output directory
+
+        Parameters
+        ----------
+        output_dir : str, optional
+            path to output directory to save the files
+        """
         for filename, vocal in enumerate(self.vocals_in_recording, start=1):
             vocal.save_spectrogram_as_image(path=output_dir, filename=str(filename))
         return 0
 
     def save_validation_images(self, output_dir=None):
+        """
+        Saves the spectrogram overlaidd with the segmentation image to the output directory
+
+        Parameters
+        ----------
+        output_dir : str, optional
+            path to output directory to save the files
+        """
         for filename, vocal in enumerate(self.vocals_in_recording, start=1):
             vocal.save_spectrogram_with_coords_as_image(path=output_dir, filename=str(filename))
         return 0
 
     def save_masks(self, output_dir=None):
+        """
+        Saves the segmentation mask image to the output directory
+
+        Parameters
+        ----------
+        output_dir : str, optional
+            path to output directory to save the files
+        """
         for filename, vocal in enumerate(self.vocals_in_recording, start=1):
             vocal.save_mask_as_image(path=output_dir, filename=str(filename))
         return 0
 
     def remove_spectrograms(self):
+        """
+        Removes the spectrogram data from each :class:`Vocal` in the :class:`ListOfVocals`
+        """
         for vocal in self.vocals_in_recording:
             vocal.spectrogram = None
         return 0
 
     def remove_masks(self):
+        """
+        Removes the segmentation data from each :class:`Vocal` in the :class:`ListOfVocals`
+        """
         for vocal in self.vocals_in_recording:
             vocal.mask = None
         return 0
 
     def remove_vocals_classified_as_noise(self, predictions):
+        """
+        Removes vocals that were classified as noise from the :class:`ListOfVocals` and
+        updates the number of vocals
+
+        Parameters
+        ----------
+        predictions : List[float]
+            Neural Network classification predictions for the :class:`ListOfVocals`
+        """
         self.vocals_in_recording = self.vocals_in_recording[predictions]
         self.number_of_vocals = len(self.vocals_in_recording)
         if self.number_of_vocals > 0:
@@ -239,6 +337,17 @@ class ListOfVocals(object):
         return 0
 
     def add_classification_to_vocals(self, predictions, classes):
+        """
+        Updates :class:`ListOfVocals` with the class and probability distribution obtained
+        using the Neural Network
+
+        Parameters
+        ----------
+        predictions : List[float]
+            Neural Network classification predictions for the :class:`ListOfVocals`
+        classes : List[str]
+            Labels used for classifying vocalizations
+        """
         for idx, vocal in enumerate(self.vocals_in_recording):
             vocal.probabilities = predictions[idx]
 

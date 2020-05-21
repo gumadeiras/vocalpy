@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 '''VocalPy - Vocal analysis framework'''
 
-__email__ = 'gustavo.santana@yale.edu'
 __license__ = 'Apache License, Version 2.0'
 __copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
 
@@ -13,13 +12,34 @@ from math import ceil
 from os import makedirs
 from os.path import join, split, splitext, exists
 
-from utils.io import save_file, load_file, create_directory, remove_directory
+from vocalpy.utils.io import save_file, load_file, create_directory, remove_directory
 
 
 class Recording(object):
-    '''
-    audio recording object and auxiliary functions to process the recording
-    '''
+    """
+    Audio recording Object which contains auxiliary functions to process the recording
+    Reads the audio file and breaks it down into segments of one minute to be processed
+    in parallel. Stores metadata about the audio recording.
+
+    Parameters
+    ----------
+    recording_path : str
+        Path to audio file to open
+    args : args
+        Struct with arguments that customizes the execution with parameters such as:
+        animal pipeline, bin size, frequency range, threads for parallelization, verbose output
+
+    Returns
+    -------
+    recording : Object
+        The recording object containing the read audio file and its metadata
+
+    Examples
+    --------
+    >>> audio_path = 'path/to/audio'
+    >>> args = p.parse_args()
+    >>> recording = Recording(recording_path=audio_path, args=args)
+    """
 
     def __init__(self, recording_path, args):
         self.args = args
@@ -57,6 +77,13 @@ class Recording(object):
 
     @property
     def has_list_of_vocals(self):
+        """
+        Checks if recording has a list of vocals
+
+        Returns
+        ------
+        _has_list_of_vocals : Bool
+        """
         return self._has_list_of_vocals
 
     @has_list_of_vocals.setter
@@ -65,6 +92,13 @@ class Recording(object):
 
     @property
     def list_of_vocals(self):
+        """
+        Returns the list of vocals for this recording
+
+        Returns
+        ------
+        _list_of_vocals : :class:`ListOfVocals`
+        """
         return self._list_of_vocals
 
     @list_of_vocals.setter
@@ -83,9 +117,17 @@ class Recording(object):
         save_file(self, filename, path)
 
     def create_paths(self, recording_path):
-        '''
-        create directory structure for output files
-        '''
+        """
+        Creates directory structure for output files.
+        Creates three directories:
+            audio_outputs
+                spectrogram
+                mask
+
+        Parameters
+        ----------
+        recording_path : str
+        """
         basepath, filename = split(recording_path)
         self.recording_dir = basepath
         self.recording_name = filename
@@ -104,22 +146,26 @@ class Recording(object):
             makedirs(self.mask_dir, exist_ok=True)
 
     def read_audio(self):
-        '''
-        read audio and metadata
-        '''
+        """
+        Reads audio and metadata. Stores information in the Recording Object
+        """
         samples, sample_rate = sf.read(self.recording_path)
         self.sample_rate = sample_rate
-        self.samples = samples if samples.ndim == 1 else samples[:,0] # get one channel if audio is stereo
+        # get one channel if audio is stereo
+        self.samples = samples if samples.ndim == 1 else samples[:, 0]
         self.samples_min = np.min(samples)
         self.samples_max = np.max(samples)
         self.recording_duration = self.samples.shape[0] / self.sample_rate
 
     def create_chunks(self, overlap=0.1):
-        '''
-        separate audio into chunks for parallel or sequential processing
-        Args:
-            overlap: (float) chunks overlap in seconds
-        '''
+        """
+        Segments audio for parallel or sequential processing
+
+        Parameters
+        ----------
+            overlap : float
+                segments overlap (in seconds)
+        """
         chunks = []
         # CREATE A BASELINE CHUNK WITH REPETITIVE INFO AND CONCATENATE
         for this_bin in range(1, self.bins + 1):
@@ -188,16 +234,28 @@ class Recording(object):
         return chunks
 
     def recording_processing_finished(self):
-        '''
-        recording has already been processed, clear chunks
-        '''
+        """
+        Recording has already been processed -> clears segments
+        """
         self.chunks = None
         return 0
 
     def load_list_of_vocals(self):
+        """
+        Loads :class:`ListOfVocals`  from a python object file
+        """
         return load_file('list_of_vocals', self.output_dir)
 
     def save_recording_data_to_csv(self, list_of_vocals=None, path=None):
+        """
+        Saves recording metadata to a CSV file. The file will contain information
+        regarding each vocalization identified in the recording.
+
+        Parameters
+        ----------
+        list_of_vocals : :class:`ListOfVocals`, optional
+        path : str, optional
+        """
         # -- save metadata to a csv file
         if list_of_vocals is None and self._has_list_of_vocals is not True:
             return -1
@@ -261,6 +319,14 @@ class Recording(object):
         return 0
 
     def save_spectrograms(self, list_of_vocals=None, path=None):
+        """
+        Saves the spectrogram images to the output directory for this Recording Object
+
+        Parameters
+        ----------
+        list_of_vocals : :class:`ListOfVocals`, optional
+        path : str, optional
+        """
         if self._has_list_of_vocals is not True and list_of_vocals is None:
             return -1
         list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
@@ -271,6 +337,14 @@ class Recording(object):
         return 0
 
     def save_validation_images(self, list_of_vocals=None, path=None):
+        """
+        Saves the spectrogram overlaid with the segmentation images to the output directory for this Recording Object
+
+        Parameters
+        ----------
+        list_of_vocals : :class:`ListOfVocals`, optional
+        path : str, optional
+        """
         if self._has_list_of_vocals is not True and list_of_vocals is None:
             return -1
         list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
@@ -281,6 +355,14 @@ class Recording(object):
         return 0
 
     def save_spectrograms_and_masks(self, list_of_vocals=None, path=None):
+        """
+        Saves the spectrograms and segmentation images to the output directory for this Recording Object
+
+        Parameters
+        ----------
+        list_of_vocals : :class:`ListOfVocals`, optional
+        path : str, optional
+        """
         if self._has_list_of_vocals is not True and list_of_vocals is None:
             return -1
         list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
@@ -294,6 +376,14 @@ class Recording(object):
         return 0
 
     def remove_spectrograms_and_masks_from_object(self, list_of_vocals=None):
+        """
+        Removes the directories containing the spectrograms and segmentation images in
+        the Recording Object output directory
+
+        Parameters
+        ----------
+        list_of_vocals : :class:`ListOfVocals`, optional
+        """
         if self._has_list_of_vocals is not True and list_of_vocals is None:
             return -1
         list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
@@ -302,9 +392,12 @@ class Recording(object):
         return 0
 
     def create_dataset(self, list_of_vocals=None):
-        # -- create dataset for the CNN and FCN
-        # -- create from list of vocals or save spectrograms
-        # -- create filename list etc and create from folder path
+        """
+        Creates an image dataset to be used by the Neural Networks
+        """
+        # ToDo
+        # create from list of vocals or save spectrograms
+        # create filename list etc and create from folder path
         if self.has_list_of_vocals is not True and list_of_vocals is None:
             return -1
         list_of_vocals = list_of_vocals if list_of_vocals is not None else self.load_list_of_vocals()
@@ -313,6 +406,15 @@ class Recording(object):
         return 0
 
     def remove_vocals_classified_as_noise_from_list_of_vocals(self, predictions):
+        """
+        Removes vocals that were classified as noise from the :class:`ListOfVocals`
+
+        Parameters
+        ----------
+        predictions : List[float]
+            Neural Network classification predictions for the :class:`ListOfVocals`
+        """
+
         # -- if list of vocals is empty, there are no predictions
         if isinstance(predictions, int) and predictions == -1:
             return predictions
@@ -324,6 +426,18 @@ class Recording(object):
         return 0
 
     def update_vocals_with_class_classification(self, predictions, classes):
+        """
+        Updates :class:`ListOfVocals` with the class and probability distribution obtained
+        using the Neural Network
+
+        Parameters
+        ----------
+        predictions : List[float]
+            Neural Network classification predictions for the :class:`ListOfVocals`
+        classes : List[str]
+            Labels used for classifying vocalizations
+        """
+
         # -- if list of vocals is empty, there are no predictions
         if isinstance(predictions, int) and predictions == -1:
             return predictions
