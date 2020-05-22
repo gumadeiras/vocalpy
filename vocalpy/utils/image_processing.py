@@ -7,6 +7,48 @@ __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 import numpy as np
 
 
+def normalize(data):
+    """
+    Rescales data to be in the range (0,1)
+
+    Parameters
+    ----------
+    data : numpy.array
+        data to be rescaled
+
+    Returns
+    -------
+    data : numpy.array
+        rescaled data
+    """
+    data = np.abs(data)
+    return data / np.max(data)
+
+
+def contrast_adjustment(data, lower_percentile, upper_percentile):
+    """
+    Contrast adjustment by saturating extreme values
+
+    Parameters
+    ----------
+    data : numpy.array
+        input data
+    lower_percentile : int
+        values bellow this percentile will be set to 0
+    upper_percentile : int
+        values above this percentile will be set to 1
+
+    Returns
+    -------
+    data : numpy.array
+        original data with extreme values saturated
+    """
+    p1, p99 = np.percentile(data, (lower_percentile, upper_percentile))
+    data[data < p1] = 0
+    data[data > p99] = 1
+    return data
+
+
 def bradley_roth(image, s=None, t=None):
     """
     Implements the Bradley-Roth adaptive thresholding algorithm
@@ -83,12 +125,7 @@ def bradley_roth(image, s=None, t=None):
     f4_y = f2_y
 
     # -- compute areas of each window
-    sums = (
-        intImage[f1_y, f1_x]
-        - intImage[f2_y, f2_x]
-        - intImage[f3_y, f3_x]
-        + intImage[f4_y, f4_x]
-    )
+    sums = intImage[f1_y, f1_x] - intImage[f2_y, f2_x] - intImage[f3_y, f3_x] + intImage[f4_y, f4_x]
 
     # -- compute thresholded image and reshape into a 2D grid
     out = np.zeros(rows * cols, dtype=np.bool)

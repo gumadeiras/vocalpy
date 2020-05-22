@@ -275,10 +275,10 @@ def identifier(chunk):
 
 def check_if_vocals_are_close(base_vocal, next_vocal):
     # -- conditions to check:
-    # -- 1) next vocal starts within 12ms from base vocal start time
-    # -- 2) next vocal starts within 12ms from base vocal end time
+    # -- 1) next vocal starts within 20ms from base vocal start time
+    # -- 2) next vocal starts within 20ms from base vocal end time
     # -- 3) next vocal starts within base vocal start/end (harmonic)
-    max_interval = 0.011  # 12ms - 1ms error because morph ops increase area
+    max_interval = 0.021  # 21ms - 1ms error because morph ops increase area
     condition_1 = np.abs(base_vocal.end - next_vocal.start) < max_interval
     condition_2 = np.abs(base_vocal.start - next_vocal.start) < max_interval
     condition_3 = (next_vocal.start >= base_vocal.start) and (next_vocal.start <= base_vocal.end)

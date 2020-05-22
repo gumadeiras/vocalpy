@@ -88,11 +88,11 @@ if __name__ == "__main__":
         # -- classify vocalizations
         Recording.classify_vocalizations()
 
-        # -- we are done :)
-        # -- save output files
+        # -- done, save output files :)
         Recording.save_outputs(validation_flag=args.validation)
 
         logger.info("total runtime: {:.0f}m {:.0f}s".format((time() - timeStart) // 60, (time() - timeStart) % 60))
+
     logger.info(
         "total runtime for all recordings: {:.0f}m {:.0f}s".format(
             (time() - timeAllRecordings) // 60, (time() - timeAllRecordings) % 60

@@ -12,11 +12,12 @@ import numpy as np
 
 from time import time
 from math import ceil
-from scipy import signal, ndimage
+from scipy import ndimage
 from skimage import exposure, measure
 
 from vocalpy.classes.classifier import VocalClassifier
-from vocalpy.utils.image_processing import bradley_roth
+from vocalpy.utils.image_processing import normalize, contrast_adjustment, bradley_roth
+from vocalpy.utils.signal_processing import spectrogram
 
 
 def identifier(chunk):
@@ -44,47 +45,37 @@ def identifier(chunk):
     logger = getLogger()
 
     timeASpectrogram = time()
-    fs = sample_rate
-    window = signal.get_window("hamming", 256)
-    noverlap = 128
-    nfft = 1024
-    sample_range_secs = sample_range.shape[0] / sample_rate
+
     logger.info(
         f"[bin {this_bin}]: computing spectrogram; \
-        time range: {sample_range_secs:.2f}s; \
+        time range: {sample_range.shape[0] / sample_rate:.2f}s; \
         audio range: {start_range / sample_rate:.2f}-{end_range / sample_rate:.2f}s"
     )
-    # -- compute spectrogram
-    f, t, Pxx = signal.spectrogram(sample_range, fs=fs, window=window, noverlap=noverlap, nfft=nfft, mode="psd")
 
-    # -- apply frequency cutoffs
-    if low_frequency_cutoff > 0:
-        Pxx = Pxx[(f > low_frequency_cutoff)]
-        f = f[(f > low_frequency_cutoff)]
-    if high_frequency_cutoff > 0:
-        Pxx = Pxx[(f < high_frequency_cutoff)]
-        f = f[(f < high_frequency_cutoff)]
+    f, t, Pxx = spectrogram(
+        samples=sample_range,
+        fs=sample_rate,
+        window_type="hamming",
+        window_size=256,
+        noverlap=128,
+        nfft=1024,
+        low_frequency_cutoff=low_frequency_cutoff,
+        high_frequency_cutoff=high_frequency_cutoff,
+    )
 
-    time_res = sample_range_secs / t.shape[0]
+    time_res = (sample_range.shape[0] / sample_rate) / t.shape[0]
     freq_res = (np.max(f) - low_frequency_cutoff) / f.shape[0]
-
     logger.info(f"[bin {this_bin}]: spectrogram runtime: {time() - timeASpectrogram:.2f}s")
     logger.info(f"[bin {this_bin}]: time resolution: {time_res * 1000:.2f}ms")
     logger.info(f"[bin {this_bin}]: freq resolution: {freq_res:.2f}Hz")
 
-    # -- convert to dB
-    Pxx = 10 * np.log10(Pxx)
+    # -- rescale data to (0,1)
+    B = normalize(data=Pxx)
 
-    # -- normalize data
-    B = np.abs(Pxx)
-    B = B / np.max(B)
+    # -- saturate extreme values
+    B = contrast_adjustment(data=B, lower_percentile=1, upper_percentile=99)
 
-    # -- contrast adjustment
-    p1, p99 = np.percentile(B, (1, 99))
-    B[B < p1] = 0
-    B[B > p99] = 1
-
-    # -- binarize spectrogram
+    # -- binarize image
     B = bradley_roth(B, t=20)
 
     # -- median filter
@@ -96,22 +87,14 @@ def identifier(chunk):
     kernel_line2 = np.ones((5, 1), np.uint8)
 
     # -- morphological operations
-    erode11 = cv2.erode(B, kernel_line1, iterations=1)
-    del B
-
-    dilate12 = cv2.dilate(erode11, kernel_rect, iterations=1)
-    del erode11
-
-    dilate13 = cv2.dilate(dilate12, kernel_line2, iterations=1)
-    del dilate12
-
-    erode14 = cv2.erode(dilate13, kernel_line1, iterations=2)
-    del dilate13
-
+    B = cv2.erode(B, kernel_line1, iterations=1)
+    B = cv2.dilate(B, kernel_rect, iterations=1)
+    B = cv2.dilate(B, kernel_line2, iterations=1)
+    B = cv2.erode(B, kernel_line1, iterations=2)
     timeAConnectedComponents = time()
     connectivity = 4
-    num_cc, output, stats, centroids = cv2.connectedComponentsWithStats(erode14, connectivity, cv2.CV_32S)
-    del erode14
+    num_cc, output, stats, centroids = cv2.connectedComponentsWithStats(B, connectivity, cv2.CV_32S)
+    del B
 
     # -- remove background stats
     num_cc = num_cc - 1
