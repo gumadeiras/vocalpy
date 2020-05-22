@@ -54,7 +54,7 @@ class VocalClassifier(object):
         self.cuda_available = torch.cuda.is_available()
         self.device = torch.device("cuda" if self.cuda_available else "cpu")
 
-        if self.type is "noise":
+        if self.type == "noise":
             self.model = self.load_pretrained_noise_model(
                 self.device, self.path_to_checkpoint
             )
@@ -186,7 +186,7 @@ class VocalClassifier(object):
             print("[classify vocals as noise]: list of vocals is empty")
             return -1
 
-        if self.type is "noise":
+        if self.type == "noise":
             return self.classify_list_of_vocals_noise(list_of_vocals)
         else:
             return self.classify_list_of_vocals_class(list_of_vocals)
