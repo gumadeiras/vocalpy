@@ -43,11 +43,19 @@ def validate_arguments(args):
     ---------
     args : ArgumentParser
     """
-    validate_bin_size(args.bin_size)
-    validate_thread_count(args.threads)
     validate_animal(args.animal)
+    validate_bin_size(args.bin_size)
     args.frequency = validate_frequency_range(args.frequency, args.animal)
+    validate_thread_count(args.threads)
     return args
+
+
+def validate_animal(animal):
+    if animal not in ["mouse", "rat", "guineapig"]:
+        print("available pipelines are: mouse, rat, guineapig")
+        print(f"provided value: {animal}")
+        exit()
+    return 0
 
 
 def validate_bin_size(bin_size):
@@ -97,12 +105,4 @@ def validate_thread_count(threads):
         )
         print(f"provided value: {threads}")
         print(f"computer thread count: {num_cores}")
-    return 0
-
-
-def validate_animal(animal):
-    if animal not in ["mouse", "rat", "guineapig"]:
-        print("available pipelines are: mouse, rat, guineapig")
-        print(f"provided value: {animal}")
-        exit()
     return 0
