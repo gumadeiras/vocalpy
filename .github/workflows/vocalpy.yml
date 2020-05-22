@@ -38,10 +38,3 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
-    - name: Codecov
-    uses: codecov/codecov-action@v1.0.7
-    with:
-        # User defined upload name. Visible in Codecov UI
-        name: VocalPy
-        # Repository upload token - get it from codecov.io. Required only for private repositories
-        token: e6357463-be12-42e3-a5a8-37dc5850287c
