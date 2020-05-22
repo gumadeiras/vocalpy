@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-'''VocalPy - Vocal analysis framework'''
+"""VocalPy - Vocal analysis framework"""
 
-__license__ = 'Apache License, Version 2.0'
-__copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
+__license__ = "Apache License, Version 2.0"
+__copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 import numpy as np
 
@@ -11,7 +11,8 @@ def bradley_roth(image, s=None, t=None):
     """
     Implements the Bradley-Roth adaptive thresholding algorithm
     'Adaptive Thresholding Using the Integral Image'
-    paper: https://people.scs.carleton.ca/~roth/iit-publications-iti/docs/gerh-50002.pdf
+    paper:
+    https://people.scs.carleton.ca/~roth/iit-publications-iti/docs/gerh-50002.pdf
 
     Parameters
     ----------
@@ -82,8 +83,12 @@ def bradley_roth(image, s=None, t=None):
     f4_y = f2_y
 
     # -- compute areas of each window
-    sums = intImage[f1_y, f1_x] - intImage[f2_y, f2_x] - \
-        intImage[f3_y, f3_x] + intImage[f4_y, f4_x]
+    sums = (
+        intImage[f1_y, f1_x]
+        - intImage[f2_y, f2_x]
+        - intImage[f3_y, f3_x]
+        + intImage[f4_y, f4_x]
+    )
 
     # -- compute thresholded image and reshape into a 2D grid
     out = np.zeros(rows * cols, dtype=np.bool)
@@ -97,7 +102,7 @@ def bradley_roth(image, s=None, t=None):
 
 def parallel_audio_processing(animal, chunk):
     """
-    Parallel processing of audio segments by calling appropriate animal pipeline
+    Parallel processing audio segments by calling appropriate animal pipeline
 
     Parameters
     ----------
@@ -113,9 +118,9 @@ def parallel_audio_processing(animal, chunk):
 
     # -- create Animal class -> Animal.identifier(animal)
     # -- one less place to be changed when new animals are added
-    if animal == 'mouse':
+    if animal == "mouse":
         return mouse.identifier(chunk)
-    elif animal == 'rat':
+    elif animal == "rat":
         return rat.identifier(chunk)
-    elif animal == 'guineapig':
+    elif animal == "guineapig":
         return guineapig.identifier(chunk)

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-'''VocalPy - Vocal analysis framework'''
+"""VocalPy - Vocal analysis framework"""
 
-__license__ = 'Apache License, Version 2.0'
-__copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
+__license__ = "Apache License, Version 2.0"
+__copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 import numpy as np
 import pandas as pd
@@ -60,20 +60,22 @@ class Recording(object):
 
         self.read_audio()
 
-        low_freq, high_freq = [int(f) for f in args.frequency.split(',')]
+        low_freq, high_freq = [int(f) for f in args.frequency.split(",")]
         self.low_frequency_cutoff = low_freq
         self.high_frequency_cutoff = high_freq
-        self.bin_size = self.args.bin_size if (self.args.bin_size < self.recording_duration) else self.recording_duration
+        self.bin_size = (
+            self.args.bin_size
+            if (self.args.bin_size < self.recording_duration)
+            else self.recording_duration
+        )
         self.bins = ceil(self.recording_duration / self.bin_size)
         self.chunks = self.create_chunks()
-        self._group_name = 'not set'
+        self._group_name = "not set"
         self._list_of_vocals = None
         self._has_list_of_vocals = None
 
     def __str__(self):
-        return '{}:\n duration: {} \n sampling rate: {}'.format(self.__class__.__name__,
-                                                                self.recording_duration,
-                                                                self.sample_rate)
+        return "f{self.__class__.__name__}:\n duration: {self.recording_duration} \n sampling rate: {self.sample_rate}"
 
     @property
     def has_list_of_vocals(self):
@@ -113,7 +115,7 @@ class Recording(object):
     def group_name(self, new_group_name):
         self._group_name = new_group_name
 
-    def save_recording_object(self, path, filename='recording'):
+    def save_recording_object(self, path, filename="recording"):
         save_file(self, filename, path)
 
     def create_paths(self, recording_path):
@@ -132,9 +134,9 @@ class Recording(object):
         self.recording_dir = basepath
         self.recording_name = filename
         filename = splitext(filename)[0]
-        self.output_dir = join(self.recording_dir, filename + '_outputs')
-        self.spectrogram_dir = join(self.output_dir, 'spectrogram')
-        self.mask_dir = join(self.output_dir, 'mask')
+        self.output_dir = join(self.recording_dir, filename + "_outputs")
+        self.spectrogram_dir = join(self.output_dir, "spectrogram")
+        self.mask_dir = join(self.output_dir, "mask")
 
         if not exists(self.output_dir):
             makedirs(self.output_dir, exist_ok=True)
@@ -172,61 +174,84 @@ class Recording(object):
             # -- first bin, remove first 0.5 second of recording (usually noisy)
             if this_bin == 1:
                 start_range = ceil(0.5 * self.sample_rate)
-                end_range = ceil((self.bin_size * self.sample_rate) + (overlap * self.sample_rate))
-                end_range = end_range if end_range < len(self.samples) else len(self.samples)
+                end_range = ceil(
+                    (self.bin_size * self.sample_rate) + (overlap * self.sample_rate)
+                )
+                end_range = (
+                    end_range if end_range < len(self.samples) else len(self.samples)
+                )
                 sample_range = self.samples[start_range:end_range]
-                chunks.append((self.output_dir,
-                               self.spectrogram_dir,
-                               self.mask_dir,
-                               self.sample_rate,
-                               sample_range,
-                               this_bin,
-                               start_range,
-                               end_range,
-                               self.bin_size,
-                               self.low_frequency_cutoff,
-                               self.high_frequency_cutoff,
-                               self.args))
+                chunks.append(
+                    (
+                        self.output_dir,
+                        self.spectrogram_dir,
+                        self.mask_dir,
+                        self.sample_rate,
+                        sample_range,
+                        this_bin,
+                        start_range,
+                        end_range,
+                        self.bin_size,
+                        self.low_frequency_cutoff,
+                        self.high_frequency_cutoff,
+                        self.args,
+                    )
+                )
 
             elif this_bin == self.bins:  # -- last bin
                 start_range = ceil((this_bin - 1) * self.bin_size * self.sample_rate)
-                end_range = end_range if end_range < len(self.samples) else len(self.samples)
+                end_range = (
+                    end_range if end_range < len(self.samples) else len(self.samples)
+                )
                 end_range = self.recording_duration * self.sample_rate
                 sample_range = self.samples[start_range:]
                 if len(sample_range) < (self.sample_rate / 100):
                     continue  # less than 10ms
-                chunks.append((self.output_dir,
-                               self.spectrogram_dir,
-                               self.mask_dir,
-                               self.sample_rate,
-                               sample_range,
-                               this_bin,
-                               start_range,
-                               end_range,
-                               self.bin_size,
-                               self.low_frequency_cutoff,
-                               self.high_frequency_cutoff,
-                               self.args))
+                chunks.append(
+                    (
+                        self.output_dir,
+                        self.spectrogram_dir,
+                        self.mask_dir,
+                        self.sample_rate,
+                        sample_range,
+                        this_bin,
+                        start_range,
+                        end_range,
+                        self.bin_size,
+                        self.low_frequency_cutoff,
+                        self.high_frequency_cutoff,
+                        self.args,
+                    )
+                )
 
             else:  # -- all other bins
                 start_range = ceil((this_bin - 1) * self.bin_size * self.sample_rate)
-                end_range = ceil((this_bin * self.bin_size * self.sample_rate) + (overlap * self.sample_rate))
-                end_range = end_range if end_range < len(self.samples) else len(self.samples)
+                end_range = ceil(
+                    (this_bin * self.bin_size * self.sample_rate)
+                    + (overlap * self.sample_rate)
+                )
+                end_range = (
+                    end_range if end_range < len(self.samples) else len(self.samples)
+                )
                 sample_range = self.samples[start_range:end_range]
                 if len(sample_range) < (self.sample_rate / 100):
                     continue  # less than 10ms
-                chunks.append((self.output_dir,
-                               self.spectrogram_dir,
-                               self.mask_dir,
-                               self.sample_rate,
-                               sample_range,
-                               this_bin,
-                               start_range,
-                               end_range,
-                               self.bin_size,
-                               self.low_frequency_cutoff,
-                               self.high_frequency_cutoff,
-                               self.args))
+                chunks.append(
+                    (
+                        self.output_dir,
+                        self.spectrogram_dir,
+                        self.mask_dir,
+                        self.sample_rate,
+                        sample_range,
+                        this_bin,
+                        start_range,
+                        end_range,
+                        self.bin_size,
+                        self.low_frequency_cutoff,
+                        self.high_frequency_cutoff,
+                        self.args,
+                    )
+                )
 
         # -- samples are now in chunks, remove from object
         self.samples = None
@@ -244,7 +269,7 @@ class Recording(object):
         """
         Loads :class:`ListOfVocals`  from a python object file
         """
-        return load_file('list_of_vocals', self.output_dir)
+        return load_file("list_of_vocals", self.output_dir)
 
     def save_recording_data_to_csv(self, list_of_vocals=None, path=None):
         """
@@ -259,7 +284,9 @@ class Recording(object):
         # -- save metadata to a csv file
         if list_of_vocals is None and self._has_list_of_vocals is not True:
             return -1
-        list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
+        list_of_vocals = (
+            list_of_vocals if list_of_vocals is not None else self._list_of_vocals
+        )
 
         if path is None:
             path = self.output_dir
@@ -267,55 +294,67 @@ class Recording(object):
         if list_of_vocals.intervals_fixed is False:
             list_of_vocals.update_intervals()
 
-        recording_df = pd.DataFrame(columns=['bin_number',
-                                             'start(s)',
-                                             'end(s)',
-                                             'duration(ms)',
-                                             'interval(s)',
-                                             'min_freq',
-                                             'max_freq',
-                                             'avg_freq',
-                                             'bandwidth',
-                                             'min_intensity',
-                                             'max_intensity',
-                                             'avg_intensity',
-                                             'bg_intensity',
-                                             'area(pixels)',
-                                             'centroid_y',
-                                             'class_top1',
-                                             'class_top2'
-                                             ])
+        recording_df = pd.DataFrame(
+            columns=[
+                "bin_number",
+                "start(s)",
+                "end(s)",
+                "duration(ms)",
+                "interval(s)",
+                "min_freq",
+                "max_freq",
+                "avg_freq",
+                "bandwidth",
+                "min_intensity",
+                "max_intensity",
+                "avg_intensity",
+                "bg_intensity",
+                "area(pixels)",
+                "centroid_y",
+                "class_top1",
+                "class_top2",
+            ]
+        )
 
         for this_vocal in list_of_vocals.vocals_in_recording:
-            recording_df = recording_df.append({'bin_number': this_vocal.bin_number,
-                                                'start(s)': this_vocal.start,
-                                                'end(s)': this_vocal.end,
-                                                'duration(ms)': this_vocal.duration,
-                                                'interval(s)': this_vocal.interval,
-                                                'min_freq': this_vocal.min_freq,
-                                                'max_freq': this_vocal.max_freq,
-                                                'avg_freq': this_vocal.avg_freq,
-                                                'bandwidth': this_vocal.bandwidth,
-                                                'min_intensity': this_vocal.min_intensity,
-                                                'max_intensity': this_vocal.max_intensity,
-                                                'avg_intensity': this_vocal.avg_intensity,
-                                                'bg_intensity': this_vocal.bg_intensity,
-                                                'area(pixels)': this_vocal.area,
-                                                'centroid_y': this_vocal.centroid[0],
-                                                'class_top1': this_vocal.top1,
-                                                'class_top2': this_vocal.top2,
-                                                }, ignore_index=True)
+            recording_df = recording_df.append(
+                {
+                    "bin_number": this_vocal.bin_number,
+                    "start(s)": this_vocal.start,
+                    "end(s)": this_vocal.end,
+                    "duration(ms)": this_vocal.duration,
+                    "interval(s)": this_vocal.interval,
+                    "min_freq": this_vocal.min_freq,
+                    "max_freq": this_vocal.max_freq,
+                    "avg_freq": this_vocal.avg_freq,
+                    "bandwidth": this_vocal.bandwidth,
+                    "min_intensity": this_vocal.min_intensity,
+                    "max_intensity": this_vocal.max_intensity,
+                    "avg_intensity": this_vocal.avg_intensity,
+                    "bg_intensity": this_vocal.bg_intensity,
+                    "area(pixels)": this_vocal.area,
+                    "centroid_y": this_vocal.centroid[0],
+                    "class_top1": this_vocal.top1,
+                    "class_top2": this_vocal.top2,
+                },
+                ignore_index=True,
+            )
 
         # -- sort vocalizations by start time and save csv
-        recording_df.sort_values(by='start(s)',
-                                 ascending=True,
-                                 inplace=True,
-                                 kind='quicksort',
-                                 na_position='last')
+        recording_df.sort_values(
+            by="start(s)",
+            ascending=True,
+            inplace=True,
+            kind="quicksort",
+            na_position="last",
+        )
 
         # -- start index from 1 instead of 0
         recording_df.index = np.arange(1, len(recording_df) + 1)
-        recording_df.to_csv(join(self.output_dir, splitext(self.recording_name)[0] + '_stats.csv'), float_format='%.6f')
+        recording_df.to_csv(
+            join(self.output_dir, splitext(self.recording_name)[0] + "_stats.csv"),
+            float_format="%.6f",
+        )
         return 0
 
     def save_spectrograms(self, list_of_vocals=None, path=None):
@@ -329,10 +368,12 @@ class Recording(object):
         """
         if self._has_list_of_vocals is not True and list_of_vocals is None:
             return -1
-        list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
+        list_of_vocals = (
+            list_of_vocals if list_of_vocals is not None else self._list_of_vocals
+        )
         path = path if path is not None else self.output_dir
-        remove_directory(join(path, 'spectrogram'))
-        create_directory(join(path, 'spectrogram'))
+        remove_directory(join(path, "spectrogram"))
+        create_directory(join(path, "spectrogram"))
         list_of_vocals.save_spectrograms(output_dir=path)
         return 0
 
@@ -347,10 +388,12 @@ class Recording(object):
         """
         if self._has_list_of_vocals is not True and list_of_vocals is None:
             return -1
-        list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
+        list_of_vocals = (
+            list_of_vocals if list_of_vocals is not None else self._list_of_vocals
+        )
         path = path if path is not None else self.output_dir
-        remove_directory(join(path, 'spectrogram_validation'))
-        create_directory(join(path, 'spectrogram_validation'))
+        remove_directory(join(path, "spectrogram_validation"))
+        create_directory(join(path, "spectrogram_validation"))
         list_of_vocals.save_validation_images(output_dir=path)
         return 0
 
@@ -365,13 +408,15 @@ class Recording(object):
         """
         if self._has_list_of_vocals is not True and list_of_vocals is None:
             return -1
-        list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
+        list_of_vocals = (
+            list_of_vocals if list_of_vocals is not None else self._list_of_vocals
+        )
         path = path if path is not None else self.output_dir
-        remove_directory(join(path, 'spectrogram'))
-        create_directory(join(path, 'spectrogram'))
+        remove_directory(join(path, "spectrogram"))
+        create_directory(join(path, "spectrogram"))
         list_of_vocals.save_spectrograms(output_dir=path)
-        remove_directory(join(path, 'mask'))
-        create_directory(join(path, 'mask'))
+        remove_directory(join(path, "mask"))
+        create_directory(join(path, "mask"))
         list_of_vocals.save_masks(output_dir=path)
         return 0
 
@@ -386,7 +431,9 @@ class Recording(object):
         """
         if self._has_list_of_vocals is not True and list_of_vocals is None:
             return -1
-        list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
+        list_of_vocals = (
+            list_of_vocals if list_of_vocals is not None else self._list_of_vocals
+        )
         list_of_vocals.remove_spectrograms()
         list_of_vocals.remove_masks()
         return 0
@@ -400,9 +447,11 @@ class Recording(object):
         # create filename list etc and create from folder path
         if self.has_list_of_vocals is not True and list_of_vocals is None:
             return -1
-        list_of_vocals = list_of_vocals if list_of_vocals is not None else self.load_list_of_vocals()
+        list_of_vocals = (
+            list_of_vocals if list_of_vocals is not None else self.load_list_of_vocals()
+        )
 
-        print('create_dataset not implemented')
+        print("create_dataset not implemented")
         return 0
 
     def remove_vocals_classified_as_noise_from_list_of_vocals(self, predictions):
@@ -446,7 +495,9 @@ class Recording(object):
         try:
             assert self._list_of_vocals.number_of_vocals == predictions.shape[0]
         except AssertionError:
-            print("[error] number of vocals: {}; number of predictions: {}".format(self._list_of_vocals.number_of_vocals, predictions.shape[0]))
+            print(
+                f"[error] number of vocals: {self._list_of_vocals.number_of_vocals}; number of predictions: {predictions.shape[0]}"
+            )
             exit()
 
         # -- add probability distribution for each vocal, top1 and top2 classes

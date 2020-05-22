@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-'''VocalPy - Vocal analysis framework'''
+"""VocalPy - Vocal analysis framework"""
 
-__license__ = 'Apache License, Version 2.0'
-__copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
+__license__ = "Apache License, Version 2.0"
+__copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 import io
 
@@ -15,7 +15,8 @@ from os.path import join, exists
 
 class Vocal(object):
     """
-    Vocalization object stores metadata about each vocal identified in the recording
+    Vocalization object stores metadata abouteach vocal identified in the
+    recording
 
     Parameters
     ----------
@@ -76,34 +77,36 @@ class Vocal(object):
         top 2 class from the neural network
     """
 
-    def __init__(self,
-                 bin_number=None,
-                 start=None,
-                 end=None,
-                 start_coord=None,
-                 end_coord=None,
-                 duration=None,
-                 interval=None,
-                 min_freq=None,
-                 max_freq=None,
-                 min_freq_coord=None,
-                 max_freq_coord=None,
-                 avg_freq=None,
-                 bandwidth=None,
-                 min_intensity=None,
-                 max_intensity=None,
-                 avg_intensity=None,
-                 bg_intensity=None,
-                 area=None,
-                 centroid=None,
-                 orientation=None,
-                 coords=None,
-                 spectrogram=None,
-                 mask=None,
-                 cnn_mask=None,
-                 probabilities=None,
-                 top1=None,
-                 top2=None):
+    def __init__(
+        self,
+        bin_number=None,
+        start=None,
+        end=None,
+        start_coord=None,
+        end_coord=None,
+        duration=None,
+        interval=None,
+        min_freq=None,
+        max_freq=None,
+        min_freq_coord=None,
+        max_freq_coord=None,
+        avg_freq=None,
+        bandwidth=None,
+        min_intensity=None,
+        max_intensity=None,
+        avg_intensity=None,
+        bg_intensity=None,
+        area=None,
+        centroid=None,
+        orientation=None,
+        coords=None,
+        spectrogram=None,
+        mask=None,
+        cnn_mask=None,
+        probabilities=None,
+        top1=None,
+        top2=None,
+    ):
 
         self._bin_number = bin_number
         self._start = start
@@ -134,23 +137,23 @@ class Vocal(object):
         self._top2 = top2
 
     def __str__(self):
-        return '{}:\n bin_number: {} \n start: {} \n end: {} \n duration: {} \n interval: {} \n min_freq: {} \n max_freq: {} \n avg_freq: {} \n bandwidth: {} \n min_intensity: {} \n max_intensity: {} \n avg_intensity: {} \n bg_intensity: {} \n area: {} \n centroid: {} \n orientation: {} \n'.format(self.__class__.__name__,
-                                                                                                                                                                                                                                                                                                           self.bin_number,
-                                                                                                                                                                                                                                                                                                           self.start,
-                                                                                                                                                                                                                                                                                                           self.end,
-                                                                                                                                                                                                                                                                                                           self.duration,
-                                                                                                                                                                                                                                                                                                           self.interval,
-                                                                                                                                                                                                                                                                                                           self.min_freq,
-                                                                                                                                                                                                                                                                                                           self.max_freq,
-                                                                                                                                                                                                                                                                                                           self.avg_freq,
-                                                                                                                                                                                                                                                                                                           self.bandwidth,
-                                                                                                                                                                                                                                                                                                           self.min_intensity,
-                                                                                                                                                                                                                                                                                                           self.max_intensity,
-                                                                                                                                                                                                                                                                                                           self.avg_intensity,
-                                                                                                                                                                                                                                                                                                           self.bg_intensity,
-                                                                                                                                                                                                                                                                                                           self.area,
-                                                                                                                                                                                                                                                                                                           self.centroid,
-                                                                                                                                                                                                                                                                                                           self.orientation)
+        return f"{self.__class__.__name__}\n \
+            bin_number: {self.bin_number}\n \
+            start: {self.start}\n \
+            end: {self.end}\n \
+            duration: {self.duration}\n \
+            interval: {self.interval}\n \
+            min_freq: {self.min_freq}\n \
+            max_freq: {self.max_freq}\n \
+            avg_freq: {self.avg_freq}\n \
+            bandwidth: {self.bandwidth}\n \
+            min_intensity: {self.min_intensity}\n \
+            max_intensity: {self.max_intensity}\n \
+            avg_intensity: {self.avg_intensity}\n \
+            bg_intensity: {self.bg_intensity}\n \
+            area: {self.area}\n \
+            centroid: {self.centroid}\n \
+            orientation: {self.orientation}\n"
 
     @property
     def bin_number(self):
@@ -368,17 +371,19 @@ class Vocal(object):
     def top2(self, new_top2):
         self._top2 = new_top2
 
-    def save_spectrogram_as_image(self, path=None, filename='vocal'):
+    def save_spectrogram_as_image(self, path=None, filename="vocal"):
         if exists(path) is False:
-            raise ValueError('path does not exist: {}'.format(path))
+            raise ValueError(f"path does not exist: {path}")
 
         img = Image.fromarray(self.spectrogram)
-        img = img.convert('L')
-        img.save(join(path, 'spectrogram', filename + '_' + str(self.bin_number) + '.png'))
+        img = img.convert("L")
+        img.save(
+            join(path, "spectrogram", filename + "_" + str(self.bin_number) + ".png")
+        )
 
-    def save_spectrogram_with_coords_as_image(self, path=None, filename='vocal'):
+    def save_spectrogram_with_coords_as_image(self, path=None, filename="vocal"):
         if exists(path) is False:
-            raise ValueError('path does not exist: {}'.format(path))
+            raise ValueError(f"path does not exist: {path}")
 
         spectrogram = self.spectrogram
         row_values = self.coords[:, 0]
@@ -387,32 +392,38 @@ class Vocal(object):
         plt.figure()
         # flip spectrogram upside down to match scatter
         # easier to flip image than to flip scatter coordinates
-        plt.imshow(np.flipud(spectrogram), cmap='gray')
-        plt.scatter(col_values[0:-1:8], row_values[0:-1:8], marker='.', alpha=0.1)
-        plt.axis('off')
+        plt.imshow(np.flipud(spectrogram), cmap="gray")
+        plt.scatter(col_values[0:-1:8], row_values[0:-1:8], marker=".", alpha=0.1)
+        plt.axis("off")
         # save image to buffer, faster than saving to file
         # matplotlib does not support rotating scatter plots directly
         buf = io.BytesIO()
-        plt.savefig(buf, bbox_inches='tight', format='png')
+        plt.savefig(buf, bbox_inches="tight", format="png")
         plt.close()
         buf.seek(0)
         img = Image.open(buf)
         # rotate image back using PIL and save to disk
         img = img.transpose(Image.FLIP_TOP_BOTTOM)
-        img.save(join(path, 'spectrogram_validation', filename + '_' + str(self.bin_number) + '.png'))
+        img.save(
+            join(
+                path,
+                "spectrogram_validation",
+                filename + "_" + str(self.bin_number) + ".png",
+            )
+        )
 
-    def save_mask_as_image(self, path=None, filename='vocal'):
+    def save_mask_as_image(self, path=None, filename="vocal"):
         if exists(path) is False:
-            raise ValueError('path does not exist: {}'.format(path))
+            raise ValueError(f"path does not exist: {path}")
 
         img = Image.fromarray(self.mask)
-        img = img.convert('L')
-        img.save(join(path, 'mask', filename + '_' + str(self.bin_number) + '.png'))
+        img = img.convert("L")
+        img.save(join(path, "mask", filename + "_" + str(self.bin_number) + ".png"))
 
-    def save_cnn_mask_as_image(self, path=None, filename='vocal'):
+    def save_cnn_mask_as_image(self, path=None, filename="vocal"):
         if exists(path) is False:
-            raise ValueError('path does not exist: {}'.format(path))
+            raise ValueError(f"path does not exist: {path}")
 
         img = Image.fromarray(self.cnn_mask)
-        img = img.convert('L')
-        img.save(join(path, 'cnn_mask', filename + '_' + str(self.bin_number) + '.png'))
+        img = img.convert("L")
+        img.save(join(path, "cnn_mask", filename + "_" + str(self.bin_number) + ".png"))

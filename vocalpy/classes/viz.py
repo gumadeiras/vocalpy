@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-'''VocalPy - Vocal analysis framework'''
+"""VocalPy - Vocal analysis framework"""
 
-__license__ = 'Apache License, Version 2.0'
-__copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
+__license__ = "Apache License, Version 2.0"
+__copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 import os
 import math
@@ -18,17 +18,14 @@ from vocalpy.utils.io import load_recording_data
 
 
 class Viz(object):
-    '''
+    """
     visualization object for plotting data from recordings
-    '''
+    """
 
-    def __init__(self,
-                 list_of_groups,
-                 group_names=None,
-                 bin_size=1):
+    def __init__(self, list_of_groups, group_names=None, bin_size=1):
 
         if len(list_of_groups) < 1:
-            print('please provide at least one recording for analysis.')
+            print("please provide at least one recording for analysis.")
             exit()
 
         self._list_of_groups = list_of_groups
@@ -57,7 +54,7 @@ class Viz(object):
 
     def combine_viz_dataframes(self, list_of_viz=None):
         if list_of_viz is None:
-            print('please provide a list_of_viz')
+            print("please provide a list_of_viz")
             return -1
 
         dfs = list_of_viz[0]._recording_df
@@ -66,7 +63,7 @@ class Viz(object):
                 continue
             dfs = pd.concat([dfs, viz._recording_df], axis=0)
 
-        return dfs.sort_values('bin_number')
+        return dfs.sort_values("bin_number")
 
     def combine_viz(self, list_of_viz, groupname):
         if len(list_of_viz):
@@ -75,13 +72,22 @@ class Viz(object):
             list_of_viz[0]._recording_path = None
             list_of_viz[0]._list_of_vocals = None
             list_of_viz[0]._bin_size = self._bin_size
-            number_of_bins_in_df = combined_df['bin_number'].max()
-            list_of_viz[0]._bins = int(math.floor(number_of_bins_in_df / self._bin_size)) + 1
+            number_of_bins_in_df = combined_df["bin_number"].max()
+            list_of_viz[0]._bins = (
+                int(math.floor(number_of_bins_in_df / self._bin_size)) + 1
+            )
 
             list_of_viz[0]._recording_data.group_name = groupname
-            list_of_viz[0]._recording_data._list_of_vocals.number_of_vocals = np.sum([viz._recording_data._list_of_vocals.number_of_vocals for viz in list_of_viz])
+            list_of_viz[0]._recording_data._list_of_vocals.number_of_vocals = np.sum(
+                [
+                    viz._recording_data._list_of_vocals.number_of_vocals
+                    for viz in list_of_viz
+                ]
+            )
 
-            list_of_viz[0]._split_array = list_of_viz[0].get_split_indices_for_bin_size()
+            list_of_viz[0]._split_array = list_of_viz[
+                0
+            ].get_split_indices_for_bin_size()
 
             return list_of_viz[0]
         else:
@@ -92,29 +98,47 @@ class Viz(object):
 
         for group in range(self._number_of_groups):
             paths = self._list_of_groups[group]
-            vizobjs = [SingleViz(recording_path=rec_path, bin_size=self._bin_size) for rec_path in paths]
+            vizobjs = [
+                SingleViz(recording_path=rec_path, bin_size=self._bin_size)
+                for rec_path in paths
+            ]
             list_of_viz.append(vizobjs)
 
         self._list_of_viz = np.asarray(list_of_viz)
         return 0
 
     def create_group_viz(self):
-        self._list_of_group_viz = [self.combine_viz(group, self._group_names[i]) for i, group in enumerate(self._list_of_viz)]
+        self._list_of_group_viz = [
+            self.combine_viz(group, self._group_names[i])
+            for i, group in enumerate(self._list_of_viz)
+        ]
         return 0
 
-    def plot(self, plot_type='group', dataname='avg_freq'):
-        if plot_type not in ['group', 'individual']:
-            print('type must be \"group\" or \"individual\".')
+    def plot(self, plot_type="group", dataname="avg_freq"):
+        if plot_type not in ["group", "individual"]:
+            print('type must be "group" or "individual".')
             exit()
 
-        if dataname not in ['raster','rate','min_freq', 'max_freq',
-                             'avg_freq', 'duration', 'bandwidth', 'min_intensity',
-                             'max_intensity', 'avg_intensity', 'area']:
-            print('possible datapoints are:')
-            print('raster, rate, min_freq, max_freq, avg_freq, duration, bandwidth, min_intensity, max_intensity, avg_intensity, area.')
+        if dataname not in [
+            "raster",
+            "rate",
+            "min_freq",
+            "max_freq",
+            "avg_freq",
+            "duration",
+            "bandwidth",
+            "min_intensity",
+            "max_intensity",
+            "avg_intensity",
+            "area",
+        ]:
+            print("possible datapoints are:")
+            print(
+                "raster, rate, min_freq, max_freq, avg_freq, duration, bandwidth, min_intensity, max_intensity, avg_intensity, area."
+            )
             exit()
 
-        if plot_type is 'group':
+        if plot_type == "group":
             self.plot_group(dataname)
         else:
             self.plot_individual(dataname)
@@ -124,22 +148,22 @@ class Viz(object):
     def plot_individual(self, dataname):
         for group in self._list_of_viz:
             for viz in group:
-                if dataname is 'raster':
+                if dataname == "raster":
                     viz.rugplot()
                 else:
                     viz.pointplot(dataname=dataname)
         return 0
 
     def plot_group(self, dataname):
-        if dataname is 'raster':
+        if dataname == "raster":
             for group in self._list_of_group_viz:
                 group.rugplot()
         else:
             self.group_pointplot(dataname=dataname)
         return 0
 
-    def group_pointplot(self, dataname='avg_freq'):
-        sns.set(style='whitegrid', palette='muted', color_codes=True)
+    def group_pointplot(self, dataname="avg_freq"):
+        sns.set(style="whitegrid", palette="muted", color_codes=True)
         f, ax = plt.subplots(1, 1, figsize=(12, 4), dpi=150)
         cmap = sns.color_palette()
         font_size = 16
@@ -148,11 +172,16 @@ class Viz(object):
         for i, group in enumerate(self._list_of_group_viz):
             if group:
                 data_values = group.get_datapoints(dataname)
-                sns.pointplot(data=data_values, color=cmap[i], capsize=.1, label=group._recording_data.group_name)
+                sns.pointplot(
+                    data=data_values,
+                    color=cmap[i],
+                    capsize=0.1,
+                    label=group._recording_data.group_name,
+                )
                 custom_lines.append(Line2D([0], [0], color=cmap[i], lw=2))
                 labels.append(group._recording_data.group_name)
                 ax.set_ylabel(dataname, fontsize=font_size)
-                ax.set_xlabel('Bin', fontsize=font_size)
+                ax.set_xlabel("Bin", fontsize=font_size)
                 ax.set_xlim(-1, 11)
                 ax.set_xticks(list(range(11)))
                 ax.tick_params(labelsize=font_size)
@@ -162,16 +191,14 @@ class Viz(object):
 
 
 class SingleViz(object):
-    '''
+    """
     visualization object for a single recording
-    '''
+    """
 
-    def __init__(self,
-                 recording_path=None,
-                 bin_size=1):
+    def __init__(self, recording_path=None, bin_size=1):
 
         if recording_path is None:
-            print('please provide a recording_path')
+            print("please provide a recording_path")
             exit()
 
         self._recording_path = recording_path
@@ -184,57 +211,74 @@ class SingleViz(object):
         self._split_array = self.get_split_indices_for_bin_size()
 
     def __str__(self):
-        return '{}:\n recording path: {} \n recording duration: {:.2f} \n bin size: {} \n bins: {} \n vocals in recording: {}'.format(self.__class__.__name__, self._recording_path, self._duration, self._bin_size, self._bins, self._recording_data._list_of_vocals.number_of_vocals)
+        return f"{self.__class__.__name__}:\n \
+            recording path: {self._recording_path} \n \
+            recording duration: {self._duration:.2f} \n \
+            bin size: {self._bin_size} \n \
+            bins: {self._bins} \n \
+            vocals in recording: {self._recording_data._list_of_vocals.number_of_vocals}"
 
     def create_list_of_vocals(self):
         return self._recording_data._list_of_vocals
 
     def create_object_dataframe(self):
-        recording_df = pd.DataFrame(columns=['bin_number',
-                                             'start',
-                                             'end',
-                                             'duration',
-                                             'interval',
-                                             'min_freq',
-                                             'max_freq',
-                                             'avg_freq',
-                                             'bandwidth',
-                                             'min_intensity',
-                                             'max_intensity',
-                                             'avg_intensity',
-                                             'bg_intensity',
-                                             'area',
-                                             'centroid_y'])
+        recording_df = pd.DataFrame(
+            columns=[
+                "bin_number",
+                "start",
+                "end",
+                "duration",
+                "interval",
+                "min_freq",
+                "max_freq",
+                "avg_freq",
+                "bandwidth",
+                "min_intensity",
+                "max_intensity",
+                "avg_intensity",
+                "bg_intensity",
+                "area",
+                "centroid_y",
+            ]
+        )
 
         for vocal in iter(self._list_of_vocals.vocals_in_recording):
-            recording_df = recording_df.append({'bin_number': vocal.bin_number,
-                                                'start': vocal.start,
-                                                'end': vocal.end,
-                                                'duration': vocal.duration,
-                                                'interval': vocal.interval,
-                                                'min_freq': vocal.min_freq,
-                                                'max_freq': vocal.max_freq,
-                                                'avg_freq': vocal.avg_freq,
-                                                'bandwidth': vocal.bandwidth,
-                                                'min_intensity': vocal.min_intensity,
-                                                'max_intensity': vocal.max_intensity,
-                                                'avg_intensity': vocal.avg_intensity,
-                                                'bg_intensity': vocal.bg_intensity,
-                                                'area': vocal.area,
-                                                'centroid_y': vocal.centroid[0]},
-                                                ignore_index=True)
+            recording_df = recording_df.append(
+                {
+                    "bin_number": vocal.bin_number,
+                    "start": vocal.start,
+                    "end": vocal.end,
+                    "duration": vocal.duration,
+                    "interval": vocal.interval,
+                    "min_freq": vocal.min_freq,
+                    "max_freq": vocal.max_freq,
+                    "avg_freq": vocal.avg_freq,
+                    "bandwidth": vocal.bandwidth,
+                    "min_intensity": vocal.min_intensity,
+                    "max_intensity": vocal.max_intensity,
+                    "avg_intensity": vocal.avg_intensity,
+                    "bg_intensity": vocal.bg_intensity,
+                    "area": vocal.area,
+                    "centroid_y": vocal.centroid[0],
+                },
+                ignore_index=True,
+            )
 
         recording_df.index = np.arange(1, len(recording_df) + 1)
         return recording_df
 
     def get_split_indices_for_bin_size(self):
         split_array = []
-        bin_column = self._recording_df[['bin_number']]
+        bin_column = self._recording_df[["bin_number"]]
         for idx in range(1, self._bins):
             try:
-                split_array.append(np.where(bin_column == idx * self._bin_size)[0][-1] + 1)
+                split_array.append(
+                    np.where(bin_column == idx * self._bin_size)[0][-1] + 1
+                )
             except:
-                print('recording {} had no vocals in bin {}'.format(self._recording_data.recording_name, idx))
+                print(
+                    f"recording {self._recording_data.recording_name} had no vocals in bin {idx}"
+                )
         return split_array
 
     def split_data_by_indices(self, dataframe):
@@ -260,38 +304,38 @@ class SingleViz(object):
 
         return data_values
 
-    def rugplot(self, dataname='start'):
+    def rugplot(self, dataname="start"):
         # -- visualize vocalizations throughtout the recording using a rug plot
         data_values = self._recording_df[[dataname]] / 60
 
-        sns.set(style='white', palette='muted', color_codes=True)
+        sns.set(style="white", palette="muted", color_codes=True)
 
         f, ax = plt.subplots(1, 1, figsize=(12, 2), dpi=300)
-        sns.rugplot(data_values, height=1, color='coral', alpha=0.5)
+        sns.rugplot(data_values, height=1, color="coral", alpha=0.5)
 
         ax.set_title(self._recording_data.group_name)
-        ax.set_xlabel('Time (minutes)')
+        ax.set_xlabel("Time (minutes)")
         ax.set_ylabel(dataname)
         ax.set_yticks([])
         plt.tight_layout()
 
         return data_values
 
-    def pointplot(self, dataname='avg_freq'):
+    def pointplot(self, dataname="avg_freq"):
         # -- visualize vocalization data throughtout the recording using a pointplot
 
         data_values = self.get_datapoints(dataname)
 
-        sns.set(style='whitegrid', palette='muted', color_codes=True)
+        sns.set(style="whitegrid", palette="muted", color_codes=True)
         f, ax = plt.subplots(1, 1, figsize=(12, 7), dpi=300)
 
-        sns.pointplot(data=data_values, color='coral', capsize=.1)
+        sns.pointplot(data=data_values, color="coral", capsize=0.1)
 
         ax.set_ylabel(dataname)
-        ax.set_xlabel('Bin')
+        ax.set_xlabel("Bin")
         ax.set_xlim(-1, self._bins)
 
-        if dataname[-4:] == 'freq':
+        if dataname[-4:] == "freq":
             ax.set_ylim(40000, 125001)
             ax.set_yticks(range(40000, 125001, 17000))
         else:
@@ -302,21 +346,21 @@ class SingleViz(object):
 
         return data_values
 
-    def violinplot(self, dataname='avg_freq', inner='box'):
+    def violinplot(self, dataname="avg_freq", inner="box"):
         # -- visualize vocalization data throughtout the recording using a violin plot
 
         data_values = self.get_datapoints(dataname)
 
-        sns.set(style='whitegrid', palette='muted', color_codes=True)
+        sns.set(style="whitegrid", palette="muted", color_codes=True)
         f, ax = plt.subplots(1, 1, figsize=(12, 7), dpi=300)
 
-        sns.violinplot(data=data_values, color='coral', inner=inner)
+        sns.violinplot(data=data_values, color="coral", inner=inner)
 
         ax.set_ylabel(dataname)
-        ax.set_xlabel('Bin')
+        ax.set_xlabel("Bin")
         ax.set_xlim(-1, self._bins)
 
-        if dataname[-4:] == 'freq':
+        if dataname[-4:] == "freq":
             ax.set_ylim(40000, 125001)
             ax.set_yticks(range(40000, 125001, 17000))
         else:

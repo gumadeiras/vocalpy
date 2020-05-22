@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-'''VocalPy - Vocal analysis framework'''
+"""VocalPy - Vocal analysis framework"""
 
-__license__ = 'Apache License, Version 2.0'
-__copyright__ = '2020 Dietrich Lab - Yale University School of Medicine'
+__license__ = "Apache License, Version 2.0"
+__copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 import glob
 import shutil
@@ -34,9 +34,9 @@ def save_file(file, filename, path):
         if the path does not exist
     """
     if exists(path) is False:
-        raise ValueError('path does not existe: {}'.format(path))
+        raise ValueError(f"path does not existe: {path}")
 
-    pickle.dump(file, open(join(path, filename + '.vocalpy'), 'wb'))
+    pickle.dump(file, open(join(path, filename + ".vocalpy"), "wb"))
 
 
 def load_file(filename, path):
@@ -56,9 +56,9 @@ def load_file(filename, path):
         if the path does not exist
     """
     if exists(path) is False:
-        raise ValueError('path does not existe: {}'.format(path))
+        raise ValueError(f"path does not existe: {path}")
 
-    return pickle.load(open(join(path, filename + '.vocalpy'), 'rb'))
+    return pickle.load(open(join(path, filename + ".vocalpy"), "rb"))
 
 
 def load_recording_data(path):
@@ -76,7 +76,7 @@ def load_recording_data(path):
         if the file does not exist
     """
     if exists(path) is False:
-        raise ValueError('file does not existe: {}'.format(path))
+        raise ValueError(f"file does not existe: {path}")
     return np.load(path, allow_pickle=True)
 
 
@@ -93,14 +93,14 @@ def load_checkpoint(checkpoint, model, device, optimizer=None):
     import torch
 
     if not exists(checkpoint):
-        print('file does not exist {}'.format(checkpoint))
+        print(f"file does not exist {checkpoint}")
         exit()
 
     checkpoint = torch.load(checkpoint, map_location=torch.device(device))
-    model.load_state_dict(checkpoint['state_dict'])
+    model.load_state_dict(checkpoint["state_dict"])
 
     if optimizer:
-        optimizer.load_state_dict(checkpoint['optim_dict'])
+        optimizer.load_state_dict(checkpoint["optim_dict"])
 
     return checkpoint
 
@@ -117,6 +117,7 @@ def load_model(model_path, device):
         device to run (CPU or GPU)
     """
     import torch
+
     return torch.load(model_path, map_location=torch.device(device))
 
 
@@ -131,23 +132,33 @@ def parse_input_path(path=None, search_tree=False):
         path provided by the user
     """
     if path is None:
-        print('usage: python vocalpy.py --audio_path=\'/path/to/audio\'')
+        print("usage: python vocalpy.py --audio_path='/path/to/audio'")
         return -1
     elif isdir(path):
-        print('audio path is a directory, geting all .wav files')
+        print("audio path is a directory, geting all .wav files")
         if search_tree:
-            types = (join(path, '**/*.wav'), join(path, '**/*.WAV'), join(path, '**/*.flac'), join(path, '**/*.FLAC'))
+            types = (
+                join(path, "**/*.wav"),
+                join(path, "**/*.WAV"),
+                join(path, "**/*.flac"),
+                join(path, "**/*.FLAC"),
+            )
         else:
-            types = (join(path, '*.wav'), join(path, '*.WAV'), join(path, '*.flac'), join(path, '*.FLAC'))
+            types = (
+                join(path, "*.wav"),
+                join(path, "*.WAV"),
+                join(path, "*.flac"),
+                join(path, "*.FLAC"),
+            )
         files_found = []
         for files in types:
             files_found.extend(glob.glob(files, recursive=search_tree))
         return files_found
     elif isfile(path):
-        print('audio path is a file.')
+        print("audio path is a file.")
         return [path]
     else:
-        print('audio path is not a file or directory: {}'.format(path))
+        print(f"audio path is not a file or directory: {path}")
         return -1
 
     return 0
@@ -164,13 +175,13 @@ def create_output_directory_structure(list_of_files):
     """
 
     list_of_output_dirs = []
-    print('list of files detected:')
+    print("list of files detected:")
     for file in list_of_files:
         print(basename(file))
         # -- split '/path/to/file.wav' to ['/path/to/file', '.wav]
         basepath = splitext(file)
         # -- output dir will be '/path/to/file_outputs'
-        output_dir = basepath[0] + '_outputs'
+        output_dir = basepath[0] + "_outputs"
         list_of_output_dirs.append(output_dir)
 
     return list_of_output_dirs
