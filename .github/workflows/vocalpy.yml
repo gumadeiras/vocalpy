@@ -41,3 +41,7 @@ jobs:
     - name: Test with pytest
       run: |
         pytest
+    - name: Code coverage
+      run: |
+        pip install codecov
+        codecov --token=${{ secrets.codecov_token }}
