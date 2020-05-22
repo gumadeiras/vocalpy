@@ -8,10 +8,15 @@ import numpy as np
 import pandas as pd
 import soundfile as sf
 
+from time import time
 from math import ceil
 from os import makedirs
+from logging import getLogger
+from joblib import Parallel, delayed
 from os.path import join, split, splitext, exists
 
+from vocalpy.classes.animal import Animal
+from vocalpy.classes.list_of_vocals import ListOfVocals
 from vocalpy.utils.io import save_file, load_file, create_directory, remove_directory
 
 
@@ -63,19 +68,16 @@ class Recording(object):
         low_freq, high_freq = [int(f) for f in args.frequency.split(",")]
         self.low_frequency_cutoff = low_freq
         self.high_frequency_cutoff = high_freq
-        self.bin_size = (
-            self.args.bin_size
-            if (self.args.bin_size < self.recording_duration)
-            else self.recording_duration
-        )
+        self.bin_size = self.args.bin_size if (self.args.bin_size < self.recording_duration) else self.recording_duration
         self.bins = ceil(self.recording_duration / self.bin_size)
         self.chunks = self.create_chunks()
         self._group_name = "not set"
         self._list_of_vocals = None
         self._has_list_of_vocals = None
+        self._animal = Animal(args.animal)
 
     def __str__(self):
-        return "f{self.__class__.__name__}:\n duration: {self.recording_duration} \n sampling rate: {self.sample_rate}"
+        return f"{self.__class__.__name__}:\n duration: {self.recording_duration} \n sampling rate: {self.sample_rate}"
 
     @property
     def has_list_of_vocals(self):
@@ -174,12 +176,8 @@ class Recording(object):
             # -- first bin, remove first 0.5 second of recording (usually noisy)
             if this_bin == 1:
                 start_range = ceil(0.5 * self.sample_rate)
-                end_range = ceil(
-                    (self.bin_size * self.sample_rate) + (overlap * self.sample_rate)
-                )
-                end_range = (
-                    end_range if end_range < len(self.samples) else len(self.samples)
-                )
+                end_range = ceil((self.bin_size * self.sample_rate) + (overlap * self.sample_rate))
+                end_range = end_range if end_range < len(self.samples) else len(self.samples)
                 sample_range = self.samples[start_range:end_range]
                 chunks.append(
                     (
@@ -200,9 +198,7 @@ class Recording(object):
 
             elif this_bin == self.bins:  # -- last bin
                 start_range = ceil((this_bin - 1) * self.bin_size * self.sample_rate)
-                end_range = (
-                    end_range if end_range < len(self.samples) else len(self.samples)
-                )
+                end_range = end_range if end_range < len(self.samples) else len(self.samples)
                 end_range = self.recording_duration * self.sample_rate
                 sample_range = self.samples[start_range:]
                 if len(sample_range) < (self.sample_rate / 100):
@@ -226,13 +222,8 @@ class Recording(object):
 
             else:  # -- all other bins
                 start_range = ceil((this_bin - 1) * self.bin_size * self.sample_rate)
-                end_range = ceil(
-                    (this_bin * self.bin_size * self.sample_rate)
-                    + (overlap * self.sample_rate)
-                )
-                end_range = (
-                    end_range if end_range < len(self.samples) else len(self.samples)
-                )
+                end_range = ceil((this_bin * self.bin_size * self.sample_rate) + (overlap * self.sample_rate))
+                end_range = end_range if end_range < len(self.samples) else len(self.samples)
                 sample_range = self.samples[start_range:end_range]
                 if len(sample_range) < (self.sample_rate / 100):
                     continue  # less than 10ms
@@ -258,12 +249,81 @@ class Recording(object):
 
         return chunks
 
-    def recording_processing_finished(self):
+    def identify_vocalizations(self):
+        """
+        Process recording by calling appropriate animal pipeline functions
+        """
+
+        logger = getLogger()
+        timeAParallel = time()
+
+        # -- distribute Recording chunks to available cores
+        # -- process each chunk and find candidate vocalizations
+        results = Parallel(n_jobs=self.args.threads, require="sharedmem")(
+            delayed(self._animal.identify_vocalizations)(chunk=i) for i in self.chunks
+        )
+
+        # -- create list of vocals found in the recording
+        logger.info("combining list of vocals from each bin")
+        timeAcombining = time()
+        list_of_vocals = ListOfVocals()
+        list_of_vocals.combine_list_of_list_of_vocals(list_of_list_of_vocals=results)
+        list_of_vocals.update_intervals()
+        self._has_list_of_vocals = True
+        self.list_of_vocals = list_of_vocals
+        logger.info("done combining ({:.0f}s)".format(time() - timeAcombining))
+        logger.info(list_of_vocals)
+
+        self.recording_identify_vocalizations_finished()
+        logger.info(
+            "recording parallel processing ({:.0f}m {:.0f}s)".format(
+                (time() - timeAParallel) // 60, (time() - timeAParallel) % 60
+            )
+        )
+
+    def recording_identify_vocalizations_finished(self):
         """
         Recording has already been processed -> clears segments
         """
         self.chunks = None
         return 0
+
+    def classify_vocalizations(self):
+        """
+        Classify identified vocalizations using the appropiate animal pipeline
+        """
+        logger = getLogger()
+
+        if self._animal._has_classifier is True:
+            # -- save spectrograms (used in noise classifier)
+            logger.info("saving spectrograms of candidate vocalizations")
+            timeAsaving = time()
+            self.save_spectrograms(path=self.output_dir)
+            logger.info("done saving ({:.0f}s)".format(time() - timeAsaving))
+
+            # -- classify candidate vocalizations as Vocal or Noise; remove Noise
+            logger.info("classifying candidate vocalizations as vocal or noise")
+            timeAclassification = time()
+            predictions, classes = self._animal.classify_vocalizations(
+                network_type="noise", list_of_vocals=self.list_of_vocals, path_to_spectrograms=self.spectrogram_dir
+            )
+            logger.info("removing candidates classified as noise")
+            self.remove_vocals_classified_as_noise_from_list_of_vocals(predictions)
+            self.save_spectrograms_and_masks(path=self.output_dir)
+            logger.info("done classifying and removing ({:.0f}s)".format(time() - timeAclassification))
+            logger.info(self._list_of_vocals)
+
+            # -- classify vocalizations into vocal types
+            logger.info("classifying vocalizations")
+            timeAclassification = time()
+            predictions, classes = self._animal.classify_vocalizations(
+                network_type="class", list_of_vocals=self.list_of_vocals, path_to_spectrograms=self.spectrogram_dir
+            )
+            logger.info("adding classification to vocals")
+            self.update_vocals_with_class_classification(predictions, classes)
+            logger.info("done classifying and updating vocals ({:.0f}s)".format(time() - timeAclassification))
+        else:
+            logger.info(f"no classifier available for animal type: {self._animal._animal}")
 
     def load_list_of_vocals(self):
         """
@@ -284,9 +344,7 @@ class Recording(object):
         # -- save metadata to a csv file
         if list_of_vocals is None and self._has_list_of_vocals is not True:
             return -1
-        list_of_vocals = (
-            list_of_vocals if list_of_vocals is not None else self._list_of_vocals
-        )
+        list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
 
         if path is None:
             path = self.output_dir
@@ -342,18 +400,13 @@ class Recording(object):
 
         # -- sort vocalizations by start time and save csv
         recording_df.sort_values(
-            by="start(s)",
-            ascending=True,
-            inplace=True,
-            kind="quicksort",
-            na_position="last",
+            by="start(s)", ascending=True, inplace=True, kind="quicksort", na_position="last",
         )
 
         # -- start index from 1 instead of 0
         recording_df.index = np.arange(1, len(recording_df) + 1)
         recording_df.to_csv(
-            join(self.output_dir, splitext(self.recording_name)[0] + "_stats.csv"),
-            float_format="%.6f",
+            join(self.output_dir, splitext(self.recording_name)[0] + "_stats.csv"), float_format="%.6f",
         )
         return 0
 
@@ -368,9 +421,7 @@ class Recording(object):
         """
         if self._has_list_of_vocals is not True and list_of_vocals is None:
             return -1
-        list_of_vocals = (
-            list_of_vocals if list_of_vocals is not None else self._list_of_vocals
-        )
+        list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
         path = path if path is not None else self.output_dir
         remove_directory(join(path, "spectrogram"))
         create_directory(join(path, "spectrogram"))
@@ -388,9 +439,7 @@ class Recording(object):
         """
         if self._has_list_of_vocals is not True and list_of_vocals is None:
             return -1
-        list_of_vocals = (
-            list_of_vocals if list_of_vocals is not None else self._list_of_vocals
-        )
+        list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
         path = path if path is not None else self.output_dir
         remove_directory(join(path, "spectrogram_validation"))
         create_directory(join(path, "spectrogram_validation"))
@@ -408,9 +457,7 @@ class Recording(object):
         """
         if self._has_list_of_vocals is not True and list_of_vocals is None:
             return -1
-        list_of_vocals = (
-            list_of_vocals if list_of_vocals is not None else self._list_of_vocals
-        )
+        list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
         path = path if path is not None else self.output_dir
         remove_directory(join(path, "spectrogram"))
         create_directory(join(path, "spectrogram"))
@@ -431,9 +478,7 @@ class Recording(object):
         """
         if self._has_list_of_vocals is not True and list_of_vocals is None:
             return -1
-        list_of_vocals = (
-            list_of_vocals if list_of_vocals is not None else self._list_of_vocals
-        )
+        list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
         list_of_vocals.remove_spectrograms()
         list_of_vocals.remove_masks()
         return 0
@@ -447,9 +492,7 @@ class Recording(object):
         # create filename list etc and create from folder path
         if self.has_list_of_vocals is not True and list_of_vocals is None:
             return -1
-        list_of_vocals = (
-            list_of_vocals if list_of_vocals is not None else self.load_list_of_vocals()
-        )
+        list_of_vocals = list_of_vocals if list_of_vocals is not None else self.load_list_of_vocals()
 
         print("create_dataset not implemented")
         return 0
@@ -496,10 +539,24 @@ class Recording(object):
             assert self._list_of_vocals.number_of_vocals == predictions.shape[0]
         except AssertionError:
             print(
-                f"[error] number of vocals: {self._list_of_vocals.number_of_vocals}; number of predictions: {predictions.shape[0]}"
+                f"[error] number of vocals: {self._list_of_vocals.number_of_vocals}; \
+                number of predictions: {predictions.shape[0]}"
             )
             exit()
 
         # -- add probability distribution for each vocal, top1 and top2 classes
         self._list_of_vocals.add_classification_to_vocals(predictions, classes)
         return 0
+
+    def save_outputs(self, validation_flag):
+        logger = getLogger()
+
+        logger.info("saving recording object, vocalizations, and csv file")
+        timeAsaving = time()
+        if validation_flag is True:
+            self.save_validation_images(path=self.output_dir)
+        # self.save_recording_object(path=self.output_dir)
+        self.remove_spectrograms_and_masks_from_object()
+        self.save_recording_object(filename="recording_without_spectrograms", path=self.output_dir)
+        self.save_recording_data_to_csv(path=self.output_dir)
+        logger.info("done saving ({:.0f}s)".format(time() - timeAsaving))

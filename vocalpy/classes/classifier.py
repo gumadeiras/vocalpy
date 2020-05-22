@@ -28,8 +28,8 @@ class VocalClassifier(object):
 
     Parameters
     ----------
-    type : str
-        vocal classifier type ('noise', or 'class')
+    network_type : str
+        vocal classifier network_type ('noise', or 'class')
     path_to_spectrograms : str
         path to directory with spectrograms to be classified
     batch_size : str, optional
@@ -38,14 +38,12 @@ class VocalClassifier(object):
         path to checkpoint to laod pretrained neural network model
     """
 
-    def __init__(
-        self, type, path_to_spectrograms, batch_size=32, path_to_checkpoint=None
-    ):
-        if type in ["noise", "class"]:
-            self.type = type
+    def __init__(self, network_type, path_to_spectrograms, batch_size=32, path_to_checkpoint=None):
+        if network_type in ["noise", "class"]:
+            self.network_type = network_type
         else:
-            print(f"VocalClassifiier type must be 'noise' or 'class'")
-            print(f"provided value {type}")
+            print(f"VocalClassifiier network_type must be 'noise' or 'class'")
+            print(f"provided value {network_type}")
 
         self.path_to_spectrograms = path_to_spectrograms
         self.batch_size = batch_size
@@ -54,14 +52,10 @@ class VocalClassifier(object):
         self.cuda_available = torch.cuda.is_available()
         self.device = torch.device("cuda" if self.cuda_available else "cpu")
 
-        if self.type == "noise":
-            self.model = self.load_pretrained_noise_model(
-                self.device, self.path_to_checkpoint
-            )
+        if self.network_type == "noise":
+            self.model = self.load_pretrained_noise_model(self.device, self.path_to_checkpoint)
         else:
-            self.model = self.load_pretrained_class_model(
-                self.device, self.path_to_checkpoint
-            )
+            self.model = self.load_pretrained_class_model(self.device, self.path_to_checkpoint)
 
         self.dataset = self.create_dataset(self.path_to_spectrograms)
         self.dataloader = self.create_dataloader(self.dataset, self.batch_size)
@@ -81,10 +75,7 @@ class VocalClassifier(object):
         if model is None:
             model = models.mobilenet_v2()
             model.classifier = nn.Sequential(
-                nn.Dropout(0.2),
-                nn.Linear(1280, 1024),
-                nn.ReLU(inplace=True),
-                nn.Linear(1024, 2),
+                nn.Dropout(0.2), nn.Linear(1280, 1024), nn.ReLU(inplace=True), nn.Linear(1024, 2),
             )
 
             model_path = "../models/noise_model.pth.tar"
@@ -118,10 +109,7 @@ class VocalClassifier(object):
             model = models.mobilenet_v2()
             # -- add extra layers after the 'classifier' sequence
             model.classifier = nn.Sequential(
-                nn.Dropout(0.2),
-                nn.Linear(1280, 1024),
-                nn.ReLU(inplace=True),
-                nn.Linear(1024, 11),
+                nn.Dropout(0.2), nn.Linear(1280, 1024), nn.ReLU(inplace=True), nn.Linear(1024, 11),
             )
 
             model_path = "../models/class_model.pth.tar"
@@ -168,9 +156,7 @@ class VocalClassifier(object):
         dataset : :class:`VocalDatasetFromFolder`
         batch_size : int
         """
-        return data.DataLoader(
-            dataset, batch_size=batch_size, shuffle=False, num_workers=0
-        )
+        return data.DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=0)
 
     def classify_list_of_vocals(self, list_of_vocals):
         """
@@ -186,7 +172,7 @@ class VocalClassifier(object):
             print("[classify vocals as noise]: list of vocals is empty")
             return -1
 
-        if self.type == "noise":
+        if self.network_type == "noise":
             return self.classify_list_of_vocals_noise(list_of_vocals)
         else:
             return self.classify_list_of_vocals_class(list_of_vocals)
@@ -253,18 +239,13 @@ class VocalDatasetFromFolder(data.Dataset):
     def __init__(self, dataset_path):
         self.dataset_path = dataset_path
         # -- get file names and sort ascending
-        self.filenames = sorted(
-            [basename(splitext(f)[0]) for f in glob(join(self.dataset_path, "*.png"))],
-            key=int,
-        )
+        self.filenames = sorted([basename(splitext(f)[0]) for f in glob(join(self.dataset_path, "*.png"))], key=int,)
         # -- build back full path to images
         self.images = [join(self.dataset_path, f + ".png") for f in self.filenames]
 
     def __getitem__(self, index):
         img = Image.open(self.images[index]).convert("RGB")
-        transToTensor = transforms.Compose(
-            [transforms.Resize((224, 224)), transforms.ToTensor()]
-        )
+        transToTensor = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor()])
         img = transToTensor(img)
         return img
 

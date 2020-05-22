@@ -5,17 +5,17 @@ __license__ = "Apache License, Version 2.0"
 __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 import cv2
-import logging
 import warnings
 
 import numpy as np
 
 from time import time
 from math import ceil
+from logging import getLogger
 from scipy import signal, ndimage
 from skimage import exposure, measure
 
-from vocalpy.utils.processing import bradley_roth
+from vocalpy.utils.image_processing import bradley_roth
 
 
 def identifier(chunk):
@@ -40,25 +40,7 @@ def identifier(chunk):
         args,
     ) = chunk
 
-    if args.verbose:
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
-            datefmt="%d-%b-%y %H:%M:%S",
-            handlers=[
-                logging.FileHandler(f"{output_dir}/output.log"),
-                logging.StreamHandler(),
-            ],
-        )
-    else:
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
-            datefmt="%d-%b-%y %H:%M:%S",
-            handlers=[logging.FileHandler(f"{output_dir}/output.log")],
-        )
-
-    logger = logging.getLogger()
+    logger = getLogger()
 
     timeASpectrogram = time()
     fs = sample_rate
@@ -72,9 +54,7 @@ def identifier(chunk):
         audio range: {start_range / sample_rate:.2f}-{end_range / sample_rate:.2f}s"
     )
     # -- compute spectrogram
-    f, t, Pxx = signal.spectrogram(
-        sample_range, fs=fs, window=window, noverlap=noverlap, nfft=nfft, mode="psd"
-    )
+    f, t, Pxx = signal.spectrogram(sample_range, fs=fs, window=window, noverlap=noverlap, nfft=nfft, mode="psd")
 
     # -- apply frequency cutoffs
     if low_frequency_cutoff > 0:
@@ -87,9 +67,7 @@ def identifier(chunk):
     time_res = sample_range_secs / t.shape[0]
     freq_res = (np.max(f) - low_frequency_cutoff) / f.shape[0]
 
-    logger.info(
-        f"[bin {this_bin}]: spectrogram runtime: {time() - timeASpectrogram:.2f}s"
-    )
+    logger.info(f"[bin {this_bin}]: spectrogram runtime: {time() - timeASpectrogram:.2f}s")
     logger.info(f"[bin {this_bin}]: time resolution: {time_res * 1000:.2f}ms")
     logger.info(f"[bin {this_bin}]: freq resolution: {freq_res:.2f}Hz")
 
@@ -113,9 +91,7 @@ def identifier(chunk):
 
     timeAConnectedComponents = time()
     connectivity = 4
-    num_cc, output, stats, centroids = cv2.connectedComponentsWithStats(
-        B, connectivity, cv2.CV_32S
-    )
+    num_cc, output, stats, centroids = cv2.connectedComponentsWithStats(B, connectivity, cv2.CV_32S)
     # del erode14
 
     # -- remove background stats
@@ -131,9 +107,7 @@ def identifier(chunk):
         if areas[i] >= min_area:
             grain[output == i + 1] = 255
 
-    logger.info(
-        f"[bin {this_bin}]: connected components runtime: {time() - timeAConnectedComponents:.2f}s"
-    )
+    logger.info(f"[bin {this_bin}]: connected components runtime: {time() - timeAConnectedComponents:.2f}s")
 
     # -- one more opening to make sure
     # -- segmentation covers *at least* the real area
@@ -146,15 +120,11 @@ def identifier(chunk):
     timeARegionProps = time()
     labels = measure.label(grain, background=0)
 
-    props = measure.regionprops(
-        labels, intensity_image=Pxx, cache=True, coordinates="rc"
-    )
+    props = measure.regionprops(labels, intensity_image=Pxx, cache=True, coordinates="rc")
     # -- sort segments by time
     props = sorted(props, key=lambda p: np.min(p.coords[:, 1]), reverse=False)
 
-    logger.info(
-        f"[bin {this_bin}]: region props runtime: {time() - timeARegionProps:.2f}s"
-    )
+    logger.info(f"[bin {this_bin}]: region props runtime: {time() - timeARegionProps:.2f}s")
     del labels
 
     timeAVocal = time()
@@ -271,14 +241,10 @@ def identifier(chunk):
         dtype = np.uint8
         Pxx = exposure.rescale_intensity(Pxx, in_range="image", out_range=dtype)
         vocal_list.add_spectrograms_to_vocals(
-            full_spectrogram=np.flipud(Pxx),
-            full_mask=np.flipud(grain),
-            spec_range=spectrogram_range,
+            full_spectrogram=np.flipud(Pxx), full_mask=np.flipud(grain), spec_range=spectrogram_range,
         )
 
-        logger.info(
-            f"[bin {this_bin}]: connecting vocals runtime: {time() - timeAConnectVocals:.2f}s"
-        )
+        logger.info(f"[bin {this_bin}]: connecting vocals runtime: {time() - timeAConnectVocals:.2f}s")
 
     logger.info(f"[bin {this_bin}]: list of vocals runtime: {time() - timeAVocal:.2f}s")
     logger.info(f"[bin {this_bin}]: raw number of vocals: {vocal_id}")
@@ -296,14 +262,8 @@ def check_if_vocals_are_close(base_vocal, next_vocal):
     # -- next vocal frequency is higher than the base vocal frequency
     # -- 3) next vocal starts/ends within base vocal start/end (harmonic)
     max_interval = 0.1  # 100ms
-    condition_1 = (np.abs(base_vocal.end - next_vocal.start) < max_interval) and (
-        next_vocal.min_freq > base_vocal.max_freq
-    )
-    condition_2 = (np.abs(base_vocal.start - next_vocal.start) < max_interval) and (
-        next_vocal.min_freq > base_vocal.max_freq
-    )
-    condition_3 = (
-        next_vocal.start >= base_vocal.start and next_vocal.end <= base_vocal.end
-    )
+    condition_1 = (np.abs(base_vocal.end - next_vocal.start) < max_interval) and (next_vocal.min_freq > base_vocal.max_freq)
+    condition_2 = (np.abs(base_vocal.start - next_vocal.start) < max_interval) and (next_vocal.min_freq > base_vocal.max_freq)
+    condition_3 = next_vocal.start >= base_vocal.start and next_vocal.end <= base_vocal.end
 
     return True if (condition_1 or condition_2 or condition_3) else False

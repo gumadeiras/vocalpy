@@ -13,30 +13,38 @@ class Animal(object):
     """
 
     def __init__(self, animal):
-        self._available_pipelines = ["mouse", "rat", "guineapig"]
-        self._default_animal = "mouse"
-        self._animal = (
-            animal if (animal in self._available_pipelines) else self._default_animal
-        )
+        self._available_identification_pipelines = ["mouse", "rat", "guineapig"]
+        self._available_classification_pipelines = ["mouse"]
+        self._animal = animal if (animal in self._available_identification_pipelines) else self._available_pipelines[0]
+        self._has_classifier = True if (animal in self._available_classification_pipelines) else None
 
-    def identify_vocalizations():
-        pass
+    def identify_vocalizations(self, chunk):
+        # -- import animal pipelines here
+        import vocalpy.pipelines.rat as rat
+        import vocalpy.pipelines.mouse as mouse
+        import vocalpy.pipelines.guineapig as guineapig
 
-    def classify_vocalizations():
-        pass
+        if self._animal == "mouse":
+            return mouse.identifier(chunk)
+        elif self._animal == "rat":
+            return rat.identifier(chunk)
+        elif self._animal == "guineapig":
+            return guineapig.identifier(chunk)
+
+    def classify_vocalizations(self, network_type, list_of_vocals, path_to_spectrograms):
+        if self._animal == "mouse":
+            return mouse.classifier(network_type, list_of_vocals, path_to_spectrograms)
+        elif self._animal == "rat":
+            pass
+        elif self._animal == "guineapig":
+            pass
 
     def check_if_vocals_are_close(self, first_vocal, second_vocal):
         if self._animal == "mouse":
-            next_vocal_is_close = mouse.check_if_vocals_are_close(
-                first_vocal, second_vocal
-            )
+            next_vocal_is_close = mouse.check_if_vocals_are_close(first_vocal, second_vocal)
         elif self._animal == "rat":
-            next_vocal_is_close = rat.check_if_vocals_are_close(
-                first_vocal, second_vocal
-            )
+            next_vocal_is_close = rat.check_if_vocals_are_close(first_vocal, second_vocal)
         elif self._animal == "guineapig":
-            next_vocal_is_close = guineapig.check_if_vocals_are_close(
-                first_vocal, second_vocal
-            )
+            next_vocal_is_close = guineapig.check_if_vocals_are_close(first_vocal, second_vocal)
 
         return next_vocal_is_close

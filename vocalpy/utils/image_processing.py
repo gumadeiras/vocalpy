@@ -98,29 +98,3 @@ def bradley_roth(image, s=None, t=None):
     out = np.reshape(out, (rows, cols)).astype(np.uint8)
 
     return out
-
-
-def parallel_audio_processing(animal, chunk):
-    """
-    Parallel processing audio segments by calling appropriate animal pipeline
-
-    Parameters
-    ----------
-    animal : str
-        animal pipeline
-    chunk : List[]
-        list containing the audio segment and metadata
-    """
-    # -- import animal pipelines here
-    import vocalpy.pipelines.rat as rat
-    import vocalpy.pipelines.mouse as mouse
-    import vocalpy.pipelines.guineapig as guineapig
-
-    # -- create Animal class -> Animal.identifier(animal)
-    # -- one less place to be changed when new animals are added
-    if animal == "mouse":
-        return mouse.identifier(chunk)
-    elif animal == "rat":
-        return rat.identifier(chunk)
-    elif animal == "guineapig":
-        return guineapig.identifier(chunk)
