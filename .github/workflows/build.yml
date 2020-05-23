@@ -41,7 +41,7 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --ignore=E203,E501,W503 --statistics
     - name: Test with pytest
       run: |
-        pytest --cov=./
+        pytest --cov=./vocalpy
     - name: Code coverage
       run: |
         codecov --token=${{ secrets.codecov_token }}
