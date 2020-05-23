@@ -14,25 +14,34 @@ def spectrogram(samples, fs, window_type, window_size, noverlap, nfft, low_frequ
 
     Parameters
     ----------
-    samples
+    samples : numpy.array
+        audio samples time series
     fs : int
-        audio sampling rate
+        sampling frequency of the audio
     window_type : str
-        window type (check available ones from scipy.sginal.get_window())
+        windowing function
+        https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.get_window.html#scipy.signal.get_window
     window_size : int
         window size
     noverlap : int
-        overlap between sliding windows
+        number of points to overlap between segments
     nfft : int
         number of points to compute the stft
     low_frequency_cutoff : int
         frequencies lower than this limit will be removed
     high_frequency_cutoff : int
         frequencies higher than this limit will be removed
+
+    Returns
+    -------
+    (f, t, Pxx) : numpy.array, numpy.array, numpy.array
+        f contains the frequency bins
+        t contains the time bins
+        Pxx contains the power values for each bin in decibel
     """
     # -- compute spectrogram
     f, t, Pxx = signal.spectrogram(
-        samples, fs=fs, window=signal.get_window(window_type, window_size), noverlap=noverlap, nfft=nfft, mode="psd"
+        x=samples, fs=fs, window=signal.get_window(window_type, window_size), noverlap=noverlap, nfft=nfft, mode="psd"
     )
 
     # -- apply frequency cutoffs

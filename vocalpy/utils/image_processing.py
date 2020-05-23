@@ -64,6 +64,11 @@ def bradley_roth(image, s=None, t=None):
         window size
     t : int
         thresholding sensitivity
+
+    Returns
+    -------
+    image : numpy.array
+        returns trehsholded image in binary values
     """
     # -- from somewhere
     img = np.array(image).astype(np.float)
