@@ -59,7 +59,7 @@ if __name__ == "__main__":
     # -- process each input file sequentially
     # -- each file is broken into chunks
     # -- chunks are processed in parallel
-    timeAllRecordings = time()
+    timeAllrecordings = time()
     for file_idx in range(0, len(list_of_files)):
         audio_path = list_of_files[file_idx]
         output_dir = list_of_output_dirs[file_idx]
@@ -72,29 +72,29 @@ if __name__ == "__main__":
         logger.info("output files will be saved to:\n{}".format(output_dir))
         logger.info("selected animal pipeline: {}".format(args.animal))
 
-        # -- create Recording object
+        # -- create recording object
         timeStart = time()
-        Recording = Recording(recording_path=audio_path, args=args)
-        # Recording.save_recording_object(path=Recording.output_dir)
-        print(Recording)
+        recording = Recording(recording_path=audio_path, args=args)
+        # recording.save_recording_object(path=recording.output_dir)
+        print(recording)
 
         logger.info("recording object created ({:.2f}s)".format((time() - timeStart)))
-        logger.info("recording duration: {:.2f} seconds".format(Recording.recording_duration))
-        logger.info("splitting audio into {} chunks".format(Recording.bins))
+        logger.info("recording duration: {:.2f} seconds".format(recording.recording_duration))
+        logger.info("splitting audio into {} chunks".format(recording.bins))
 
         # -- identify vocalizations
-        Recording.identify_vocalizations()
+        recording.identify_vocalizations()
 
         # -- classify vocalizations
-        Recording.classify_vocalizations()
+        recording.classify_vocalizations()
 
         # -- done, save output files :)
-        Recording.save_outputs(validation_flag=args.validation)
+        recording.save_outputs(validation_flag=args.validation)
 
         logger.info("total runtime: {:.0f}m {:.0f}s".format((time() - timeStart) // 60, (time() - timeStart) % 60))
 
     logger.info(
         "total runtime for all recordings: {:.0f}m {:.0f}s".format(
-            (time() - timeAllRecordings) // 60, (time() - timeAllRecordings) % 60
+            (time() - timeAllrecordings) // 60, (time() - timeAllrecordings) % 60
         )
     )
