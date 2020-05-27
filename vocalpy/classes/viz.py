@@ -73,21 +73,14 @@ class Viz(object):
             list_of_viz[0]._list_of_vocals = None
             list_of_viz[0]._bin_size = self._bin_size
             number_of_bins_in_df = combined_df["bin_number"].max()
-            list_of_viz[0]._bins = (
-                int(math.floor(number_of_bins_in_df / self._bin_size)) + 1
-            )
+            list_of_viz[0]._bins = int(math.floor(number_of_bins_in_df / self._bin_size)) + 1
 
             list_of_viz[0]._recording_data.group_name = groupname
             list_of_viz[0]._recording_data._list_of_vocals.number_of_vocals = np.sum(
-                [
-                    viz._recording_data._list_of_vocals.number_of_vocals
-                    for viz in list_of_viz
-                ]
+                [viz._recording_data._list_of_vocals.number_of_vocals for viz in list_of_viz]
             )
 
-            list_of_viz[0]._split_array = list_of_viz[
-                0
-            ].get_split_indices_for_bin_size()
+            list_of_viz[0]._split_array = list_of_viz[0].get_split_indices_for_bin_size()
 
             return list_of_viz[0]
         else:
@@ -98,20 +91,14 @@ class Viz(object):
 
         for group in range(self._number_of_groups):
             paths = self._list_of_groups[group]
-            vizobjs = [
-                SingleViz(recording_path=rec_path, bin_size=self._bin_size)
-                for rec_path in paths
-            ]
+            vizobjs = [SingleViz(recording_path=rec_path, bin_size=self._bin_size) for rec_path in paths]
             list_of_viz.append(vizobjs)
 
         self._list_of_viz = np.asarray(list_of_viz)
         return 0
 
     def create_group_viz(self):
-        self._list_of_group_viz = [
-            self.combine_viz(group, self._group_names[i])
-            for i, group in enumerate(self._list_of_viz)
-        ]
+        self._list_of_group_viz = [self.combine_viz(group, self._group_names[i]) for i, group in enumerate(self._list_of_viz)]
         return 0
 
     def plot(self, plot_type="group", dataname="avg_freq"):
@@ -173,10 +160,7 @@ class Viz(object):
             if group:
                 data_values = group.get_datapoints(dataname)
                 sns.pointplot(
-                    data=data_values,
-                    color=cmap[i],
-                    capsize=0.1,
-                    label=group._recording_data.group_name,
+                    data=data_values, color=cmap[i], capsize=0.1, label=group._recording_data.group_name,
                 )
                 custom_lines.append(Line2D([0], [0], color=cmap[i], lw=2))
                 labels.append(group._recording_data.group_name)
@@ -272,13 +256,9 @@ class SingleViz(object):
         bin_column = self._recording_df[["bin_number"]]
         for idx in range(1, self._bins):
             try:
-                split_array.append(
-                    np.where(bin_column == idx * self._bin_size)[0][-1] + 1
-                )
+                split_array.append(np.where(bin_column == idx * self._bin_size)[0][-1] + 1)
             except:
-                print(
-                    f"recording {self._recording_data.recording_name} had no vocals in bin {idx}"
-                )
+                print(f"recording {self._recording_data.recording_name} had no vocals in bin {idx}")
         return split_array
 
     def split_data_by_indices(self, dataframe):

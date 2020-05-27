@@ -268,6 +268,8 @@ class Recording(object):
         timeAcombining = time()
         list_of_vocals = ListOfVocals()
         list_of_vocals.combine_list_of_list_of_vocals(list_of_list_of_vocals=results)
+
+        # -- only needs to fix first vocal in each segment
         list_of_vocals.update_intervals()
         self._has_list_of_vocals = True
         self.list_of_vocals = list_of_vocals

@@ -19,10 +19,7 @@ def create_logger(args=None, out_dir=None):
             level=logging.INFO,
             format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
             datefmt="%d-%b-%y %H:%M:%S",
-            handlers=[
-                logging.FileHandler(f"{out_dir}/output.log"),
-                logging.StreamHandler(),
-            ],
+            handlers=[logging.FileHandler(f"{out_dir}/output.log"), logging.StreamHandler(),],
         )
         logging.info("verbose output on")
     else:
@@ -97,12 +94,8 @@ def validate_thread_count(threads):
         print(f"computer core count: {num_cores}")
         exit()
     if threads > num_cores:
-        print(
-            "WARNING: number of threads is equal or higher than number of available cores."
-        )
-        print(
-            "WARNING: if your CPU has hyperthreading, use number of physical cores for better performance."
-        )
+        print("WARNING: number of threads is equal or higher than number of available cores.")
+        print("WARNING: if your CPU has hyperthreading, use number of physical cores for better performance.")
         print(f"provided value: {threads}")
         print(f"computer thread count: {num_cores}")
     return 0

@@ -377,9 +377,7 @@ class Vocal(object):
 
         img = Image.fromarray(self.spectrogram)
         img = img.convert("L")
-        img.save(
-            join(path, "spectrogram", filename + "_" + str(self.bin_number) + ".png")
-        )
+        img.save(join(path, "spectrogram", filename + "_" + str(self.bin_number) + ".png"))
 
     def save_spectrogram_with_coords_as_image(self, path=None, filename="vocal"):
         if exists(path) is False:
@@ -404,13 +402,7 @@ class Vocal(object):
         img = Image.open(buf)
         # rotate image back using PIL and save to disk
         img = img.transpose(Image.FLIP_TOP_BOTTOM)
-        img.save(
-            join(
-                path,
-                "spectrogram_validation",
-                filename + "_" + str(self.bin_number) + ".png",
-            )
-        )
+        img.save(join(path, "spectrogram_validation", filename + "_" + str(self.bin_number) + ".png",))
 
     def save_mask_as_image(self, path=None, filename="vocal"):
         if exists(path) is False:

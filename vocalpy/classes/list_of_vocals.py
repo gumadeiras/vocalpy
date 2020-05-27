@@ -38,7 +38,6 @@ class ListOfVocals(object):
         self.coords_fixed = False
 
     def __str__(self):
-        # return '{}: vocals_in_recording: {} \n number_of_vocals: {} \n vocals_processed: {}'.format(self.__class__.__name__, self.vocals_in_recording, self.number_of_vocals, self.vocals_processed)
         return f"{self.__class__.__name__}:\n \
             number_of_vocals: {self.number_of_vocals}\n \
             vocals_combined: {self.vocals_combined}\n \
@@ -67,10 +66,7 @@ class ListOfVocals(object):
 
         for idx in range(1, len(self.vocals_in_recording), 1):
             self.vocals_in_recording[idx].interval = np.abs(
-                (
-                    self.vocals_in_recording[idx - 1].end
-                    - self.vocals_in_recording[idx].start
-                )
+                (self.vocals_in_recording[idx - 1].end - self.vocals_in_recording[idx].start)
             )
 
         self.intervals_fixed = True
@@ -96,20 +92,12 @@ class ListOfVocals(object):
             if (first_vocal.bin_number < second_vocal.bin_number)
             else second_vocal.bin_number,
             start=first_vocal.start if (start_difference < 0) else second_vocal.start,
-            start_coord=first_vocal.start_coord
-            if (start_difference < 0)
-            else second_vocal.start_coord,
+            start_coord=first_vocal.start_coord if (start_difference < 0) else second_vocal.start_coord,
             end=first_vocal.end if (end_difference > 0) else second_vocal.end,
-            end_coord=first_vocal.end_coord
-            if (end_difference > 0)
-            else second_vocal.end_coord,
+            end_coord=first_vocal.end_coord if (end_difference > 0) else second_vocal.end_coord,
             interval=-1,  # -- updated after noise candidates are removed
-            min_freq=first_vocal.min_freq
-            if (first_vocal.min_freq < second_vocal.min_freq)
-            else second_vocal.min_freq,
-            max_freq=first_vocal.max_freq
-            if (first_vocal.max_freq > second_vocal.max_freq)
-            else second_vocal.max_freq,
+            min_freq=first_vocal.min_freq if (first_vocal.min_freq < second_vocal.min_freq) else second_vocal.min_freq,
+            max_freq=first_vocal.max_freq if (first_vocal.max_freq > second_vocal.max_freq) else second_vocal.max_freq,
             min_freq_coord=first_vocal.min_freq_coord
             if (first_vocal.min_freq_coord < second_vocal.min_freq_coord)
             else second_vocal.min_freq_coord,
@@ -123,9 +111,7 @@ class ListOfVocals(object):
             max_intensity=first_vocal.max_intensity
             if (first_vocal.max_intensity < second_vocal.max_intensity)
             else second_vocal.max_intensity,
-            avg_intensity=np.mean(
-                (first_vocal.avg_intensity, second_vocal.avg_intensity)
-            ),
+            avg_intensity=np.mean((first_vocal.avg_intensity, second_vocal.avg_intensity)),
             bg_intensity=np.mean((first_vocal.bg_intensity, second_vocal.bg_intensity)),
             area=first_vocal.area + second_vocal.area,
             centroid=first_vocal.centroid,
@@ -166,17 +152,11 @@ class ListOfVocals(object):
                 break
 
             if animal == "mouse":
-                next_vocal_is_close = mouse.check_if_vocals_are_close(
-                    base_vocal, next_vocal
-                )
+                next_vocal_is_close = mouse.check_if_vocals_are_close(base_vocal, next_vocal)
             elif animal == "rat":
-                next_vocal_is_close = rat.check_if_vocals_are_close(
-                    base_vocal, next_vocal
-                )
+                next_vocal_is_close = rat.check_if_vocals_are_close(base_vocal, next_vocal)
             elif animal == "guineapig":
-                next_vocal_is_close = guineapig.check_if_vocals_are_close(
-                    base_vocal, next_vocal
-                )
+                next_vocal_is_close = guineapig.check_if_vocals_are_close(base_vocal, next_vocal)
 
             # -- get next vocal (idx)
             idx = idx + 1
@@ -188,17 +168,11 @@ class ListOfVocals(object):
                 try:
                     next_vocal = self.vocals_in_recording[idx + 1]
                     if animal == "mouse":
-                        next_vocal_is_close = mouse.check_if_vocals_are_close(
-                            new_vocal, next_vocal
-                        )
+                        next_vocal_is_close = mouse.check_if_vocals_are_close(new_vocal, next_vocal)
                     elif animal == "rat":
-                        next_vocal_is_close = rat.check_if_vocals_are_close(
-                            new_vocal, next_vocal
-                        )
+                        next_vocal_is_close = rat.check_if_vocals_are_close(new_vocal, next_vocal)
                     elif animal == "guineapig":
-                        next_vocal_is_close = guineapig.check_if_vocals_are_close(
-                            new_vocal, next_vocal
-                        )
+                        next_vocal_is_close = guineapig.check_if_vocals_are_close(new_vocal, next_vocal)
                 except:
                     next_vocal_is_close = False
                 idx = idx + 1
@@ -222,9 +196,7 @@ class ListOfVocals(object):
         """
         for vocal in self.vocals_in_recording:
             cx = vocal.start_coord + ((vocal.end_coord - vocal.start_coord) // 2)
-            cy = vocal.min_freq_coord + (
-                (vocal.max_freq_coord - vocal.min_freq_coord) // 2
-            )
+            cy = vocal.min_freq_coord + ((vocal.max_freq_coord - vocal.min_freq_coord) // 2)
             vocal.centroid = np.rint([cy, cx]).astype(np.int)
 
         self.centroid_spectro_fixed = True
@@ -329,9 +301,7 @@ class ListOfVocals(object):
             path to output directory to save the files
         """
         for filename, vocal in enumerate(self.vocals_in_recording, start=1):
-            vocal.save_spectrogram_with_coords_as_image(
-                path=output_dir, filename=str(filename)
-            )
+            vocal.save_spectrogram_with_coords_as_image(path=output_dir, filename=str(filename))
         return 0
 
     def save_masks(self, output_dir=None):
