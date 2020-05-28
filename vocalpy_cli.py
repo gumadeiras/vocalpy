@@ -34,8 +34,8 @@ if __name__ == "__main__":
     args = p.parse_args()
 
     # -- let the user know about the help menu and verbose output
-    print("run 'python vocalpy.py -h' to show the help menu")
-    print("use '-v' to enable verbose output (recommended)")
+    print(f"run 'python vocalpy.py -h' to show the help menu")
+    print(f"use '-v' to enable verbose output (recommended)")
 
     # -- parse input audio path provided by the user
     list_of_files = parse_input_path(args.path_to_audio)
@@ -45,12 +45,8 @@ if __name__ == "__main__":
     try:
         assert len(list_of_files) == len(list_of_output_dirs)
     except AssertionError:
-        print("list of audio files provided and list to be processed are different")
-        print(
-            "number of audio files: {}; number of files to be processed: {}".format(
-                len(list_of_files), len(list_of_output_dirs)
-            )
-        )
+        print(f"list of audio files provided and list to be processed are different")
+        print(f"number of audio files: {len(list_of_files)}; number of files to be processed: {len(list_of_output_dirs)}")
         exit()
 
     # -- validate arguments provided by the user
@@ -68,9 +64,9 @@ if __name__ == "__main__":
         create_directory(output_dir)
         create_logger(args, output_dir)
         logger = getLogger()
-        logger.info("selected file:\n{}".format(audio_path))
-        logger.info("output files will be saved to:\n{}".format(output_dir))
-        logger.info("selected animal pipeline: {}".format(args.animal))
+        logger.info(f"selected file:\n{audio_path}")
+        logger.info(f"output files will be saved to:\n{output_dir}")
+        logger.info(f"selected animal pipeline: {args.animal}")
 
         # -- create recording object
         timeStart = time()
@@ -78,9 +74,9 @@ if __name__ == "__main__":
         # recording.save_recording_object(path=recording.output_dir)
         print(recording)
 
-        logger.info("recording object created ({:.2f}s)".format((time() - timeStart)))
-        logger.info("recording duration: {:.2f} seconds".format(recording.recording_duration))
-        logger.info("splitting audio into {} chunks".format(recording.bins))
+        logger.info(f"recording object created ({time() - timeStart:.2f}s)")
+        logger.info(f"recording duration: {recording.recording_duration:.2f} seconds")
+        logger.info(f"splitting audio into {recording.bins} chunks")
 
         # -- identify vocalizations
         recording.identify_vocalizations()
@@ -91,10 +87,8 @@ if __name__ == "__main__":
         # -- done, save output files :)
         recording.save_outputs(validation_flag=args.validation)
 
-        logger.info("total runtime: {:.0f}m {:.0f}s".format((time() - timeStart) // 60, (time() - timeStart) % 60))
+        logger.info(f"total runtime: {(time() - timeStart) // 60:.0f}m {(time() - timeStart) % 60:.0f}s")
 
     logger.info(
-        "total runtime for all recordings: {:.0f}m {:.0f}s".format(
-            (time() - timeAllrecordings) // 60, (time() - timeAllrecordings) % 60
-        )
+        f"total runtime for all recordings: {(time() - timeAllrecordings) // 60:.0f}m {(time() - timeAllrecordings) % 60:.0f}s"
     )
