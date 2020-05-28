@@ -15,7 +15,7 @@ jupyter>=1.0.0
 notebook>=6.0.2
 
 # pyform for GUI
-pyforms
+# pyforms
 
 # pytorch
 torch==1.5.0
