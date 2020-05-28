@@ -17,24 +17,26 @@ if __name__ == "__main__":
     p.add_argument("-a", "--animal", help="choose from ['mouse', 'rat']", type=str, default="mouse")
     p.add_argument("-p", "--path_to_audio", help="path to audio file or directory", type=str, default=None)
     p.add_argument(
-        "-b", "--bin_size", help="bin size in seconds to split spectrogram processing (default=60)", type=int, default=60
+        "-b",
+        "--bin_size",
+        help="split audio into segments for parallel processing (in seconds; default=60)",
+        type=int,
+        default=60,
     )
     p.add_argument(
         "-f",
         "--frequency",
-        help="frequency range to compute spectrogram; string format: 'lower range,upper range'; '0,-1' to use full range",
+        help="frequency cutoffs; 'lower range,upper range'; '0,-1' to use full range",
         type=str,
         default="default",
     )
-    p.add_argument("-t", "--threads", help="number of threads (default=max)", type=int, default=-1)
-    p.add_argument("-v", "--verbose", help="enable output verbosity", action="store_true")
-    p.add_argument(
-        "-l", "--validation", help="saves overlay of segmentation on spectrogram for manual verifcation", action="store_true"
-    )
+    p.add_argument("-t", "--threads", help="number of threads to use (default=max)", type=int, default=-1)
+    p.add_argument("-v", "--verbose", help="enable verbose output", action="store_true")
+    p.add_argument("-l", "--validation", help="saves overlay of segmentation for manual verifcation", action="store_true")
     args = p.parse_args()
 
     # -- let the user know about the help menu and verbose output
-    print(f"run 'python vocalpy.py -h' to show the help menu")
+    print(f"run 'python vocalpy.py --help' to show the help menu")
     print(f"use '-v' to enable verbose output (recommended)")
 
     # -- parse input audio path provided by the user
