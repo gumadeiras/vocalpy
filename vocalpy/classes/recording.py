@@ -273,14 +273,12 @@ class Recording(object):
         list_of_vocals.update_intervals()
         self._has_list_of_vocals = True
         self.list_of_vocals = list_of_vocals
-        logger.info("done combining ({:.0f}s)".format(time() - timeAcombining))
+        logger.info(f"done combining ({time() - timeAcombining:.0f}s)")
         logger.info(list_of_vocals)
 
         self.recording_identify_vocalizations_finished()
         logger.info(
-            "recording parallel processing ({:.0f}m {:.0f}s)".format(
-                (time() - timeAParallel) // 60, (time() - timeAParallel) % 60
-            )
+            f"recording parallel processing ({(time() - timeAParallel) // 60:.0f}m {(time() - timeAParallel) % 60:.0f}s)"
         )
 
     def recording_identify_vocalizations_finished(self):
@@ -301,7 +299,7 @@ class Recording(object):
             logger.info("saving spectrograms of candidate vocalizations")
             timeAsaving = time()
             self.save_spectrograms(path=self.output_dir)
-            logger.info("done saving ({:.0f}s)".format(time() - timeAsaving))
+            logger.info(f"done saving ({time() - timeAsaving:.0f}s)")
 
             # -- classify candidate vocalizations as Vocal or Noise; remove Noise
             logger.info("classifying candidate vocalizations as vocal or noise")
@@ -312,7 +310,7 @@ class Recording(object):
             logger.info("removing candidates classified as noise")
             self.remove_vocals_classified_as_noise_from_list_of_vocals(predictions)
             self.save_spectrograms_and_masks(path=self.output_dir)
-            logger.info("done classifying and removing ({:.0f}s)".format(time() - timeAclassification))
+            logger.info(f"done classifying and removing ({time() - timeAclassification:.0f}s)")
             logger.info(self._list_of_vocals)
 
             # -- classify vocalizations into vocal types
@@ -323,7 +321,7 @@ class Recording(object):
             )
             logger.info("adding classification to vocals")
             self.update_vocals_with_class_classification(predictions, classes)
-            logger.info("done classifying and updating vocals ({:.0f}s)".format(time() - timeAclassification))
+            logger.info("done classifying and updating vocals ({time() - timeAclassification:.0f}s)")
         else:
             logger.info(f"no classifier available for animal type: {self._animal._animal}")
 
@@ -561,4 +559,4 @@ class Recording(object):
         self.remove_spectrograms_and_masks_from_object()
         self.save_recording_object(filename="recording_without_spectrograms", path=self.output_dir)
         self.save_recording_data_to_csv(path=self.output_dir)
-        logger.info("done saving ({:.0f}s)".format(time() - timeAsaving))
+        logger.info(f"done saving ({time() - timeAsaving:.0f}s)")

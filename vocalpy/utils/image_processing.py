@@ -43,9 +43,9 @@ def contrast_adjustment(data, lower_percentile, upper_percentile):
     data : numpy.array
         original data with extreme values saturated
     """
-    p1, p99 = np.percentile(data, (lower_percentile, upper_percentile))
-    data[data < p1] = 0
-    data[data > p99] = 1
+    lower, upper = np.percentile(data, (lower_percentile, upper_percentile))
+    data[data < lower] = 0
+    data[data > upper] = 1
     return data
 
 
