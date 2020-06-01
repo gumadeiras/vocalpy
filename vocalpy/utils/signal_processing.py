@@ -83,3 +83,16 @@ def butter_highpass_filter(samples, high_frequency_cutoff, fs, order=25):
     b, a = butter_highpass(high_frequency_cutoff, fs, order=order)
     y = lfilter(b, a, samples)
     return y
+
+
+def butter_lowpass(low_frequency_cutoff, fs, order=25):
+    nyquist_freq = 0.5 * fs
+    high = low_frequency_cutoff / nyquist_freq
+    b, a = butter(order, high, btype="low")
+    return b, a
+
+
+def butter_lowpass_filter(samples, low_frequency_cutoff, fs, order=25):
+    b, a = butter_highpass(low_frequency_cutoff, fs, order=order)
+    y = lfilter(b, a, samples)
+    return y

@@ -251,10 +251,21 @@ class Recording(object):
 
     def create_animal_pipeline(self, animal):
         import importlib
+
+        has_identifier, has_classifier = self.check_pipeline_avalability(animal)
+
+        if has_identifier:
+            AnimalClass = getattr(importlib.import_module("vocalpy.pipelines." + animal), animal.title())
+        else:
+            print("implement error, animal pipeline not available")
+
+        return AnimalClass(has_identifier, has_classifier)
+
+    def check_pipeline_avalability(self, animal):
         import yaml
 
         with open(join(dirname(__file__), pardir, "configs", "pipelines_parameters.yml"), "r") as ymlfile:
-            pipelines_configs = yaml.load(ymlfile)
+            pipelines_configs = yaml.safe_load(ymlfile)
 
         identifier_pipelines = []
         classifier_pipelines = []
@@ -264,17 +275,9 @@ class Recording(object):
             if available["classifier"]:
                 classifier_pipelines.append(animal_pipeline)
 
-        if animal in identifier_pipelines:
-            has_identifier = True
-            if animal in classifier_pipelines:
-                has_classifier = True
-            else:
-                has_classifier = False
-            AnimalClass = getattr(importlib.import_module("vocalpy.pipelines." + animal), animal.title())
-        else:
-            print("implement error, animal pipeline not available")
-
-        return AnimalClass(has_identifier, has_classifier)
+        has_identifier = animal in identifier_pipelines
+        has_classifier = animal in classifier_pipelines
+        return has_identifier, has_classifier
 
     def identify_vocalizations(self):
         """

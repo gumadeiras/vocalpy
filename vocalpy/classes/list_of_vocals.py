@@ -7,11 +7,6 @@ __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 import torch
 
 import numpy as np
-import vocalpy.pipelines.rat as rat
-import vocalpy.pipelines.mouse as mouse
-import vocalpy.pipelines.guineapig as guineapig
-
-from vocalpy.classes.vocal import Vocal
 
 
 class ListOfVocals(object):

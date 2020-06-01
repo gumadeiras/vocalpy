@@ -63,9 +63,7 @@ class Animal(ABC):
             # -- get next vocal (idx)
             idx = idx + 1
             while next_vocal_is_close is True:
-                """
-                    while there are blobs close by, continue combining them
-                    """
+                # while there are blobs close by, continue combining them
                 new_vocal = self.combine_vocals(new_vocal, next_vocal)
                 try:
                     next_vocal = list_of_vocals.vocals_in_recording[idx + 1]
@@ -86,9 +84,6 @@ class Animal(ABC):
         list_of_vocals.vocals_combined = True
 
     def combine_vocals(self, first_vocal, second_vocal):
-        import numpy as np
-        from vocalpy.classes.vocal import Vocal
-
         """
         Combines two vocals
 
@@ -98,6 +93,9 @@ class Animal(ABC):
         second_vocal : :class:`Vocal`
             vocals to be combined
         """
+        import numpy as np
+        from vocalpy.classes.vocal import Vocal
+
         # -- combines two vocals
         start_difference = first_vocal.start - second_vocal.start
         end_difference = first_vocal.end - second_vocal.end
