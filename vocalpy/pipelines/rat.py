@@ -11,276 +11,279 @@ import numpy as np
 
 from time import time
 from math import ceil
+from scipy import ndimage
 from logging import getLogger
-from scipy import signal, ndimage
 from skimage import exposure, measure
 
-from vocalpy.utils.image_processing import bradley_roth
+from vocalpy.classes.animal import Animal
+from vocalpy.classes.classifier import VocalClassifier
+from vocalpy.utils.signal_processing import compute_spectrogram
+from vocalpy.utils.image_processing import normalize, contrast_adjustment, bradley_roth
 
 
-def identifier(chunk):
-    from vocalpy.classes.vocal import Vocal
-    from vocalpy.classes.list_of_vocals import ListOfVocals
+class Rat(Animal):
+    def identify_vocalizations(self, chunk):
+        return self.identifier(chunk)
 
-    timeBinA = time()
+    def classify_vocalizations(self, network_type, list_of_vocals, path_to_spectrograms):
+        Classifier = VocalClassifier(network_type=network_type, path_to_spectrograms=path_to_spectrograms)
+        predictions = Classifier.classify_list_of_vocals(list_of_vocals)
+        return predictions, Classifier.classes
 
-    # -- unwrap chunk
-    (
-        output_dir,
-        spectrogram_dir,
-        mask_dir,
-        sample_rate,
-        sample_range,
-        this_bin,
-        start_range,
-        end_range,
-        bin_size,
-        low_frequency_cutoff,
-        high_frequency_cutoff,
-        args,
-    ) = chunk
+    def check_if_vocals_are_close(self, first_vocal, second_vocal):
+        # -- conditions to check:
+        # -- 1) next vocal starts within 20ms from base vocal start time
+        # -- 2) next vocal starts within 20ms from base vocal end time
+        # -- 3) next vocal starts within base vocal start/end (harmonic)
+        max_interval = 0.019  # 20ms - 1ms error because morph ops increase area
+        condition_1 = np.abs(first_vocal.end - second_vocal.start) < max_interval
+        condition_2 = np.abs(first_vocal.start - second_vocal.start) < max_interval
+        condition_3 = (second_vocal.start >= first_vocal.start) and (second_vocal.start <= first_vocal.end)
 
-    logger = getLogger()
+        return True if (condition_1 or condition_2 or condition_3) else False
 
-    timeASpectrogram = time()
-    fs = sample_rate
-    window = signal.get_window("hamming", 256)
-    noverlap = 128
-    nfft = 1024
-    sample_range_secs = sample_range.shape[0] / sample_rate
-    logger.info(
-        f"[bin {this_bin}]: computing spectrogram; \
-        time range: {sample_range_secs:.2f}s; \
-        audio range: {start_range / sample_rate:.2f}-{end_range / sample_rate:.2f}s"
-    )
-    # -- compute spectrogram
-    f, t, Pxx = signal.spectrogram(sample_range, fs=fs, window=window, noverlap=noverlap, nfft=nfft, mode="psd")
+    def identifier(self, chunk):
+        from vocalpy.classes.vocal import Vocal
+        from vocalpy.classes.list_of_vocals import ListOfVocals
 
-    # -- apply frequency cutoffs
-    if low_frequency_cutoff > 0:
-        Pxx = Pxx[(f > low_frequency_cutoff)]
-        f = f[(f > low_frequency_cutoff)]
-    if high_frequency_cutoff > 0:
-        Pxx = Pxx[(f < high_frequency_cutoff)]
-        f = f[(f < high_frequency_cutoff)]
+        timeBinA = time()
 
-    time_res = sample_range_secs / t.shape[0]
-    freq_res = (np.max(f) - low_frequency_cutoff) / f.shape[0]
+        # -- unwrap chunk
+        (
+            output_dir,
+            spectrogram_dir,
+            mask_dir,
+            sample_rate,
+            sample_range,
+            this_bin,
+            start_range,
+            end_range,
+            bin_size,
+            low_frequency_cutoff,
+            high_frequency_cutoff,
+            args,
+        ) = chunk
 
-    logger.info(f"[bin {this_bin}]: spectrogram runtime: {time() - timeASpectrogram:.2f}s")
-    logger.info("[bin {this_bin}]: time resolution: {time_res * 1000:.2f}ms")
-    logger.info("[bin {this_bin}]: freq resolution: {freq_res:.2f}Hz")
+        logger = getLogger()
 
-    # -- convert to dB
-    Pxx = 10 * np.log10(Pxx)
+        timeASpectrogram = time()
 
-    # -- normalize data
-    B = np.abs(Pxx)
-    B = B / np.max(B)
+        logger.info(
+            f"[bin {this_bin}]: computing spectrogram; \
+            time range: {sample_range.shape[0] / sample_rate:.2f}s; \
+            audio range: {start_range / sample_rate:.2f}-{end_range / sample_rate:.2f}s"
+        )
 
-    # -- contrast adjustment
-    p1, p99 = np.percentile(B, (1, 99))
-    B[B < p1] = 0
-    B[B > p99] = 1
+        # -- compute spectrogram
+        f, t, Pxx = compute_spectrogram(
+            samples=sample_range,
+            fs=sample_rate,
+            window_type="hamming",
+            window_size=256,
+            noverlap=128,
+            nfft=1024,
+            low_frequency_cutoff=low_frequency_cutoff,
+            high_frequency_cutoff=high_frequency_cutoff,
+        )
 
-    # -- binarize spectrogram
-    B = bradley_roth(B, t=20)
+        time_res = sample_range.shape[0] / sample_rate / t.shape[0]
+        freq_res = (np.max(f) - low_frequency_cutoff) / f.shape[0]
 
-    # -- median filter
-    B = ndimage.median_filter(B, size=(3, 3))
+        logger.info(f"[bin {this_bin}]: spectrogram runtime: {time() - timeASpectrogram:.2f}s")
+        logger.info("[bin {this_bin}]: time resolution: {time_res * 1000:.2f}ms")
+        logger.info("[bin {this_bin}]: freq resolution: {freq_res:.2f}Hz")
 
-    # -- kernels for morphological operations
-    kernel_rect = np.ones((4, 2), np.uint8)
-    kernel_line1 = np.ones((4, 1), np.uint8)
-    kernel_line2 = np.ones((5, 1), np.uint8)
+        # -- rescale data to (0,1)
+        B = normalize(data=Pxx)
 
-    # -- morphological operations
-    erode11 = cv2.erode(B, kernel_line1, iterations=1)
-    del B
+        # -- saturate extreme values
+        B = contrast_adjustment(data=B, lower_percentile=1, upper_percentile=99)
 
-    dilate12 = cv2.dilate(erode11, kernel_rect, iterations=1)
-    del erode11
+        # -- binarize spectrogram
+        B = bradley_roth(B, t=20)
 
-    dilate13 = cv2.dilate(dilate12, kernel_line2, iterations=1)
-    del dilate12
+        # -- median filter
+        B = ndimage.median_filter(B, size=(3, 3))
 
-    erode14 = cv2.erode(dilate13, kernel_line1, iterations=2)
-    del dilate13
+        # -- kernels for morphological operations
+        kernel_rect = np.ones((4, 2), np.uint8)
+        kernel_line1 = np.ones((4, 1), np.uint8)
+        kernel_line2 = np.ones((5, 1), np.uint8)
 
-    timeAConnectedComponents = time()
-    connectivity = 4
-    num_cc, output, stats, centroids = cv2.connectedComponentsWithStats(erode14, connectivity, cv2.CV_32S)
-    del erode14
+        # -- morphological operations
+        erode11 = cv2.erode(B, kernel_line1, iterations=1)
+        del B
 
-    # -- remove background stats
-    num_cc = num_cc - 1
-    areas = stats[1:, 4]
+        dilate12 = cv2.dilate(erode11, kernel_rect, iterations=1)
+        del erode11
 
-    # -- filtered connected components placeholder
-    grain = np.zeros((output.shape))
+        dilate13 = cv2.dilate(dilate12, kernel_line2, iterations=1)
+        del dilate12
 
-    # -- threshold connected components by minimum area
-    min_area = 20
-    for i in range(0, num_cc):
-        if areas[i] >= min_area:
-            grain[output == i + 1] = 255
+        erode14 = cv2.erode(dilate13, kernel_line1, iterations=2)
+        del dilate13
 
-    logger.info(f"[bin {this_bin}]: connected components runtime: {time() - timeAConnectedComponents:.2f}s")
+        timeAConnectedComponents = time()
+        connectivity = 4
+        num_cc, output, stats, centroids = cv2.connectedComponentsWithStats(erode14, connectivity, cv2.CV_32S)
+        del erode14
 
-    # -- one more opening to make sure
-    # -- segmentation covers *at least* the real area
-    grain = grain.astype(np.uint8)
-    # kernel_cross = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.uint8)
-    kernel_line3 = np.ones((1, 3), dtype=np.uint8)
-    grain = cv2.dilate(grain, kernel_line3, iterations=1)
+        # -- remove background stats
+        num_cc = num_cc - 1
+        areas = stats[1:, 4]
 
-    # -- get connected components stats
-    timeARegionProps = time()
-    labels = measure.label(grain, background=0)
+        # -- filtered connected components placeholder
+        grain = np.zeros((output.shape))
 
-    props = measure.regionprops(labels, intensity_image=Pxx, cache=True, coordinates="rc")
+        # -- threshold connected components by minimum area
+        min_area = 20
+        for i in range(0, num_cc):
+            if areas[i] >= min_area:
+                grain[output == i + 1] = 255
 
-    # -- sort segments by time
-    props = sorted(props, key=lambda p: np.min(p.coords[:, 1]), reverse=False)
+        logger.info(f"[bin {this_bin}]: connected components runtime: {time() - timeAConnectedComponents:.2f}s")
 
-    logger.info(f"[bin {this_bin}]: region props runtime: {time() - timeARegionProps:.2f}s")
-    del labels
+        # -- one more opening to make sure
+        # -- segmentation covers *at least* the real area
+        grain = grain.astype(np.uint8)
+        # kernel_cross = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.uint8)
+        kernel_line3 = np.ones((1, 3), dtype=np.uint8)
+        grain = cv2.dilate(grain, kernel_line3, iterations=1)
 
-    timeAVocal = time()
-    vocal_id = 0
-    vocal_list = []
+        # -- get connected components stats
+        timeARegionProps = time()
+        labels = measure.label(grain, background=0)
 
-    index = 0
-    end = 0
-    for prop in props:
-        start = np.min(prop.coords[:, 1])
-        if index > 0:
-            interval = np.abs(end - start)
-        else:
-            interval = 0
-            index = index + 1
+        props = measure.regionprops(labels, intensity_image=Pxx, cache=True, coordinates="rc")
 
-        end = np.max(prop.coords[:, 1])
-        duration = end - start
+        # -- sort segments by time
+        props = sorted(props, key=lambda p: np.min(p.coords[:, 1]), reverse=False)
 
-        if duration < 5:
-            continue
+        logger.info(f"[bin {this_bin}]: region props runtime: {time() - timeARegionProps:.2f}s")
+        del labels
 
-        # -- get spectrogram and mask around
-        # -- each vocalization to compute intensity
-        spectro_range = 200  # 2*200 * 0.51 = 205ms
-        centroid_time = ceil(prop.centroid[1])
+        timeAVocal = time()
+        vocal_id = 0
+        vocal_list = []
 
-        # -- edge conditions:
-        # -- spectro_range goes over the spectrom vector limit (for this bin)
-        # -- left edge: -200 is before vector start index
-        # -- right edge: +200 is after vector end index
-        with warnings.catch_warnings():
-            warnings.filterwarnings("error")
-            try:
-                range_start = centroid_time - spectro_range
-                range_end = centroid_time + spectro_range
-                bg_intensity = np.mean(Pxx[:, range_start:range_end])
-            except RuntimeWarning:
-                left_end_idx = centroid_time - spectro_range
-                if left_end_idx < 0:
-                    centroid_time = centroid_time + np.abs(left_end_idx)
+        index = 0
+        end = 0
+        for prop in props:
+            start = np.min(prop.coords[:, 1])
+            if index > 0:
+                interval = np.abs(end - start)
+            else:
+                interval = 0
+                index = index + 1
+
+            end = np.max(prop.coords[:, 1])
+            duration = end - start
+
+            if duration < 5:
+                continue
+
+            # -- get spectrogram and mask around
+            # -- each vocalization to compute intensity
+            spectro_range = 200  # 2*200 * 0.51 = 205ms
+            centroid_time = ceil(prop.centroid[1])
+
+            # -- edge conditions:
+            # -- spectro_range goes over the spectrom vector limit (for this bin)
+            # -- left edge: -200 is before vector start index
+            # -- right edge: +200 is after vector end index
+            with warnings.catch_warnings():
+                warnings.filterwarnings("error")
+                try:
                     range_start = centroid_time - spectro_range
                     range_end = centroid_time + spectro_range
                     bg_intensity = np.mean(Pxx[:, range_start:range_end])
-                else:
-                    centroid_time = centroid_time - np.abs(left_end_idx)
-                    range_start = centroid_time - spectro_range
-                    range_end = centroid_time + spectro_range
-                    bg_intensity = np.mean(Pxx[:, range_start:range_end])
-            warnings.simplefilter("ignore")
-            warnings.filterwarnings("ignore")
+                except RuntimeWarning:
+                    left_end_idx = centroid_time - spectro_range
+                    if left_end_idx < 0:
+                        centroid_time = centroid_time + np.abs(left_end_idx)
+                        range_start = centroid_time - spectro_range
+                        range_end = centroid_time + spectro_range
+                        bg_intensity = np.mean(Pxx[:, range_start:range_end])
+                    else:
+                        centroid_time = centroid_time - np.abs(left_end_idx)
+                        range_start = centroid_time - spectro_range
+                        range_end = centroid_time + spectro_range
+                        bg_intensity = np.mean(Pxx[:, range_start:range_end])
+                warnings.simplefilter("ignore")
+                warnings.filterwarnings("ignore")
 
-        # -- if contrast ratio is above treshold
-        # -- then it's a false positive
-        if (prop.mean_intensity / bg_intensity) > 0.91:
-            continue
+            # -- if contrast ratio is above treshold
+            # -- then it's a false positive
+            if (prop.mean_intensity / bg_intensity) > 0.91:
+                continue
 
-        if this_bin == 1:
-            # first 0.5 were removed from recording as they are noisy
-            # make this better
-            start_time = (start * time_res) + ((this_bin - 1) * bin_size) + 0.5
-            end_time = (end * time_res) + ((this_bin - 1) * bin_size) + 0.5
-        else:
-            start_time = (start * time_res) + ((this_bin - 1) * bin_size)
-            end_time = (end * time_res) + ((this_bin - 1) * bin_size)
+            if this_bin == 1:
+                # first 0.5 were removed from recording as they are noisy
+                # make this better
+                start_time = (start * time_res) + ((this_bin - 1) * bin_size) + 0.5
+                end_time = (end * time_res) + ((this_bin - 1) * bin_size) + 0.5
+            else:
+                start_time = (start * time_res) + ((this_bin - 1) * bin_size)
+                end_time = (end * time_res) + ((this_bin - 1) * bin_size)
 
-        min_freq_coord = np.min(prop.coords[:, 0])
-        max_freq_coord = np.max(prop.coords[:, 0])
-        min_freq = (min_freq_coord * freq_res) + low_frequency_cutoff
-        max_freq = (max_freq_coord * freq_res) + low_frequency_cutoff
-        avg_freq = (np.mean(prop.coords[:, 0]) * freq_res) + low_frequency_cutoff
-        bandwidth = max_freq - min_freq
+            min_freq_coord = np.min(prop.coords[:, 0])
+            max_freq_coord = np.max(prop.coords[:, 0])
+            min_freq = (min_freq_coord * freq_res) + low_frequency_cutoff
+            max_freq = (max_freq_coord * freq_res) + low_frequency_cutoff
+            avg_freq = (np.mean(prop.coords[:, 0]) * freq_res) + low_frequency_cutoff
+            bandwidth = max_freq - min_freq
 
-        new_vocal = Vocal(
-            bin_number=this_bin,
-            start=start_time,
-            end=end_time,
-            start_coord=start,
-            end_coord=end,
-            duration=duration * time_res * 1000,
-            interval=interval * time_res,
-            min_freq=min_freq,
-            max_freq=max_freq,
-            min_freq_coord=min_freq_coord,
-            max_freq_coord=max_freq_coord,
-            avg_freq=avg_freq,
-            bandwidth=bandwidth,
-            min_intensity=prop.min_intensity,
-            max_intensity=prop.max_intensity,
-            avg_intensity=prop.mean_intensity,
-            bg_intensity=bg_intensity,
-            area=prop.area,
-            centroid=np.rint(prop.centroid).astype(int),
-            coords=prop.coords,
-        )
+            new_vocal = Vocal(
+                bin_number=this_bin,
+                start=start_time,
+                end=end_time,
+                start_coord=start,
+                end_coord=end,
+                duration=duration * time_res * 1000,
+                interval=interval * time_res,
+                min_freq=min_freq,
+                max_freq=max_freq,
+                min_freq_coord=min_freq_coord,
+                max_freq_coord=max_freq_coord,
+                avg_freq=avg_freq,
+                bandwidth=bandwidth,
+                min_intensity=prop.min_intensity,
+                max_intensity=prop.max_intensity,
+                avg_intensity=prop.mean_intensity,
+                bg_intensity=bg_intensity,
+                area=prop.area,
+                centroid=np.rint(prop.centroid).astype(int),
+                coords=prop.coords,
+            )
 
-        vocal_list.append(new_vocal)
-        vocal_id = vocal_id + 1
+            vocal_list.append(new_vocal)
+            vocal_id = vocal_id + 1
 
-    del props
+        del props
 
-    # -- if list is not empty, create a list of vocals
-    if len(vocal_list):
-        vocal_list = ListOfVocals(vocals_in_recording=np.asarray(vocal_list))
-        timeAConnectVocals = time()
-        vocal_list.connect_vocals(animal="rat")
-        vocal_list.connect_vocals(animal="rat")
-        vocal_list.update_centroids()
+        # -- if list is not empty, create a list of vocals
+        if len(vocal_list):
+            vocal_list = ListOfVocals(vocals_in_recording=np.asarray(vocal_list))
+            timeAConnectVocals = time()
+            vocal_list.connect_vocals(animal="rat")
+            vocal_list.connect_vocals(animal="rat")
+            vocal_list.update_centroids()
 
-        spectrogram_range = 350  # 350 ~ 357ms @ 0.51ms resolution
-        vocal_list.update_coords(spectrogram_range)
+            spectrogram_range = 350  # 350 ~ 357ms @ 0.51ms resolution
+            vocal_list.update_coords(spectrogram_range)
 
-        # -- rescale pixel values to save spectrograms in 8bits
-        dtype = np.uint8
-        Pxx = exposure.rescale_intensity(Pxx, in_range="image", out_range=dtype)
-        vocal_list.add_spectrograms_to_vocals(
-            full_spectrogram=np.flipud(Pxx), full_mask=np.flipud(grain), spec_range=spectrogram_range,
-        )
+            # -- rescale pixel values to save spectrograms in 8bits
+            dtype = np.uint8
+            Pxx = exposure.rescale_intensity(Pxx, in_range="image", out_range=dtype)
+            vocal_list.add_spectrograms_to_vocals(
+                full_spectrogram=np.flipud(Pxx), full_mask=np.flipud(grain), spec_range=spectrogram_range,
+            )
 
-        logger.info(f"[bin {this_bin}]: connecting vocals runtime: {time() - timeAConnectVocals:.2f}s")
+            logger.info(f"[bin {this_bin}]: connecting vocals runtime: {time() - timeAConnectVocals:.2f}s")
 
-    logger.info(f"[bin {this_bin}]: list of vocals runtime: {time() - timeAVocal:.2f}s")
-    logger.info(f"[bin {this_bin}]: raw number of vocals: {vocal_id}")
-    logger.info(f"[bin {this_bin}]: {vocal_list}")
-    logger.info(f"[bin {this_bin}]: bin runtime: {time() - timeBinA:.2f}s")
+        logger.info(f"[bin {this_bin}]: list of vocals runtime: {time() - timeAVocal:.2f}s")
+        logger.info(f"[bin {this_bin}]: raw number of vocals: {vocal_id}")
+        logger.info(f"[bin {this_bin}]: {vocal_list}")
+        logger.info(f"[bin {this_bin}]: bin runtime: {time() - timeBinA:.2f}s")
 
-    return vocal_list
-
-
-def check_if_vocals_are_close(base_vocal, next_vocal):
-    # -- conditions to check:
-    # -- 1) next vocal starts within 20ms from base vocal start time
-    # -- 2) next vocal starts within 20ms from base vocal end time
-    # -- 3) next vocal starts within base vocal start/end (harmonic)
-    max_interval = 0.021  # 21ms - 1ms error because morph ops increase area
-    condition_1 = np.abs(base_vocal.end - next_vocal.start) < max_interval
-    condition_2 = np.abs(base_vocal.start - next_vocal.start) < max_interval
-    condition_3 = (next_vocal.start >= base_vocal.start) and (next_vocal.start <= base_vocal.end)
-
-    return True if (condition_1 or condition_2 or condition_3) else False
+        return vocal_list

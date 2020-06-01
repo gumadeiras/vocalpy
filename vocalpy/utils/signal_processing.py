@@ -5,10 +5,10 @@ __license__ = "Apache License, Version 2.0"
 __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 import numpy as np
-from scipy import signal
+from scipy.signal import spectrogram, get_window, butter, lfilter
 
 
-def spectrogram(samples, fs, window_type, window_size, noverlap, nfft, low_frequency_cutoff, high_frequency_cutoff):
+def compute_spectrogram(samples, fs, window_type, window_size, noverlap, nfft, low_frequency_cutoff, high_frequency_cutoff):
     """
     Computes the spectrogram, applies a frequency cutoff, and converts power values to decibel
 
@@ -40,8 +40,8 @@ def spectrogram(samples, fs, window_type, window_size, noverlap, nfft, low_frequ
         Pxx contains the power values for each bin in decibel
     """
     # -- compute spectrogram
-    f, t, Pxx = signal.spectrogram(
-        x=samples, fs=fs, window=signal.get_window(window_type, window_size), noverlap=noverlap, nfft=nfft, mode="psd"
+    f, t, Pxx = spectrogram(
+        x=samples, fs=fs, window=get_window(window_type, window_size), noverlap=noverlap, nfft=nfft, mode="psd"
     )
 
     # -- apply frequency cutoffs
@@ -56,3 +56,30 @@ def spectrogram(samples, fs, window_type, window_size, noverlap, nfft, low_frequ
     Pxx = 10 * np.log10(Pxx)
 
     return f, t, Pxx
+
+
+def butter_bandpass(low_frequency_cutoff, high_frequency_cutoff, fs, order=25):
+    nyquist_freq = 0.5 * fs
+    low = low_frequency_cutoff / nyquist_freq
+    high = high_frequency_cutoff / nyquist_freq
+    b, a = butter(order, [low, high], btype="band")
+    return b, a
+
+
+def butter_bandpass_filter(samples, low_frequency_cutoff, high_frequency_cutoff, fs, order=25):
+    b, a = butter_bandpass(low_frequency_cutoff, high_frequency_cutoff, fs, order=order)
+    y = lfilter(b, a, samples)
+    return y
+
+
+def butter_highpass(high_frequency_cutoff, fs, order=25):
+    nyquist_freq = 0.5 * fs
+    high = high_frequency_cutoff / nyquist_freq
+    b, a = butter(order, high, btype="high")
+    return b, a
+
+
+def butter_highpass_filter(samples, high_frequency_cutoff, fs, order=25):
+    b, a = butter_highpass(high_frequency_cutoff, fs, order=order)
+    y = lfilter(b, a, samples)
+    return y

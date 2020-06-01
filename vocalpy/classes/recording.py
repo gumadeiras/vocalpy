@@ -4,6 +4,7 @@
 __license__ = "Apache License, Version 2.0"
 __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
+
 import numpy as np
 import pandas as pd
 import soundfile as sf
@@ -13,9 +14,8 @@ from math import ceil
 from os import makedirs
 from logging import getLogger
 from joblib import Parallel, delayed
-from os.path import join, split, splitext, exists
+from os.path import join, split, splitext, exists, dirname, pardir
 
-from vocalpy.classes.animal import Animal
 from vocalpy.classes.list_of_vocals import ListOfVocals
 from vocalpy.utils.io import save_file, load_file, create_directory, remove_directory
 
@@ -74,7 +74,7 @@ class Recording(object):
         self._group_name = "not set"
         self._list_of_vocals = None
         self._has_list_of_vocals = None
-        self._animal = Animal(args.animal)
+        self._animal = self.create_animal_pipeline(args.animal)
 
     def __str__(self):
         return f"{self.__class__.__name__}:\n duration: {self.recording_duration} \n sampling rate: {self.sample_rate}"
@@ -249,6 +249,33 @@ class Recording(object):
 
         return chunks
 
+    def create_animal_pipeline(self, animal):
+        import importlib
+        import yaml
+
+        with open(join(dirname(__file__), pardir, "configs", "pipelines_parameters.yml"), "r") as ymlfile:
+            pipelines_configs = yaml.load(ymlfile)
+
+        identifier_pipelines = []
+        classifier_pipelines = []
+        for animal_pipeline, available in pipelines_configs["pipelines"].items():
+            if available["identifier"]:
+                identifier_pipelines.append(animal_pipeline)
+            if available["classifier"]:
+                classifier_pipelines.append(animal_pipeline)
+
+        if animal in identifier_pipelines:
+            has_identifier = True
+            if animal in classifier_pipelines:
+                has_classifier = True
+            else:
+                has_classifier = False
+            AnimalClass = getattr(importlib.import_module("vocalpy.pipelines." + animal), animal.title())
+        else:
+            print("implement error, animal pipeline not available")
+
+        return AnimalClass(has_identifier, has_classifier)
+
     def identify_vocalizations(self):
         """
         Process recording by calling appropriate animal pipeline functions
@@ -321,7 +348,7 @@ class Recording(object):
             )
             logger.info("adding classification to vocals")
             self.update_vocals_with_class_classification(predictions, classes)
-            logger.info("done classifying and updating vocals ({time() - timeAclassification:.0f}s)")
+            logger.info(f"done classifying and updating vocals ({time() - timeAclassification:.0f}s)")
         else:
             logger.info(f"no classifier available for animal type: {self._animal._animal}")
 

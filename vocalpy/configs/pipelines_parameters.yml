@@ -1,0 +1,22 @@
+pipelines:
+  generic:
+    identifier: False
+    classifier: False
+  mouse:
+    identifier: True
+    classifier: True
+    defaults:
+      nfft: 1024
+      window_type: "hamming"
+      window_size: 256
+      noverlap: 128
+      low_frequency_cutoff: 45000
+      high_frequency_cutoff: -1
+      min_vocal_duration: 5
+      max_vocal_duration: 250
+  rat:
+    identifier: True
+    classifier: True
+  guineapig:
+    identifier: True
+    classifier: False
