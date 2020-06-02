@@ -14,7 +14,7 @@ def compute_spectrogram(samples, fs, window_type, window_size, noverlap, nfft, l
 
     Parameters
     ----------
-    samples : numpy.array
+    samples : ndarray
         audio samples time series
     fs : int
         sampling frequency of the audio
@@ -34,7 +34,7 @@ def compute_spectrogram(samples, fs, window_type, window_size, noverlap, nfft, l
 
     Returns
     -------
-    (f, t, Pxx) : numpy.array, numpy.array, numpy.array
+    (f, t, Pxx) : (ndarray, ndarray, ndarray)
         f contains the frequency bins
         t contains the time bins
         Pxx contains the power values for each bin in decibel
@@ -59,6 +59,25 @@ def compute_spectrogram(samples, fs, window_type, window_size, noverlap, nfft, l
 
 
 def butter_bandpass(low_frequency_cutoff, high_frequency_cutoff, fs, order=25):
+    """
+    Creates a Butterworth bandpass filter
+
+    Parameters
+    ----------
+    low_frequency_cutoff : int
+        lower frequency cutoff for the butterworth filter
+    high_frequency_cutoff
+        higher frequency cutoff for the butterworth filter
+    fs : int
+        signal sampling rate
+    order : int, optional
+        Butterworth filter order
+
+    Returns
+    -------
+    (b, a) : (ndarray, ndarray)
+        numerator (b) and denominator (a) polynomials of the IIR filter
+    """
     nyquist_freq = 0.5 * fs
     low = low_frequency_cutoff / nyquist_freq
     high = high_frequency_cutoff / nyquist_freq
@@ -67,12 +86,50 @@ def butter_bandpass(low_frequency_cutoff, high_frequency_cutoff, fs, order=25):
 
 
 def butter_bandpass_filter(samples, low_frequency_cutoff, high_frequency_cutoff, fs, order=25):
+    """
+    Applies a Butterworth bandpass filter to a signal
+
+    Parameters
+    ----------
+    samples : ndarray
+        source signal to be filtered
+    low_frequency_cutoff : int
+        lower frequency cutoff for the butterworth filter
+    high_frequency_cutoff
+        higher frequency cutoff for the butterworth filter
+    fs : int
+        signal sampling rate
+    order : int, optional
+        Butterworth filter order
+
+    Returns
+    -------
+    y : ndarray
+        source signal filtered using the butterworth filter
+    """
     b, a = butter_bandpass(low_frequency_cutoff, high_frequency_cutoff, fs, order=order)
     y = lfilter(b, a, samples)
     return y
 
 
 def butter_highpass(high_frequency_cutoff, fs, order=25):
+    """
+    Creates a Butterworth highpass filter
+
+    Parameters
+    ----------
+    high_frequency_cutoff
+        higher frequency cutoff for the butterworth filter
+    fs : int
+        signal sampling rate
+    order : int, optional
+        Butterworth filter order
+
+    Returns
+    -------
+    (b, a) : (ndarray, ndarray)
+        numerator (b) and denominator (a) polynomials of the IIR filter
+    """
     nyquist_freq = 0.5 * fs
     high = high_frequency_cutoff / nyquist_freq
     b, a = butter(order, high, btype="high")
@@ -80,12 +137,48 @@ def butter_highpass(high_frequency_cutoff, fs, order=25):
 
 
 def butter_highpass_filter(samples, high_frequency_cutoff, fs, order=25):
+    """
+    Applies a Butterworth highpass filter to a signal
+
+    Parameters
+    ----------
+    samples : ndarray
+        source signal to be filtered
+    high_frequency_cutoff
+        higher frequency cutoff for the butterworth filter
+    fs : int
+        signal sampling rate
+    order : int, optional
+        Butterworth filter order
+
+    Returns
+    -------
+    y : ndarray
+        source signal filtered using the butterworth filter
+    """
     b, a = butter_highpass(high_frequency_cutoff, fs, order=order)
     y = lfilter(b, a, samples)
     return y
 
 
 def butter_lowpass(low_frequency_cutoff, fs, order=25):
+    """
+    Creates a Butterworth lowpass filter
+
+    Parameters
+    ----------
+    low_frequency_cutoff : int
+        lower frequency cutoff for the butterworth filter
+    fs : int
+        signal sampling rate
+    order : int, optional
+        Butterworth filter order
+
+    Returns
+    -------
+    (b, a) : (ndarray, ndarray)
+        numerator (b) and denominator (a) polynomials of the IIR filter
+    """
     nyquist_freq = 0.5 * fs
     high = low_frequency_cutoff / nyquist_freq
     b, a = butter(order, high, btype="low")
@@ -93,6 +186,25 @@ def butter_lowpass(low_frequency_cutoff, fs, order=25):
 
 
 def butter_lowpass_filter(samples, low_frequency_cutoff, fs, order=25):
+    """
+    Applies a Butterworth lowpass filter to a signal
+
+    Parameters
+    ----------
+    samples : ndarray
+        source signal to be filtered
+    low_frequency_cutoff : int
+        lower frequency cutoff for the butterworth filter
+    fs : int
+        signal sampling rate
+    order : int, optional
+        Butterworth filter order
+
+    Returns
+    -------
+    y : ndarray
+        source signal filtered using the butterworth filter
+    """
     b, a = butter_highpass(low_frequency_cutoff, fs, order=order)
     y = lfilter(b, a, samples)
     return y

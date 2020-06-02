@@ -17,7 +17,7 @@ from joblib import Parallel, delayed
 from os.path import join, split, splitext, exists, dirname, pardir
 
 from vocalpy.classes.list_of_vocals import ListOfVocals
-from vocalpy.utils.io import save_file, load_file, create_directory, remove_directory
+from vocalpy.utils.io import save_file, load_file, create_directory, remove_directory, read_yaml
 
 
 class Recording(object):
@@ -250,6 +250,19 @@ class Recording(object):
         return chunks
 
     def create_animal_pipeline(self, animal):
+        """
+        Creates an instance of :class:`Animal` that implements the pipeline for the animal selected by the user
+
+        Parameters
+        ----------
+        animal : str
+            animal pipeline selected by the user
+
+        Returns
+        -------
+        class instance : :class:`Animal`
+            animal pipeline selected by the user
+        """
         import importlib
 
         has_identifier, has_classifier = self.check_pipeline_avalability(animal)
@@ -262,10 +275,23 @@ class Recording(object):
         return AnimalClass(has_identifier, has_classifier)
 
     def check_pipeline_avalability(self, animal):
-        import yaml
+        """
+        Reads the YAML configuration file for pipeline availability and checks if the animal selected by the user has a
+        pipeline implemented
 
-        with open(join(dirname(__file__), pardir, "configs", "pipelines_parameters.yml"), "r") as ymlfile:
-            pipelines_configs = yaml.safe_load(ymlfile)
+        Parameters
+        ----------
+        animal : str
+            animal pipeline selected by the user
+
+        Returns
+        -------
+        has_identifier : bool
+            availability of the vocalization identifier pipeline
+        has_classifier : bool
+            availability of the vocalization classification pipeline
+        """
+        pipelines_configs = read_yaml(join(dirname(__file__), pardir, "configs", "pipelines_parameters.yml"))
 
         identifier_pipelines = []
         classifier_pipelines = []

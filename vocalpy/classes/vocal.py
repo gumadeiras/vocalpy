@@ -63,11 +63,11 @@ class Vocal(object):
         vocal orientation (slope)
     coords : float, optional
         vocal coordinates in the spectrogram
-    spectrogram : numpy.array, optional
+    spectrogram : ndarray, optional
         spectrogram (image)
-    mask : numpy.array, optional
+    mask : ndarray, optional
         segmentation (image)
-    cnn_mask : numpy.array, optional
+    cnn_mask : ndarray, optional
         segmentation from neural network (image)
     probabilities : List[float], optional
         classes probability distribution from the neural network

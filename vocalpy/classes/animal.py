@@ -30,16 +30,14 @@ class Animal(ABC):
 
     def connect_vocals(self, list_of_vocals):
         """
-            Checks segmentation and combines segments that belong to the same vocalization. Uses predefined
-            constraints. Can have different contrainsts for different animal pipelines
+        Checks segmentation and combines segments that belong to the same vocalization. Uses predefined
+        constraints. Can have different contrainsts for different animal pipelines
 
-            Parameters
-            ----------
-            animal : str
-                animal pipeline (constraints) to use
-            """
-        # -- combine segmentation blobs that are close
-        # -- consider them as one vocal
+        Parameters
+        ----------
+        list_of_vocals : :class:`ListOfVocals`
+            list of vocal candidates to be connected
+        """
         import numpy as np
 
         new_list_of_vocals = []

@@ -13,12 +13,12 @@ def normalize(data):
 
     Parameters
     ----------
-    data : numpy.array
+    data : ndarray
         data to be rescaled
 
     Returns
     -------
-    data : numpy.array
+    data : ndarray
         rescaled data
     """
     data = np.abs(data)
@@ -31,7 +31,7 @@ def contrast_adjustment(data, lower_percentile, upper_percentile):
 
     Parameters
     ----------
-    data : numpy.array
+    data : ndarray
         input data
     lower_percentile : int
         values bellow this percentile will be set to 0
@@ -40,7 +40,7 @@ def contrast_adjustment(data, lower_percentile, upper_percentile):
 
     Returns
     -------
-    data : numpy.array
+    data : ndarray
         original data with extreme values saturated
     """
     lower, upper = np.percentile(data, (lower_percentile, upper_percentile))
@@ -58,7 +58,7 @@ def bradley_roth(image, s=None, t=None):
 
     Parameters
     ----------
-    image : numpy.array
+    image : ndarray
         image the be tresholded
     s : int
         window size
@@ -67,7 +67,7 @@ def bradley_roth(image, s=None, t=None):
 
     Returns
     -------
-    image : numpy.array
+    image : ndarray
         returns trehsholded image in binary values
     """
     # -- from somewhere

@@ -5,11 +5,11 @@ __license__ = "Apache License, Version 2.0"
 __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 import glob
+import yaml
 import shutil
 import pickle
 
 import numpy as np
-
 from sys import exit
 from os import makedirs
 from os.path import basename, exists, isdir, isfile, join, splitext
@@ -212,3 +212,22 @@ def remove_directory(path):
     """
     shutil.rmtree(path, ignore_errors=True)
     return 0
+
+
+def read_yaml(path_to_file):
+    """
+    Loads a YAML configuration file
+
+    Parameters
+    ----------
+    path_to_file : str
+        path to YAML file
+
+    Returns
+    -------
+    yml_data : dict
+        YAML file data read into a dictionary
+    """
+    with open(path_to_file, "r") as ymlfile:
+        yml_data = yaml.safe_load(ymlfile)
+    return yml_data

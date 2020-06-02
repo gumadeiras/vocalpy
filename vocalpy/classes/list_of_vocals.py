@@ -135,9 +135,9 @@ class ListOfVocals(object):
 
         Parameters
         ----------
-        full_spectrogram : numpy.array
+        full_spectrogram : ndarray
             complete spectrogram ranging the recording segment
-        full_mask : numpy.array
+        full_mask : ndarray
             complete segmentation mask ranging the recording segment
         spec_range : int, optional
             range to crop the spectrogram/segmentation around the vocal (+-200)
