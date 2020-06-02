@@ -83,8 +83,8 @@ class Viz(object):
             list_of_viz[0]._split_array = list_of_viz[0].get_split_indices_for_bin_size()
 
             return list_of_viz[0]
-        else:
-            return []
+
+        return []
 
     def create_viz_for_each_recording(self):
         list_of_viz = []

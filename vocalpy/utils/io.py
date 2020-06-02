@@ -10,7 +10,6 @@ import shutil
 import pickle
 
 import numpy as np
-from sys import exit
 from os import makedirs
 from os.path import basename, exists, isdir, isfile, join, splitext
 
@@ -134,7 +133,7 @@ def parse_input_path(path=None, search_tree=False):
     if path is None:
         print("usage: python vocalpy.py --audio_path='/path/to/audio'")
         return -1
-    elif isdir(path):
+    if isdir(path):
         print("audio path is a directory, geting all .wav files")
         if search_tree:
             types = (
@@ -157,11 +156,9 @@ def parse_input_path(path=None, search_tree=False):
     elif isfile(path):
         print("audio path is a file.")
         return [path]
-    else:
-        print(f"audio path is not a file or directory: {path}")
-        return -1
 
-    return 0
+    print(f"audio path is not a file or directory: {path}")
+    return -1
 
 
 def create_output_directory_structure(list_of_files):

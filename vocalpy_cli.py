@@ -58,7 +58,7 @@ if __name__ == "__main__":
     # -- each file is broken into chunks
     # -- chunks are processed in parallel
     timeAllrecordings = time()
-    for file_idx in range(0, len(list_of_files)):
+    for file_idx, __ in enumerate(list_of_files):
         audio_path = list_of_files[file_idx]
         output_dir = list_of_output_dirs[file_idx]
 

@@ -67,9 +67,9 @@ def validate_frequency_range(frequency_range, animal):
     if frequency_range == "default":
         if animal == "mouse":
             return "45000,-1"
-        elif animal == "rat":
+        if animal == "rat":
             return "20000,-1"
-        elif animal == "guineapig":
+        if animal == "guineapig":
             return "0,22000"
     else:
         low_freq, high_freq = [int(f) for f in frequency_range.split(",")]

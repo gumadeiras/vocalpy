@@ -174,8 +174,8 @@ class VocalClassifier(object):
 
         if self.network_type == "noise":
             return self.classify_list_of_vocals_noise(list_of_vocals)
-        else:
-            return self.classify_list_of_vocals_class(list_of_vocals)
+
+        return self.classify_list_of_vocals_class(list_of_vocals)
 
     def classify_list_of_vocals_class(self, list_of_vocals):
         """
