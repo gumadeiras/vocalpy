@@ -171,7 +171,16 @@ class Recording(object):
                 segments overlap (in seconds)
         """
         chunks = []
-        # CREATE A BASELINE CHUNK WITH REPETITIVE INFO AND CONCATENATE
+        baseline_chunk = [
+            self.output_dir,
+            self.spectrogram_dir,
+            self.mask_dir,
+            self.sample_rate,
+            self.bin_size,
+            self.low_frequency_cutoff,
+            self.high_frequency_cutoff,
+            self.args,
+        ]
         for this_bin in range(1, self.bins + 1):
             # -- first bin, remove first 0.5 second of recording (usually noisy)
             if this_bin == 1:
@@ -179,22 +188,9 @@ class Recording(object):
                 end_range = ceil((self.bin_size * self.sample_rate) + (overlap * self.sample_rate))
                 end_range = end_range if end_range < len(self.samples) else len(self.samples)
                 sample_range = self.samples[start_range:end_range]
-                chunks.append(
-                    (
-                        self.output_dir,
-                        self.spectrogram_dir,
-                        self.mask_dir,
-                        self.sample_rate,
-                        sample_range,
-                        this_bin,
-                        start_range,
-                        end_range,
-                        self.bin_size,
-                        self.low_frequency_cutoff,
-                        self.high_frequency_cutoff,
-                        self.args,
-                    )
-                )
+                this_chunk = baseline_chunk.copy()
+                this_chunk.append((sample_range, this_bin, start_range, end_range,))
+                chunks.append(np.hstack(this_chunk))
 
             elif this_bin == self.bins:  # -- last bin
                 start_range = ceil((this_bin - 1) * self.bin_size * self.sample_rate)
@@ -203,22 +199,9 @@ class Recording(object):
                 sample_range = self.samples[start_range:]
                 if len(sample_range) < (self.sample_rate / 100):
                     continue  # less than 10ms
-                chunks.append(
-                    (
-                        self.output_dir,
-                        self.spectrogram_dir,
-                        self.mask_dir,
-                        self.sample_rate,
-                        sample_range,
-                        this_bin,
-                        start_range,
-                        end_range,
-                        self.bin_size,
-                        self.low_frequency_cutoff,
-                        self.high_frequency_cutoff,
-                        self.args,
-                    )
-                )
+                this_chunk = baseline_chunk.copy()
+                this_chunk.append((sample_range, this_bin, start_range, end_range,))
+                chunks.append(np.hstack(this_chunk))
 
             else:  # -- all other bins
                 start_range = ceil((this_bin - 1) * self.bin_size * self.sample_rate)
@@ -227,22 +210,9 @@ class Recording(object):
                 sample_range = self.samples[start_range:end_range]
                 if len(sample_range) < (self.sample_rate / 100):
                     continue  # less than 10ms
-                chunks.append(
-                    (
-                        self.output_dir,
-                        self.spectrogram_dir,
-                        self.mask_dir,
-                        self.sample_rate,
-                        sample_range,
-                        this_bin,
-                        start_range,
-                        end_range,
-                        self.bin_size,
-                        self.low_frequency_cutoff,
-                        self.high_frequency_cutoff,
-                        self.args,
-                    )
-                )
+                this_chunk = baseline_chunk.copy()
+                this_chunk.append((sample_range, this_bin, start_range, end_range,))
+                chunks.append(np.hstack(this_chunk))
 
         # -- samples are now in chunks, remove from object
         self.samples = None

@@ -119,15 +119,15 @@ class ListOfVocals(object):
                 # empty list
                 continue
 
-        if len(new_list_of_vocals):
+        if new_list_of_vocals:
             self.vocals_in_recording = np.hstack(new_list_of_vocals)
             self.number_of_vocals = len(self.vocals_in_recording)
             self.vocals_combined = True
             self.centroid_spectro_fixed = True
             return 0
-        else:
-            print("recording has no vocals")
-            exit()
+
+        print("recording has no vocals")
+        exit()
 
     def add_spectrograms_to_vocals(self, full_spectrogram, full_mask, spec_range=200):
         """

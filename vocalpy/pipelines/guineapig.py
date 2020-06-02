@@ -57,14 +57,14 @@ class Guineapig(Animal):
             spectrogram_dir,
             mask_dir,
             sample_rate,
-            sample_range,
-            this_bin,
-            start_range,
-            end_range,
             bin_size,
             low_frequency_cutoff,
             high_frequency_cutoff,
             args,
+            sample_range,
+            this_bin,
+            start_range,
+            end_range,
         ) = chunk
 
         logger = getLogger()
@@ -246,7 +246,7 @@ class Guineapig(Animal):
         del props
 
         # -- if list is not empty, create a list of vocals
-        if len(vocal_list):
+        if vocal_list:
             vocal_list = ListOfVocals(vocals_in_recording=np.asarray(vocal_list))
             timeAConnectVocals = time()
             vocal_list.connect_vocals(animal="guineapig")

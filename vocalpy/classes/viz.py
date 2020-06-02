@@ -24,7 +24,7 @@ class Viz(object):
 
     def __init__(self, list_of_groups, group_names=None, bin_size=1):
 
-        if len(list_of_groups) < 1:
+        if list_of_groups < 1:
             print("please provide at least one recording for analysis.")
             exit()
 
@@ -66,7 +66,7 @@ class Viz(object):
         return dfs.sort_values("bin_number")
 
     def combine_viz(self, list_of_viz, groupname):
-        if len(list_of_viz):
+        if list_of_viz:
             combined_df = self.combine_viz_dataframes(list_of_viz)
             list_of_viz[0]._recording_df = combined_df
             list_of_viz[0]._recording_path = None
