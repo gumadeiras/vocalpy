@@ -7,7 +7,6 @@ __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 import numpy as np
 import pandas as pd
-import soundfile as sf
 
 from time import time
 from math import ceil
@@ -17,7 +16,14 @@ from joblib import Parallel, delayed
 from os.path import join, split, splitext, exists, dirname, pardir
 
 from vocalpy.classes.list_of_vocals import ListOfVocals
-from vocalpy.utils.io import save_file, load_file, create_directory, remove_directory, read_yaml
+from vocalpy.utils.io import (
+    save_file,
+    load_file,
+    create_directory,
+    remove_directory,
+    read_yaml,
+    read_audio_information,
+)
 
 
 class Recording(object):
@@ -58,12 +64,10 @@ class Recording(object):
         self.create_paths(recording_path)
 
         self.sample_rate = None
-        self.samples = None
-        self.samples_min = None
-        self.samples_max = None
+        self.number_of_samples = None
         self.recording_duration = None
 
-        self.read_audio()
+        self.read_audio_metadata()
 
         low_freq, high_freq = [int(f) for f in args.frequency.split(",")]
         self.low_frequency_cutoff = low_freq
@@ -149,19 +153,16 @@ class Recording(object):
         if not exists(self.mask_dir):
             makedirs(self.mask_dir, exist_ok=True)
 
-    def read_audio(self):
+    def read_audio_metadata(self):
         """
-        Reads audio and metadata. Stores information in the Recording Object
+        Reads audio metadata. Stores information in the Recording Object
         """
-        samples, sample_rate = sf.read(self.recording_path)
-        self.sample_rate = sample_rate
-        # get one channel if audio is stereo
-        self.samples = samples if samples.ndim == 1 else samples[:, 0]
-        self.samples_min = np.min(samples)
-        self.samples_max = np.max(samples)
-        self.recording_duration = self.samples.shape[0] / self.sample_rate
+        metadata = read_audio_information(self.recording_path)
+        self.sample_rate = metadata.samplerate
+        self.recording_duration = metadata.duration
+        self.number_of_samples = self.recording_duration * self.sample_rate
 
-    def create_chunks(self, overlap=0.1):
+    def create_chunks(self, overlap=0.15):
         """
         Segments audio for parallel or sequential processing
 
@@ -172,6 +173,7 @@ class Recording(object):
         """
         chunks = []
         baseline_chunk = [
+            self.recording_path,
             self.output_dir,
             self.spectrogram_dir,
             self.mask_dir,
@@ -186,36 +188,31 @@ class Recording(object):
             if this_bin == 1:
                 start_range = ceil(0.5 * self.sample_rate)
                 end_range = ceil((self.bin_size * self.sample_rate) + (overlap * self.sample_rate))
-                end_range = end_range if end_range < len(self.samples) else len(self.samples)
-                sample_range = self.samples[start_range:end_range]
+                end_range = end_range if end_range < self.number_of_samples else self.number_of_samples
                 this_chunk = baseline_chunk.copy()
-                this_chunk.append((sample_range, this_bin, start_range, end_range,))
+                this_chunk.append((this_bin, start_range, end_range,))
                 chunks.append(np.hstack(this_chunk))
 
             elif this_bin == self.bins:  # -- last bin
                 start_range = ceil((this_bin - 1) * self.bin_size * self.sample_rate)
-                end_range = end_range if end_range < len(self.samples) else len(self.samples)
                 end_range = self.recording_duration * self.sample_rate
-                sample_range = self.samples[start_range:]
-                if len(sample_range) < (self.sample_rate / 100):
-                    continue  # less than 10ms
+                if end_range - start_range < self.sample_rate:
+                    continue  # less than 1s
+                # -- None reads until the end of the audio
+                end_range = None
                 this_chunk = baseline_chunk.copy()
-                this_chunk.append((sample_range, this_bin, start_range, end_range,))
+                this_chunk.append((this_bin, start_range, end_range,))
                 chunks.append(np.hstack(this_chunk))
 
             else:  # -- all other bins
                 start_range = ceil((this_bin - 1) * self.bin_size * self.sample_rate)
                 end_range = ceil((this_bin * self.bin_size * self.sample_rate) + (overlap * self.sample_rate))
-                end_range = end_range if end_range < len(self.samples) else len(self.samples)
-                sample_range = self.samples[start_range:end_range]
-                if len(sample_range) < (self.sample_rate / 100):
-                    continue  # less than 10ms
+                end_range = end_range if end_range < self.number_of_samples else self.number_of_samples
+                if end_range - start_range < self.sample_rate:
+                    continue  # less than 1s
                 this_chunk = baseline_chunk.copy()
-                this_chunk.append((sample_range, this_bin, start_range, end_range,))
+                this_chunk.append((this_bin, start_range, end_range,))
                 chunks.append(np.hstack(this_chunk))
-
-        # -- samples are now in chunks, remove from object
-        self.samples = None
 
         return chunks
 

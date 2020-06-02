@@ -10,6 +10,8 @@ import shutil
 import pickle
 
 import numpy as np
+import soundfile as sf
+
 from os import makedirs
 from os.path import basename, exists, isdir, isfile, join, splitext
 
@@ -153,7 +155,7 @@ def parse_input_path(path=None, search_tree=False):
         for files in types:
             files_found.extend(glob.glob(files, recursive=search_tree))
         return files_found
-    elif isfile(path):
+    if isfile(path):
         print("audio path is a file.")
         return [path]
 
@@ -228,3 +230,43 @@ def read_yaml(path_to_file):
     with open(path_to_file, "r") as ymlfile:
         yml_data = yaml.safe_load(ymlfile)
     return yml_data
+
+
+def read_audio(path_to_file, start=0, stop=None):
+    """
+    Reads audio and metadata using SoundFile
+
+    Parameters
+    ----------
+    path_to_file : str
+        path to audio file
+
+    Returns
+    -------
+    (samples, sample_rate) : (ndarray, int)
+        mono audio samples (always first channel) and audio sampling frequency
+    """
+    samples, sample_rate = sf.read(path_to_file, start=start, stop=stop, always_2d=True)
+    return samples[:, 0], sample_rate
+
+
+def read_audio_information(path_to_file):
+    """
+    Reads audio metadata using SoundFile
+
+    Parameters
+    ----------
+    path_to_file : str
+        path to audio file
+
+    Returns
+    -------
+    metadata : dict
+        returns audio metadata in a dictionary including:
+            path to file
+            sampling rate
+            number of channels
+            duration
+            format
+    """
+    return sf.info(path_to_file)

@@ -15,6 +15,7 @@ from scipy import ndimage
 from logging import getLogger
 from skimage import exposure, measure
 
+from vocalpy.utils.io import read_audio
 from vocalpy.classes.animal import Animal
 from vocalpy.utils.signal_processing import compute_spectrogram
 from vocalpy.utils.image_processing import normalize, contrast_adjustment, bradley_roth
@@ -49,10 +50,13 @@ class Guineapig(Animal):
         from vocalpy.classes.vocal import Vocal
         from vocalpy.classes.list_of_vocals import ListOfVocals
 
+        logger = getLogger()
+
         timeBinA = time()
 
         # -- unwrap chunk
         (
+            recording_path,
             output_dir,
             spectrogram_dir,
             mask_dir,
@@ -61,21 +65,34 @@ class Guineapig(Animal):
             low_frequency_cutoff,
             high_frequency_cutoff,
             args,
-            sample_range,
+            # sample_range,
             this_bin,
             start_range,
             end_range,
         ) = chunk
 
-        logger = getLogger()
+        # -- make sure bin is an int
+        # -- np.hstack converts ints to floats when creating chunks
+        this_bin = int(this_bin)
+
+        timeAudioRead = time()
+        logger.info(f"[bin {this_bin}]: reading audio;")
+        sample_range, __ = read_audio(recording_path, start=start_range, stop=end_range)
+        logger.info(f"[bin {this_bin}]: read audio runtime: {time() - timeAudioRead:.2f}s;")
 
         timeASpectrogram = time()
-
-        logger.info(
-            f"[bin {this_bin}]: computing spectrogram; \
-            time range: {sample_range.shape[0] / sample_rate:.2f}s; \
-            audio range: {start_range / sample_rate:.2f}-{end_range / sample_rate:.2f}s"
-        )
+        if end_range is None:
+            logger.info(
+                f"[bin {this_bin}]: computing spectrogram; \
+                time range: {sample_range.shape[0] / sample_rate:.2f}s; \
+                audio range: {start_range / sample_rate:.2f}e-end of audio"
+            )
+        else:
+            logger.info(
+                f"[bin {this_bin}]: computing spectrogram; \
+                time range: {sample_range.shape[0] / sample_rate:.2f}s; \
+                audio range: {start_range / sample_rate:.2f}-{end_range / sample_rate:.2f}s"
+            )
 
         # -- compute spectrogram
         f, t, Pxx = compute_spectrogram(
@@ -139,7 +156,7 @@ class Guineapig(Animal):
         timeARegionProps = time()
         labels = measure.label(grain, background=0)
 
-        props = measure.regionprops(labels, intensity_image=Pxx, cache=True, coordinates="rc")
+        props = measure.regionprops(labels, intensity_image=Pxx, cache=True)
         # -- sort segments by time
         props = sorted(props, key=lambda p: np.min(p.coords[:, 1]), reverse=False)
 
