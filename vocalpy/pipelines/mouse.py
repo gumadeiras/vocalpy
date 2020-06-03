@@ -82,7 +82,7 @@ class Mouse(Animal):
             logger.info(
                 f"[bin {this_bin}]: computing spectrogram; \
                 time range: {sample_range.shape[0] / sample_rate:.2f}s; \
-                audio range: {start_range / sample_rate:.2f}e-end of audio"
+                audio range: {start_range / sample_rate:.2f}s-end of audio"
             )
         else:
             logger.info(
