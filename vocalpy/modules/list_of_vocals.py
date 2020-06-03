@@ -86,9 +86,9 @@ class ListOfVocals(object):
         coords from vocal coordinates start/end, and min/max frequency
 
         Parameters
+        ----------
         spec_range : int, optional
             range before/after vocal used to crop and generate spectrograms
-        ----------
         """
         for vocal in self.vocals_in_recording:
             col_values = vocal.coords[:, 1]

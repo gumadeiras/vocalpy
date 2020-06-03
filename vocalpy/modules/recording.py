@@ -126,11 +126,8 @@ class Recording(object):
 
     def create_paths(self, recording_path):
         """
-        Creates directory structure for output files.
-        Creates three directories:
-            audio_outputs
-                spectrogram
-                mask
+        Creates directory structure for output files
+        Creates a `spectrogram` and `mask` directories inside the `audio_output` directory
 
         Parameters
         ----------
