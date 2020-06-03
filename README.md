@@ -17,10 +17,12 @@ For `conda`:
 ```sh
 conda create -y --name vocalpy-env python=3.7
 conda activate vocalpy-env
+git clone https://github.com/gumadeiras/vocalpy.git
+cd vocalpy
 pip install -r requirements.txt
 ```
 
-### from source
+### direct from source
 
 To clone the repository locally and install in editable mode run
 
