@@ -16,8 +16,8 @@ from logging import getLogger
 from skimage import exposure, measure
 
 from vocalpy.utils.io import read_audio
-from vocalpy.classes.animal import Animal
-from vocalpy.classes.classifier import VocalClassifier
+from vocalpy.pipelines.animal import Animal
+from vocalpy.nn.classifier import VocalClassifier
 from vocalpy.utils.signal_processing import compute_spectrogram
 from vocalpy.utils.image_processing import normalize, contrast_adjustment, bradley_roth
 
@@ -44,8 +44,8 @@ class Mouse(Animal):
         return True if (condition_1 or condition_2 or condition_3) else False
 
     def identifier(self, chunk):
-        from vocalpy.classes.vocal import Vocal
-        from vocalpy.classes.list_of_vocals import ListOfVocals
+        from vocalpy.modules.vocal import Vocal
+        from vocalpy.modules.list_of_vocals import ListOfVocals
 
         logger = getLogger()
 

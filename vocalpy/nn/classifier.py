@@ -17,7 +17,7 @@ from PIL import Image
 from glob import glob
 from torch.autograd import Variable
 from torch.nn.functional import softmax
-from os.path import join, basename, splitext
+from os.path import join, basename, splitext, dirname, pardir
 
 from vocalpy.utils.io import load_checkpoint
 
@@ -78,7 +78,7 @@ class VocalClassifier(object):
                 nn.Dropout(0.2), nn.Linear(1280, 1024), nn.ReLU(inplace=True), nn.Linear(1024, 2),
             )
 
-            model_path = "../models/noise_model.pth.tar"
+            model_path = join(dirname(__file__), pardir, "nn", "pretrained", "noise_model.pth.tar")
             classifier_dir_path = os.path.dirname(os.path.abspath(__file__))
             model_path = join(classifier_dir_path, model_path)
             load_checkpoint(model_path, model, device)
@@ -112,7 +112,7 @@ class VocalClassifier(object):
                 nn.Dropout(0.2), nn.Linear(1280, 1024), nn.ReLU(inplace=True), nn.Linear(1024, 11),
             )
 
-            model_path = "../models/class_model.pth.tar"
+            model_path = join(dirname(__file__), pardir, "nn", "pretrained", "class_model.pth.tar")
             classifier_dir_path = os.path.dirname(os.path.abspath(__file__))
             model_path = join(classifier_dir_path, model_path)
             load_checkpoint(model_path, model, device)

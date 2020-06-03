@@ -15,7 +15,7 @@ from logging import getLogger
 from joblib import Parallel, delayed
 from os.path import join, split, splitext, exists, dirname, pardir
 
-from vocalpy.classes.list_of_vocals import ListOfVocals
+from vocalpy.modules.list_of_vocals import ListOfVocals
 from vocalpy.utils.io import (
     save_file,
     load_file,
@@ -518,7 +518,7 @@ class Recording(object):
         list_of_vocals = list_of_vocals if list_of_vocals is not None else self.load_list_of_vocals()
 
         print("create_dataset not implemented")
-        return 0
+        return NotImplemented
 
     def remove_vocals_classified_as_noise_from_list_of_vocals(self, predictions):
         """

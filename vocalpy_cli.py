@@ -8,7 +8,7 @@ from time import time
 from logging import getLogger
 from argparse import ArgumentParser
 
-from vocalpy.classes.recording import Recording
+from vocalpy.modules.recording import Recording
 from vocalpy.utils.misc import create_logger, validate_arguments
 from vocalpy.utils.io import parse_input_path, create_output_directory_structure, create_directory
 

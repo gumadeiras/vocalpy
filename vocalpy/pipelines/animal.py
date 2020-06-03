@@ -18,15 +18,15 @@ class Animal(ABC):
 
     @abstractmethod
     def identify_vocalizations(self, chunk):
-        pass
+        return NotImplemented
 
     @abstractmethod
     def classify_vocalizations(self, network_type, list_of_vocals, path_to_spectrograms):
-        pass
+        return NotImplemented
 
     @abstractmethod
     def check_if_vocals_are_close(self, first_vocal, second_vocal):
-        pass
+        return NotImplemented
 
     def connect_vocals(self, list_of_vocals):
         """
@@ -92,7 +92,7 @@ class Animal(ABC):
             vocals to be combined
         """
         import numpy as np
-        from vocalpy.classes.vocal import Vocal
+        from vocalpy.modules.vocal import Vocal
 
         # -- combines two vocals
         start_difference = first_vocal.start - second_vocal.start
