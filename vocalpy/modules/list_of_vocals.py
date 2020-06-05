@@ -179,7 +179,7 @@ class ListOfVocals(object):
             path to output directory to save the files
         """
         for filename, vocal in enumerate(self.vocals_in_recording, start=1):
-            vocal.save_spectrogram_with_coords_as_image(path=output_dir, filename=str(filename))
+            vocal.save_spectrogram_with_segmentation_as_image(path=output_dir, filename=str(filename))
         return 0
 
     def save_masks(self, output_dir=None):

@@ -1,4 +1,4 @@
-# vocalpy
+# VocalPy
 ![Python Versions](https://img.shields.io/badge/python-3.6%20%7C%203.7-blue)
 ![Platforms](https://img.shields.io/badge/platform-linux--64%20%7C%20osx--64-lightgrey)
 ![build](https://github.com/gumadeiras/vocalpy/workflows/build/badge.svg?branch=master)
@@ -8,11 +8,15 @@
 ![License](https://img.shields.io/badge/license-Apache%202-blue)
 
 
-## installation
+## Installation
 
-### quickstart (recommended)
+#### Preliminaries
 
-It is not required, but **highly recommended** to install using a virtual environment (see [conda](https://docs.conda.io/en/latest/miniconda.html) or [venv](https://docs.python.org/3/library/venv.html)).
+- Make sure you have installed [Git LFS](https://git-lfs.github.com/).
+
+- It is not required, but **highly recommended** to install using a virtual environment (see [conda](https://docs.conda.io/en/latest/miniconda.html) or [venv](https://docs.python.org/3/library/venv.html)).
+
+#### Quickstart with virtual environment (recommended)
 
 For `conda`:
 ```sh
@@ -23,10 +27,9 @@ cd vocalpy
 pip install -r requirements.txt
 ```
 
-### direct from source
+#### Direct from source (not recommended)
 
-To clone the repository locally and install in editable mode run
-
+To clone the repository and install directly using `pip` run:
 ```sh
 git clone https://github.com/gumadeiras/vocalpy.git
 cd vocalpy

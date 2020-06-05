@@ -4,13 +4,9 @@
 __license__ = "Apache License, Version 2.0"
 __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
-import io
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-from PIL import Image
-from os.path import join, exists
+from os.path import join
+from vocalpy.utils.io import save_image_to_disk
+from vocalpy.utils.image_processing import scatter_over_spectrogram, numpy_to_grayscale_image
 
 
 class Vocal(object):
@@ -372,50 +368,21 @@ class Vocal(object):
         self._top2 = new_top2
 
     def save_spectrogram_as_image(self, path=None, filename="vocal"):
-        if exists(path) is False:
-            raise ValueError(f"path does not exist: {path}")
+        filename = filename + "_" + str(self.bin_number)
+        img = numpy_to_grayscale_image(self.spectrogram)
+        save_image_to_disk(image=img, path=join(path, "spectrogram"), filename=filename, img_format="png")
 
-        img = Image.fromarray(self.spectrogram)
-        img = img.convert("L")
-        img.save(join(path, "spectrogram", filename + "_" + str(self.bin_number) + ".png"))
-
-    def save_spectrogram_with_coords_as_image(self, path=None, filename="vocal"):
-        if exists(path) is False:
-            raise ValueError(f"path does not exist: {path}")
-
-        spectrogram = self.spectrogram
-        row_values = self.coords[:, 0]
-        col_values = self.coords[:, 1]
-
-        plt.figure()
-        # flip spectrogram upside down to match scatter
-        # easier to flip image than to flip scatter coordinates
-        plt.imshow(np.flipud(spectrogram), cmap="gray")
-        plt.scatter(col_values[0:-1:8], row_values[0:-1:8], marker=".", alpha=0.1)
-        plt.axis("off")
-        # save image to buffer, faster than saving to file
-        # matplotlib does not support rotating scatter plots directly
-        buf = io.BytesIO()
-        plt.savefig(buf, bbox_inches="tight", format="png")
-        plt.close()
-        buf.seek(0)
-        img = Image.open(buf)
-        # rotate image back using PIL and save to disk
-        img = img.transpose(Image.FLIP_TOP_BOTTOM)
-        img.save(join(path, "spectrogram_validation", filename + "_" + str(self.bin_number) + ".png",))
+    def save_spectrogram_with_segmentation_as_image(self, path=None, filename="vocal"):
+        img = scatter_over_spectrogram(self.spectrogram, self.coords)
+        filename = filename + "_" + str(self.bin_number)
+        save_image_to_disk(image=img, path=join(path, "spectrogram_validation"), filename=filename, img_format="png")
 
     def save_mask_as_image(self, path=None, filename="vocal"):
-        if exists(path) is False:
-            raise ValueError(f"path does not exist: {path}")
-
-        img = Image.fromarray(self.mask)
-        img = img.convert("L")
-        img.save(join(path, "mask", filename + "_" + str(self.bin_number) + ".png"))
+        filename = filename + "_" + str(self.bin_number)
+        img = numpy_to_grayscale_image(self.mask)
+        save_image_to_disk(image=img, path=join(path, "mask"), filename=filename, img_format="png")
 
     def save_cnn_mask_as_image(self, path=None, filename="vocal"):
-        if exists(path) is False:
-            raise ValueError(f"path does not exist: {path}")
-
-        img = Image.fromarray(self.cnn_mask)
-        img = img.convert("L")
-        img.save(join(path, "cnn_mask", filename + "_" + str(self.bin_number) + ".png"))
+        filename = filename + "_" + str(self.bin_number)
+        img = numpy_to_grayscale_image(self.cnn_mask)
+        save_image_to_disk(image=img, path=join(path, "cnn_mask"), filename=filename, img_format="png")

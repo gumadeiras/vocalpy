@@ -6,23 +6,23 @@ __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 
 import numpy as np
-import pandas as pd
 
 from time import time
 from math import ceil
 from os import makedirs
 from logging import getLogger
 from joblib import Parallel, delayed
-from os.path import join, split, splitext, exists, dirname, pardir
+from os.path import join, split, splitext, exists
 
 from vocalpy.modules.list_of_vocals import ListOfVocals
+from vocalpy.utils.misc import check_pipeline_avalability, create_dataframe_from_list_of_vocals
 from vocalpy.utils.io import (
     save_file,
     load_file,
     create_directory,
     remove_directory,
-    read_yaml,
     read_audio_information,
+    save_dataframe_as_csv,
 )
 
 
@@ -78,7 +78,8 @@ class Recording(object):
         self._group_name = "not set"
         self._list_of_vocals = None
         self._has_list_of_vocals = None
-        self._animal = self.create_animal_pipeline(args.animal)
+        self._animal_name = args.animal
+        self._animal = self.create_animal_pipeline()
 
     def __str__(self):
         return f"{self.__class__.__name__}:\n duration: {self.recording_duration} \n sampling rate: {self.sample_rate}"
@@ -213,7 +214,7 @@ class Recording(object):
 
         return chunks
 
-    def create_animal_pipeline(self, animal):
+    def create_animal_pipeline(self):
         """
         Creates an instance of :class:`Animal` that implements the pipeline for the animal selected by the user
 
@@ -229,45 +230,14 @@ class Recording(object):
         """
         import importlib
 
-        has_identifier, has_classifier = self.check_pipeline_avalability(animal)
+        has_identifier, has_classifier = check_pipeline_avalability(self._animal_name)
 
         if has_identifier:
-            AnimalClass = getattr(importlib.import_module("vocalpy.pipelines." + animal), animal.title())
+            AnimalClass = getattr(importlib.import_module("vocalpy.pipelines." + self._animal_name), self._animal_name.title())
         else:
             print("implement error, animal pipeline not available")
 
         return AnimalClass(has_identifier, has_classifier)
-
-    def check_pipeline_avalability(self, animal):
-        """
-        Reads the YAML configuration file for pipeline availability and checks if the animal selected by the user has a
-        pipeline implemented
-
-        Parameters
-        ----------
-        animal : str
-            animal pipeline selected by the user
-
-        Returns
-        -------
-        has_identifier : bool
-            availability of the vocalization identifier pipeline
-        has_classifier : bool
-            availability of the vocalization classification pipeline
-        """
-        pipelines_configs = read_yaml(join(dirname(__file__), pardir, "configs", "pipelines_parameters.yml"))
-
-        identifier_pipelines = []
-        classifier_pipelines = []
-        for animal_pipeline, available in pipelines_configs["pipelines"].items():
-            if available["identifier"]:
-                identifier_pipelines.append(animal_pipeline)
-            if available["classifier"]:
-                classifier_pipelines.append(animal_pipeline)
-
-        has_identifier = animal in identifier_pipelines
-        has_classifier = animal in classifier_pipelines
-        return has_identifier, has_classifier
 
     def identify_vocalizations(self):
         """
@@ -296,14 +266,14 @@ class Recording(object):
         logger.info(f"done combining ({time() - timeAcombining:.0f}s)")
         logger.info(list_of_vocals)
 
-        self.recording_identify_vocalizations_finished()
+        self.identify_vocalizations_finished()
         logger.info(
             f"recording parallel processing ({(time() - timeAParallel) // 60:.0f}m {(time() - timeAParallel) % 60:.0f}s)"
         )
 
-    def recording_identify_vocalizations_finished(self):
+    def identify_vocalizations_finished(self):
         """
-        Recording has already been processed -> clears segments
+        Recording has already been processed -> clear segments
         """
         self.chunks = None
         return 0
@@ -372,63 +342,9 @@ class Recording(object):
         if list_of_vocals.intervals_fixed is False:
             list_of_vocals.update_intervals()
 
-        recording_df = pd.DataFrame(
-            columns=[
-                "bin_number",
-                "start(s)",
-                "end(s)",
-                "duration(ms)",
-                "interval(s)",
-                "min_freq",
-                "max_freq",
-                "avg_freq",
-                "bandwidth",
-                "min_intensity",
-                "max_intensity",
-                "avg_intensity",
-                "bg_intensity",
-                "area(pixels)",
-                "centroid_y",
-                "class_top1",
-                "class_top2",
-            ]
-        )
+        recording_df = create_dataframe_from_list_of_vocals(self.list_of_vocals)
 
-        for this_vocal in list_of_vocals.vocals_in_recording:
-            recording_df = recording_df.append(
-                {
-                    "bin_number": this_vocal.bin_number,
-                    "start(s)": this_vocal.start,
-                    "end(s)": this_vocal.end,
-                    "duration(ms)": this_vocal.duration,
-                    "interval(s)": this_vocal.interval,
-                    "min_freq": this_vocal.min_freq,
-                    "max_freq": this_vocal.max_freq,
-                    "avg_freq": this_vocal.avg_freq,
-                    "bandwidth": this_vocal.bandwidth,
-                    "min_intensity": this_vocal.min_intensity,
-                    "max_intensity": this_vocal.max_intensity,
-                    "avg_intensity": this_vocal.avg_intensity,
-                    "bg_intensity": this_vocal.bg_intensity,
-                    "area(pixels)": this_vocal.area,
-                    "centroid_y": this_vocal.centroid[0],
-                    "class_top1": this_vocal.top1,
-                    "class_top2": this_vocal.top2,
-                },
-                ignore_index=True,
-            )
-
-        # -- sort vocalizations by start time and save csv
-        recording_df.sort_values(
-            by="start(s)", ascending=True, inplace=True, kind="quicksort", na_position="last",
-        )
-
-        # -- start index from 1 instead of 0
-        recording_df.index = np.arange(1, len(recording_df) + 1)
-        recording_df.to_csv(
-            join(self.output_dir, splitext(self.recording_name)[0] + "_stats.csv"), float_format="%.6f",
-        )
-        return 0
+        save_dataframe_as_csv(dataframe=recording_df, path=self.output_dir, filename=self.recording_name)
 
     def save_spectrograms(self, list_of_vocals=None, path=None):
         """

@@ -270,3 +270,55 @@ def read_audio_information(path_to_file):
             format
     """
     return sf.info(path_to_file)
+
+
+def save_image_to_disk(image, path, filename, img_format="png"):
+    """
+    Saves PIL Image to disk
+
+    Parameters
+    ----------
+    image : :class:`PIL.Image`
+        image to be saved to disk
+    path : str
+        target path
+    filename : str
+        image file name
+    img_format : str, optional
+        image encoding format (png, jpg, gif, ...)
+
+    Raises
+    ------
+    ValueError
+        if target path does not exist
+    """
+    if exists(path) is False:
+        raise ValueError(f"path does not exist: {path}")
+    image.save(join(path, filename + "." + img_format))
+
+
+def save_dataframe_as_csv(dataframe, path, filename):
+    """
+    Saves a Pandas DataFrame to disk
+
+    Parameters
+    ----------
+    dataframe : :class:`pandas.DataFrame`
+        dataframe to be saved to disk
+    path : str
+        target path
+    filename : str
+        image file name
+
+    Raises
+    ------
+    ValueError
+        if target path does not exist
+    """
+    if exists(path) is False:
+        raise ValueError(f"path does not exist: {path}")
+    # -- start index from 1 instead of 0
+    dataframe.index = np.arange(1, len(dataframe) + 1)
+    dataframe.to_csv(
+        join(path, splitext(filename)[0] + "_stats.csv"), float_format="%.6f",
+    )

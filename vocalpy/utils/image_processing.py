@@ -4,7 +4,12 @@
 __license__ = "Apache License, Version 2.0"
 __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
+import io
+
 import numpy as np
+import matplotlib.pyplot as plt
+
+from PIL import Image
 
 
 def normalize(data):
@@ -140,3 +145,61 @@ def bradley_roth(image, s=None, t=None):
     out = np.reshape(out, (rows, cols)).astype(np.uint8)
 
     return out
+
+
+def scatter_over_spectrogram(spectrogram, coordinates):
+    """
+    Creates a PIL Image overlay scatter of the segmentation on the spectrogram
+
+    Parameters
+    ----------
+    spectrogram : ndarray
+        array containing the spectrogram data
+    coordinates : ndarray
+        array containing the segmentation coordinates
+
+    Returns
+    -------
+    img : :class:`PIL.Image`
+        image containing the segmentation as a scatter plot over the spectrogram
+    """
+    # unpack coordinates
+    row_values = coordinates[:, 0]
+    col_values = coordinates[:, 1]
+
+    plt.figure()
+    # flip spectrogram upside down to match scatter
+    # easier to flip image than to flip scatter coordinates
+    plt.imshow(np.flipud(spectrogram), cmap="gray")
+    # only plot every 8th coordinate to save time
+    plt.scatter(col_values[0:-1:8], row_values[0:-1:8], marker=".", alpha=0.1)
+    plt.axis("off")
+    # save image to buffer, faster than saving to file
+    # matplotlib does not support rotating scatter plots directly
+    buf = io.BytesIO()
+    plt.savefig(buf, bbox_inches="tight", format="png")
+    plt.close()
+    buf.seek(0)
+    img = Image.open(buf)
+    # rotate image back using PIL and save to disk
+    img = img.transpose(Image.FLIP_TOP_BOTTOM)
+    return img
+
+
+def numpy_to_grayscale_image(data):
+    """
+    Converts a numpy array to a grayscale PIL Image
+
+    Parameters
+    ----------
+    data : ndarray
+        data array
+
+    Returns
+    -------
+    img : :class:`PIL.Image`
+        data array as a grayscale image
+    """
+    img = Image.fromarray(data)
+    img = img.convert("L")
+    return img

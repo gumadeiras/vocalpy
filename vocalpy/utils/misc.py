@@ -6,8 +6,12 @@ __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 import logging
 
-from os.path import join
+import pandas as pd
+
+from os.path import join, dirname, pardir
 from multiprocessing import cpu_count
+
+from vocalpy.utils.io import read_yaml
 
 
 def create_logger(args=None, out_dir=None):
@@ -99,3 +103,105 @@ def validate_thread_count(threads):
         print(f"provided value: {threads}")
         print(f"computer thread count: {num_cores}")
     return 0
+
+
+def check_pipeline_avalability(animal):
+    """
+    Reads the YAML configuration file for pipeline availability and checks if the animal selected by the user has a
+    pipeline implemented
+
+    Parameters
+    ----------
+    animal : str
+        animal pipeline selected by the user
+
+    Returns
+    -------
+    has_identifier : bool
+        availability of the vocalization identifier pipeline
+    has_classifier : bool
+        availability of the vocalization classification pipeline
+    """
+
+    # ToDo: also return pipeline parameters
+    pipelines_configs = read_yaml(join(dirname(__file__), pardir, "configs", "pipelines_parameters.yml"))
+
+    identifier_pipelines = []
+    classifier_pipelines = []
+    for animal_pipeline, available in pipelines_configs["pipelines"].items():
+        if available["identifier"]:
+            identifier_pipelines.append(animal_pipeline)
+        if available["classifier"]:
+            classifier_pipelines.append(animal_pipeline)
+
+    has_identifier = animal in identifier_pipelines
+    has_classifier = animal in classifier_pipelines
+    return has_identifier, has_classifier
+
+
+def create_dataframe_from_list_of_vocals(list_of_vocals):
+    """
+    Creates a Pandas DataFrame from a :class:`ListOfVocals`
+
+    Parameters
+    ----------
+    list_of_vocals : :class:`ListOfVocals`
+        list of vocals is a :class:`ListOfVocals` instance
+
+    Returns
+    -------
+    dataframe : :class:`pandas.DataFrame`
+        dataframe containing all vocals from the list of vocals
+    """
+    dataframe = pd.DataFrame(
+        columns=[
+            "bin_number",
+            "start(s)",
+            "end(s)",
+            "duration(ms)",
+            "interval(s)",
+            "min_freq",
+            "max_freq",
+            "avg_freq",
+            "bandwidth",
+            "min_intensity",
+            "max_intensity",
+            "avg_intensity",
+            "bg_intensity",
+            "area(pixels)",
+            "centroid_y",
+            "class_top1",
+            "class_top2",
+        ]
+    )
+
+    for vocal in list_of_vocals.vocals_in_recording:
+        dataframe = dataframe.append(
+            {
+                "bin_number": vocal.bin_number,
+                "start(s)": vocal.start,
+                "end(s)": vocal.end,
+                "duration(ms)": vocal.duration,
+                "interval(s)": vocal.interval,
+                "min_freq": vocal.min_freq,
+                "max_freq": vocal.max_freq,
+                "avg_freq": vocal.avg_freq,
+                "bandwidth": vocal.bandwidth,
+                "min_intensity": vocal.min_intensity,
+                "max_intensity": vocal.max_intensity,
+                "avg_intensity": vocal.avg_intensity,
+                "bg_intensity": vocal.bg_intensity,
+                "area(pixels)": vocal.area,
+                "centroid_y": vocal.centroid[0],
+                "class_top1": vocal.top1,
+                "class_top2": vocal.top2,
+            },
+            ignore_index=True,
+        )
+
+    # -- sort vocalizations by start time and save csv
+    dataframe.sort_values(
+        by="start(s)", ascending=True, inplace=True, kind="quicksort", na_position="last",
+    )
+
+    return dataframe
