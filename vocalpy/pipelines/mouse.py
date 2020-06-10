@@ -71,6 +71,8 @@ class Mouse(Animal):
         # -- make sure bin is an int
         # -- np.hstack converts ints to floats when creating chunks
         this_bin = int(this_bin)
+        start_range = int(start_range)
+        end_range = int(end_range)
 
         timeAudioRead = time()
         logger.info(f"[bin {this_bin}]: reading audio;")
