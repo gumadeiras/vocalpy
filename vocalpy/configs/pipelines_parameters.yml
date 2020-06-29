@@ -11,7 +11,7 @@ pipelines:
       window_size: 256
       noverlap: 128
       low_frequency_cutoff: 45000
-      high_frequency_cutoff: -1
+      high_frequency_cutoff: 125000
       min_vocal_duration: 5
       max_vocal_duration: 250
   rat:

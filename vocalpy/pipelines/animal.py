@@ -12,7 +12,8 @@ class Animal(ABC):
     Animal class calls apropriate pipeline functions
     """
 
-    def __init__(self, has_identifier, has_classifier):
+    def __init__(self, animal, has_identifier, has_classifier):
+        self._animal = animal
         self._has_identifier = has_identifier
         self._has_classifier = has_classifier
 

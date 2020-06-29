@@ -5,10 +5,19 @@ __license__ = "Apache License, Version 2.0"
 __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 import numpy as np
-from scipy.signal import spectrogram, get_window, butter, lfilter
+from scipy.signal import spectrogram, get_window, windows, butter, lfilter
 
 
-def compute_spectrogram(samples, fs, window_type, window_size, noverlap, nfft, low_frequency_cutoff, high_frequency_cutoff):
+def compute_spectrogram(
+    samples,
+    fs,
+    window_type="hann",
+    window_size=512,
+    noverlap=256,
+    nfft=1024,
+    low_frequency_cutoff=None,
+    high_frequency_cutoff=None,
+):
     """
     Computes the spectrogram, applies a frequency cutoff, and converts power values to decibel
 
@@ -45,17 +54,95 @@ def compute_spectrogram(samples, fs, window_type, window_size, noverlap, nfft, l
     )
 
     # -- apply frequency cutoffs
-    if low_frequency_cutoff > 0:
-        Pxx = Pxx[(f > low_frequency_cutoff)]
-        f = f[(f > low_frequency_cutoff)]
-    if high_frequency_cutoff > 0:
-        Pxx = Pxx[(f < high_frequency_cutoff)]
-        f = f[(f < high_frequency_cutoff)]
+    if low_frequency_cutoff is not None:
+        Pxx = filter_high_pass(Pxx, f, low_frequency_cutoff)
+        f = filter_high_pass(f, f, low_frequency_cutoff)
+    if high_frequency_cutoff is not None:
+        Pxx = filter_low_pass(Pxx, f, high_frequency_cutoff)
+        f = filter_low_pass(f, f, high_frequency_cutoff)
 
     # -- convert to dB
     Pxx = 10 * np.log10(Pxx)
 
     return f, t, Pxx
+
+
+def compute_multitaper_spectrogram(
+    samples,
+    fs,
+    window_size=512,
+    window_halfbandwidth=4,
+    window_count=6,
+    noverlap=256,
+    nfft=1024,
+    low_frequency_cutoff=None,
+    high_frequency_cutoff=None,
+):
+    """
+    Computes a multitaper spectrogram, applies a frequency cutoff, and converts power values to decibel
+
+    Parameters
+    ----------
+    samples : ndarray
+        audio samples time series
+    fs : int
+        sampling frequency of the audio
+    window_size : int
+        window size in points
+    window_halfbandwidth : int
+        time halfbandwith for spheroidal sequences (2*NW = BW/f0)
+    window_count : int
+        number of windows (spheroidak sequences) to use
+    noverlap : int
+        number of points to overlap between segments
+    nfft : int
+        number of points to compute the stft
+    low_frequency_cutoff : int
+        frequencies lower than this limit will be removed
+    high_frequency_cutoff : int
+        frequencies higher than this limit will be removed
+
+    Returns
+    -------
+    (f, t, Pxx) : (ndarray, ndarray, ndarray)
+        f contains the frequency bins
+        t contains the time bins
+        Pxx contains the power values for each bin in decibel
+    """
+    # -- get dpss windows for multitaper spectrogram
+    wins = windows.dpss(window_size, window_halfbandwidth, window_count)
+
+    # -- compute spectrogram using each window and average them
+    for idx, window in enumerate(wins):
+        # -- compute spectrogram using each window
+        f, t, Pxx = spectrogram(x=samples, fs=fs, window=window, noverlap=noverlap, nfft=nfft, mode="psd")
+
+        # -- apply frequency cutoffs
+        if low_frequency_cutoff is not None:
+            Pxx = filter_high_pass(Pxx, f, low_frequency_cutoff)
+            f = filter_high_pass(f, f, low_frequency_cutoff)
+        if high_frequency_cutoff is not None:
+            Pxx = filter_low_pass(Pxx, f, high_frequency_cutoff)
+            f = filter_low_pass(f, f, high_frequency_cutoff)
+
+        if idx == 0:
+            Pxx_average = 10 * np.log10(Pxx) / window_count
+        else:
+            Pxx_average += 10 * np.log10(Pxx) / window_count
+
+    return f, t, Pxx_average
+
+
+def filter_low_pass(data, frequencies, frequency_cutoff):
+    return data[(frequencies < frequency_cutoff)]
+
+
+def filter_high_pass(data, frequencies, frequency_cutoff):
+    return data[(frequencies > frequency_cutoff)]
+
+
+def filter_band_pass(data, frequencies, lower_frequency_cutoff, higher_frequency_cutoff):
+    return data[(frequencies > lower_frequency_cutoff) & (frequencies < higher_frequency_cutoff)]
 
 
 def butter_bandpass(low_frequency_cutoff, high_frequency_cutoff, fs, order=25):

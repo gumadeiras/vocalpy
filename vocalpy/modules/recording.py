@@ -237,7 +237,7 @@ class Recording(object):
         else:
             print("implement error, animal pipeline not available")
 
-        return AnimalClass(has_identifier, has_classifier)
+        return AnimalClass(self._animal_name.lower(), has_identifier, has_classifier)
 
     def identify_vocalizations(self):
         """

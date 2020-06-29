@@ -70,9 +70,9 @@ def validate_bin_size(bin_size):
 def validate_frequency_range(frequency_range, animal):
     if frequency_range == "default":
         if animal == "mouse":
-            return "45000,-1"
+            return "45000,125000"
         if animal == "rat":
-            return "20000,-1"
+            return "20000,125000"
         if animal == "guineapig":
             return "0,22000"
     else:
