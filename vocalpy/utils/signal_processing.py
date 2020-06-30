@@ -11,7 +11,7 @@ from scipy.signal import spectrogram, get_window, windows, butter, lfilter
 def compute_spectrogram(
     samples,
     fs,
-    window_type="hann",
+    window_type="hamming",
     window_size=512,
     noverlap=256,
     nfft=1024,
@@ -27,18 +27,18 @@ def compute_spectrogram(
         audio samples time series
     fs : int
         sampling frequency of the audio
-    window_type : str
+    window_type : str (optional)
         windowing function
         https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.get_window.html#scipy.signal.get_window
-    window_size : int
+    window_size : int (optional)
         window size
-    noverlap : int
+    noverlap : int (optional)
         number of points to overlap between segments
-    nfft : int
+    nfft : int (optional)
         number of points to compute the stft
-    low_frequency_cutoff : int
+    low_frequency_cutoff : int (optional)
         frequencies lower than this limit will be removed
-    high_frequency_cutoff : int
+    high_frequency_cutoff : int (optional)
         frequencies higher than this limit will be removed
 
     Returns
@@ -87,19 +87,19 @@ def compute_multitaper_spectrogram(
         audio samples time series
     fs : int
         sampling frequency of the audio
-    window_size : int
+    window_size : int (optional)
         window size in points
-    window_halfbandwidth : int
+    window_halfbandwidth : int (optional)
         time halfbandwith for spheroidal sequences (2*NW = BW/f0)
-    window_count : int
+    window_count : int (optional)
         number of windows (spheroidak sequences) to use
-    noverlap : int
+    noverlap : int (optional)
         number of points to overlap between segments
-    nfft : int
+    nfft : int (optional)
         number of points to compute the stft
-    low_frequency_cutoff : int
+    low_frequency_cutoff : int (optional)
         frequencies lower than this limit will be removed
-    high_frequency_cutoff : int
+    high_frequency_cutoff : int (optional)
         frequencies higher than this limit will be removed
 
     Returns
