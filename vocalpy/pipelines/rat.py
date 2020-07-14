@@ -109,8 +109,8 @@ class Rat(Animal):
         freq_res = (np.max(f) - low_frequency_cutoff) / f.shape[0]
 
         logger.info(f"[bin {this_bin}]: spectrogram runtime: {time() - timeASpectrogram:.2f}s")
-        logger.info("[bin {this_bin}]: time resolution: {time_res * 1000:.2f}ms")
-        logger.info("[bin {this_bin}]: freq resolution: {freq_res:.2f}Hz")
+        logger.info(f"[bin {this_bin}]: time resolution: {time_res * 1000:.2f}ms")
+        logger.info(f"[bin {this_bin}]: freq resolution: {freq_res:.2f}Hz")
 
         # -- rescale data to (0,1)
         B = normalize(data=Pxx)
@@ -284,11 +284,11 @@ class Rat(Animal):
         if vocal_list:
             vocal_list = ListOfVocals(vocals_in_recording=np.asarray(vocal_list))
             timeAConnectVocals = time()
-            vocal_list.connect_vocals(animal="rat")
-            vocal_list.connect_vocals(animal="rat")
+            self.connect_vocals(vocal_list)
+            self.connect_vocals(vocal_list)
             vocal_list.update_centroids()
 
-            spectrogram_range = 350  # 350 ~ 357ms @ 0.51ms resolution
+            spectrogram_range = 400  # 400*2 ~ 408 @ 0.51ms resolution
             vocal_list.update_coords(spectrogram_range)
 
             # -- rescale pixel values to save spectrograms in 8bits

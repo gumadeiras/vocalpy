@@ -197,7 +197,7 @@ class Recording(object):
                 if end_range - start_range < self.sample_rate:
                     continue  # less than 1s
                 # -- None reads until the end of the audio
-                end_range = None
+                # end_range = None
                 this_chunk = baseline_chunk.copy()
                 this_chunk.append((this_bin, start_range, end_range,))
                 chunks.append(np.hstack(this_chunk))
