@@ -21,7 +21,7 @@ class Animal(ABC):
         return NotImplemented
 
     @abstractmethod
-    def classify_vocalizations(self, network_type, list_of_vocals, path_to_spectrograms):
+    def classify_vocalizations(self, network_type, list_of_vocals, source=None):
         return NotImplemented
 
     @abstractmethod

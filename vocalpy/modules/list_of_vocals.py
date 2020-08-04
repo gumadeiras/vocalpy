@@ -147,8 +147,16 @@ class ListOfVocals(object):
             spec_max = full_spectrogram.shape[1]
 
             lower = cx - spec_range
-            lower = lower if lower > 0 else 0
-            higher = min(cx + spec_range, spec_max)
+            if lower < 0:
+                extra_higher = -lower
+                lower = 0
+                higher = cx + spec_range + extra_higher
+
+            higher = cx + spec_range
+            if higher > spec_max:
+                extra_lower = higher - spec_max
+                higher = spec_max
+                lower = lower - extra_lower
 
             vocal.spectrogram = full_spectrogram[:, lower:higher]
             vocal.mask = full_mask[:, lower:higher]

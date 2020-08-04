@@ -18,6 +18,7 @@ from skimage import exposure, measure
 from vocalpy.utils.io import read_audio
 from vocalpy.pipelines.animal import Animal
 from vocalpy.nn.classifier import VocalClassifier
+from vocalpy.nn.datasets import create_array_from_list_of_vocals
 from vocalpy.utils.signal_processing import compute_spectrogram
 from vocalpy.utils.image_processing import normalize, contrast_adjustment, bradley_roth
 
@@ -26,8 +27,9 @@ class Mouse(Animal):
     def identify_vocalizations(self, chunk):
         return self.identifier(chunk)
 
-    def classify_vocalizations(self, network_type, list_of_vocals, path_to_spectrograms):
-        Classifier = VocalClassifier(network_type=network_type, path_to_spectrograms=path_to_spectrograms)
+    def classify_vocalizations(self, network_type, list_of_vocals, source=None):
+        source = create_array_from_list_of_vocals(list_of_vocals) if source is None else source
+        Classifier = VocalClassifier(network_type=network_type, source=source)
         predictions = Classifier.classify_list_of_vocals(list_of_vocals)
         return predictions, Classifier.classes
 
@@ -267,7 +269,8 @@ class Mouse(Animal):
             self.connect_vocals(vocal_list)
             vocal_list.update_centroids()
 
-            spectrogram_range = 206  # 206 ~ 210ms @ 0.51ms resolution
+            # -- 206*2 ~ 210ms @ 0.51ms resolution
+            spectrogram_range = 206
             vocal_list.update_coords(spectrogram_range)
 
             # -- rescale pixel values to save spectrograms in 8bits

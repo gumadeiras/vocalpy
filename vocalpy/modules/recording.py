@@ -211,21 +211,15 @@ class Recording(object):
         logger = getLogger()
 
         if self.params["classifier"]:
-            # -- save spectrograms (used in noise classifier)
-            logger.info("saving spectrograms of candidate vocalizations")
-            timeAsaving = time()
-            self.save_spectrograms(path=self.output_dir)
-            logger.info(f"done saving ({time() - timeAsaving:.0f}s)")
 
             # -- classify candidate vocalizations as Vocal or Noise; remove Noise
             logger.info("classifying candidate vocalizations as vocal or noise")
             timeAclassification = time()
             predictions, classes = self._animal.classify_vocalizations(
-                network_type="noise", list_of_vocals=self.list_of_vocals, path_to_spectrograms=self.spectrogram_dir
+                network_type="noise", list_of_vocals=self.list_of_vocals
             )
             logger.info("removing candidates classified as noise")
             self.remove_vocals_classified_as_noise_from_list_of_vocals(predictions)
-            self.save_spectrograms_and_masks(path=self.output_dir)
             logger.info(f"done classifying and removing ({time() - timeAclassification:.0f}s)")
             logger.info(self._list_of_vocals)
 
@@ -233,7 +227,7 @@ class Recording(object):
             logger.info("classifying vocalizations")
             timeAclassification = time()
             predictions, classes = self._animal.classify_vocalizations(
-                network_type="class", list_of_vocals=self.list_of_vocals, path_to_spectrograms=self.spectrogram_dir
+                network_type="class", list_of_vocals=self.list_of_vocals
             )
             logger.info("adding classification to vocals")
             self.update_vocals_with_class_classification(predictions, classes)

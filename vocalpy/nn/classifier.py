@@ -9,17 +9,14 @@ import torch
 
 import numpy as np
 import torch.nn as nn
-import torch.utils.data as data
 import torchvision.models as models
-import torchvision.transforms as transforms
 
-from PIL import Image
-from glob import glob
 from torch.autograd import Variable
 from torch.nn.functional import softmax
-from os.path import join, basename, splitext, dirname, pardir
+from os.path import join, dirname, pardir
 
 from vocalpy.utils.io import load_checkpoint
+from vocalpy.nn import datasets
 
 
 class VocalClassifier(object):
@@ -30,22 +27,22 @@ class VocalClassifier(object):
     ----------
     network_type : str
         vocal classifier network_type ('noise', or 'class')
-    path_to_spectrograms : str
-        path to directory with spectrograms to be classified
+    source : str or numpy.ndarray
+        path to directory with spectrograms or array with data to be classified
     batch_size : str, optional
         batch size to use with the neural network
     path_to_checkpoint : str, optional
         path to checkpoint to laod pretrained neural network model
     """
 
-    def __init__(self, network_type, path_to_spectrograms, batch_size=32, path_to_checkpoint=None):
+    def __init__(self, network_type, source, batch_size=32, path_to_checkpoint=None):
         if network_type in ["noise", "class"]:
             self.network_type = network_type
         else:
             print(f"VocalClassifiier network_type must be 'noise' or 'class'")
             print(f"provided value {network_type}")
 
-        self.path_to_spectrograms = path_to_spectrograms
+        # self.source = source
         self.batch_size = batch_size
         self.path_to_checkpoint = path_to_checkpoint
 
@@ -57,8 +54,8 @@ class VocalClassifier(object):
         else:
             self.model = self.load_pretrained_class_model(self.device, self.path_to_checkpoint)
 
-        self.dataset = self.create_dataset(self.path_to_spectrograms)
-        self.dataloader = self.create_dataloader(self.dataset, self.batch_size)
+        self.dataset = self.create_dataset(source)
+        self.dataloader = datasets.create_dataloader(self.dataset, self.batch_size)
 
     def load_pretrained_noise_model(self, device, model=None):
         """
@@ -136,27 +133,20 @@ class VocalClassifier(object):
         ]
         return model
 
-    def create_dataset(self, path_to_spectrograms):
+    def create_dataset(self, source):
         """
         Creates a dataset by instantiating the VocalDatasetFromFolder class
 
         Parameters
         ----------
-        path_to_spectrograms : str
-            path to directory that contains the spectrogram images used to create the dataset
+        source : str or numpy.ndarray
+            if path -> directory that contains the spectrogram images used to create the dataset
+            if ndarray -> return dataset from array
         """
-        return VocalDatasetFromFolder(path_to_spectrograms)
+        if isinstance(source, np.ndarray):
+            return datasets.VocalDatasetFromArray(source)
 
-    def create_dataloader(self, dataset, batch_size):
-        """
-        Creates a DataLoader to load data from the dataset
-
-        Parameters
-        ----------
-        dataset : :class:`VocalDatasetFromFolder`
-        batch_size : int
-        """
-        return data.DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=0)
+        return datasets.VocalDatasetFromFolder(source)
 
     def classify_list_of_vocals(self, list_of_vocals):
         """
@@ -224,30 +214,3 @@ class VocalClassifier(object):
     def remove_candidates_classified_as_noise(self, classifications, list_of_vocals):
         print("remove_candidates_classified_as_noise() not implemented")
         return 0
-
-
-class VocalDatasetFromFolder(data.Dataset):
-    """
-    Creates a vocalization dataset from a directory containing spectrograms
-
-    Parameters
-    ----------
-    dataset_path : str
-        path to the directory containing the spectrograms
-    """
-
-    def __init__(self, dataset_path):
-        self.dataset_path = dataset_path
-        # -- get file names and sort ascending
-        self.filenames = sorted([basename(splitext(f)[0]) for f in glob(join(self.dataset_path, "*.png"))], key=int,)
-        # -- build back full path to images
-        self.images = [join(self.dataset_path, f + ".png") for f in self.filenames]
-
-    def __getitem__(self, index):
-        img = Image.open(self.images[index]).convert("RGB")
-        transToTensor = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor()])
-        img = transToTensor(img)
-        return img
-
-    def __len__(self):
-        return len(self.images)
