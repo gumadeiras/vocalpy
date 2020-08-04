@@ -48,9 +48,9 @@ class ListOfVocals(object):
         path : str
             path to save the object
         """
-        from utils import save_file
+        from utils import write_pickle_file
 
-        save_file(self, "list_of_vocals", path)
+        write_pickle_file(self, "list_of_vocals", path)
 
     def update_intervals(self):
         """

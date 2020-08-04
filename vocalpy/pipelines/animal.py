@@ -12,10 +12,9 @@ class Animal(ABC):
     Animal class calls apropriate pipeline functions
     """
 
-    def __init__(self, animal, has_identifier, has_classifier):
+    def __init__(self, animal, params):
+        self.params = params
         self._animal = animal
-        self._has_identifier = has_identifier
-        self._has_classifier = has_classifier
 
     @abstractmethod
     def identify_vocalizations(self, chunk):
@@ -130,7 +129,7 @@ class Animal(ABC):
             centroid=first_vocal.centroid,
             coords=np.vstack((first_vocal.coords, second_vocal.coords)),
         )
-        combined_vocal.duration = combined_vocal.end - combined_vocal.start
+        combined_vocal.duration = (combined_vocal.end - combined_vocal.start) * 1000
         combined_vocal.bandwidth = combined_vocal.max_freq - combined_vocal.min_freq
 
         return combined_vocal

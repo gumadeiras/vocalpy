@@ -1,18 +1,16 @@
 # --
-# -- default values if no parameters are passed by the user
+# -- default values if no parameters are provided by the user
 # --
-
-# -- default animal pipeline
-default_animal: mouse
 
 # -- break audio into bins for parallel processing (in seconds)
 bin_size: 60
 
 # -- number of threads to use simultaneously
+# -- -1 = thread count / 2
 threads: -1
 
 # -- verboso output
 verbose: True
 
 # -- save segmentation overlaid on spectrogram for manual verification
-validation: True
+validation: False

@@ -52,31 +52,19 @@ class Rat(Animal):
         timeBinA = time()
 
         # -- unwrap chunk
-        (
-            recording_path,
-            output_dir,
-            spectrogram_dir,
-            mask_dir,
-            sample_rate,
-            bin_size,
-            low_frequency_cutoff,
-            high_frequency_cutoff,
-            args,
-            # sample_range,
-            this_bin,
-            start_range,
-            end_range,
-        ) = chunk
+        audio_path, output_dir, spectrogram_dir, mask_dir, sample_rate, bin_size, this_bin, start_range, end_range = chunk
 
-        # -- make sure bin is an int
-        # -- np.hstack converts ints to floats when creating chunks
-        this_bin = int(this_bin)
-        start_range = int(start_range)
-        end_range = int(end_range)
+        # -- np.hstack converts everything to strings
+        # -- yup, this is ugly
+        sample_rate = int(sample_rate.astype(np.float))
+        bin_size = int(bin_size.astype(np.float))
+        this_bin = int(this_bin.astype(np.float))
+        start_range = int(start_range.astype(np.float))
+        end_range = int(end_range.astype(np.float))
 
         timeAudioRead = time()
         logger.info(f"[bin {this_bin}]: reading audio;")
-        sample_range, __ = read_audio(recording_path, start=start_range, stop=end_range)
+        sample_range, __ = read_audio(audio_path, start=start_range, stop=end_range)
         logger.info(f"[bin {this_bin}]: read audio runtime: {time() - timeAudioRead:.2f}s;")
 
         timeASpectrogram = time()
@@ -101,12 +89,12 @@ class Rat(Animal):
             window_size=256,
             noverlap=128,
             nfft=1024,
-            low_frequency_cutoff=low_frequency_cutoff,
-            high_frequency_cutoff=high_frequency_cutoff,
+            lower_frequency_cutoff=self.params["lower_frequency_cutoff"],
+            higher_frequency_cutoff=self.params["higher_frequency_cutoff"],
         )
 
         time_res = sample_range.shape[0] / sample_rate / t.shape[0]
-        freq_res = (np.max(f) - low_frequency_cutoff) / f.shape[0]
+        freq_res = (np.max(f) - self.params["lower_frequency_cutoff"]) / f.shape[0]
 
         logger.info(f"[bin {this_bin}]: spectrogram runtime: {time() - timeASpectrogram:.2f}s")
         logger.info(f"[bin {this_bin}]: time resolution: {time_res * 1000:.2f}ms")
@@ -198,7 +186,7 @@ class Rat(Animal):
             end = np.max(prop.coords[:, 1])
             duration = end - start
 
-            if duration < 5:
+            if (duration < self.params["min_vocal_duration"]) | (duration > self.params["max_vocal_duration"]):
                 continue
 
             # -- get spectrogram and mask around
@@ -247,9 +235,9 @@ class Rat(Animal):
 
             min_freq_coord = np.min(prop.coords[:, 0])
             max_freq_coord = np.max(prop.coords[:, 0])
-            min_freq = (min_freq_coord * freq_res) + low_frequency_cutoff
-            max_freq = (max_freq_coord * freq_res) + low_frequency_cutoff
-            avg_freq = (np.mean(prop.coords[:, 0]) * freq_res) + low_frequency_cutoff
+            min_freq = (min_freq_coord * freq_res) + self.params["lower_frequency_cutoff"]
+            max_freq = (max_freq_coord * freq_res) + self.params["lower_frequency_cutoff"]
+            avg_freq = (np.mean(prop.coords[:, 0]) * freq_res) + self.params["lower_frequency_cutoff"]
             bandwidth = max_freq - min_freq
 
             new_vocal = Vocal(

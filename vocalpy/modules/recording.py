@@ -5,32 +5,29 @@ __license__ = "Apache License, Version 2.0"
 __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 
-import numpy as np
-
 from time import time
-from math import ceil
 from os import makedirs
 from logging import getLogger
 from joblib import Parallel, delayed
 from os.path import join, split, splitext, exists
 
+from vocalpy.modules.audio import Audio
 from vocalpy.modules.list_of_vocals import ListOfVocals
-from vocalpy.utils.misc import check_pipeline_avalability, create_dataframe_from_list_of_vocals
+from vocalpy.configs.configs import load_user_parameters, write_user_parameters
+from vocalpy.utils.misc import create_dataframe_from_list_of_vocals
 from vocalpy.utils.io import (
-    save_file,
-    load_file,
+    write_pickle_file,
+    load_pickle_file,
     create_directory,
     remove_directory,
-    read_audio_information,
     save_dataframe_as_csv,
 )
 
 
 class Recording(object):
     """
-    Audio recording Object which contains auxiliary functions to process the recording
-    Reads the audio file and breaks it down into segments of one minute to be processed
-    in parallel. Stores metadata about the audio recording.
+    Recording Object which contains auxiliary functions to process the recording
+    Concentrates all objects associated with the recording, including: :class:`Audio` and :class:`ListOfVocals`
 
     Parameters
     ----------
@@ -53,28 +50,15 @@ class Recording(object):
     """
 
     def __init__(self, recording_path, args):
-        self.args = args
         self.recording_path = recording_path
         self.recording_dir = None
         self.recording_name = None
-        self.spectrogram_dir = None
-        self.masks_dir = None
         self.output_dir = None
-
+        self.spectrogram_dir = None
+        self.mask_dir = None
         self.create_paths(recording_path)
-
-        self.sample_rate = None
-        self.number_of_samples = None
-        self.recording_duration = None
-
-        self.read_audio_metadata()
-
-        low_freq, high_freq = [int(f) for f in args.frequency.split(",")]
-        self.low_frequency_cutoff = low_freq
-        self.high_frequency_cutoff = high_freq
-        self.bin_size = self.args.bin_size if (self.args.bin_size < self.recording_duration) else self.recording_duration
-        self.bins = ceil(self.recording_duration / self.bin_size)
-        self.chunks = self.create_chunks()
+        self.params = self.create_user_parameters_yaml(args)
+        self.audio = Audio(self.recording_path, self.output_dir, self.spectrogram_dir, self.mask_dir, self.params["bin_size"])
         self._group_name = "not set"
         self._list_of_vocals = None
         self._has_list_of_vocals = None
@@ -82,7 +66,9 @@ class Recording(object):
         self._animal = self.create_animal_pipeline()
 
     def __str__(self):
-        return f"{self.__class__.__name__}:\n duration: {self.recording_duration} \n sampling rate: {self.sample_rate}"
+        return (
+            f"{self.__class__.__name__}:\n duration: {self.audio.audio_duration} \n sampling rate: {self.audio.sampling_rate}"
+        )
 
     @property
     def has_list_of_vocals(self):
@@ -123,7 +109,12 @@ class Recording(object):
         self._group_name = new_group_name
 
     def save_recording_object(self, path, filename="recording"):
-        save_file(self, filename, path)
+        write_pickle_file(self, filename, path)
+
+    def create_user_parameters_yaml(self, args):
+        user_params_yaml = load_user_parameters(args)
+        write_user_parameters(user_params_yaml, self.output_dir)
+        return user_params_yaml
 
     def create_paths(self, recording_path):
         """
@@ -151,69 +142,6 @@ class Recording(object):
         if not exists(self.mask_dir):
             makedirs(self.mask_dir, exist_ok=True)
 
-    def read_audio_metadata(self):
-        """
-        Reads audio metadata. Stores information in the Recording Object
-        """
-        metadata = read_audio_information(self.recording_path)
-        self.sample_rate = metadata.samplerate
-        self.recording_duration = metadata.duration
-        self.number_of_samples = self.recording_duration * self.sample_rate
-
-    def create_chunks(self, overlap=0.15):
-        """
-        Segments audio for parallel or sequential processing
-
-        Parameters
-        ----------
-            overlap : float
-                segments overlap (in seconds)
-        """
-        chunks = []
-        baseline_chunk = [
-            self.recording_path,
-            self.output_dir,
-            self.spectrogram_dir,
-            self.mask_dir,
-            self.sample_rate,
-            self.bin_size,
-            self.low_frequency_cutoff,
-            self.high_frequency_cutoff,
-            self.args,
-        ]
-        for this_bin in range(1, self.bins + 1):
-            # -- first bin, remove first 0.5 second of recording (usually noisy)
-            if this_bin == 1:
-                start_range = ceil(0.5 * self.sample_rate)
-                end_range = ceil((self.bin_size * self.sample_rate) + (overlap * self.sample_rate))
-                end_range = end_range if end_range < self.number_of_samples else self.number_of_samples
-                this_chunk = baseline_chunk.copy()
-                this_chunk.append((this_bin, start_range, end_range,))
-                chunks.append(np.hstack(this_chunk))
-
-            elif this_bin == self.bins:  # -- last bin
-                start_range = ceil((this_bin - 1) * self.bin_size * self.sample_rate)
-                end_range = self.recording_duration * self.sample_rate
-                if end_range - start_range < self.sample_rate:
-                    continue  # less than 1s
-                # -- None reads until the end of the audio
-                # end_range = None
-                this_chunk = baseline_chunk.copy()
-                this_chunk.append((this_bin, start_range, end_range,))
-                chunks.append(np.hstack(this_chunk))
-
-            else:  # -- all other bins
-                start_range = ceil((this_bin - 1) * self.bin_size * self.sample_rate)
-                end_range = ceil((this_bin * self.bin_size * self.sample_rate) + (overlap * self.sample_rate))
-                end_range = end_range if end_range < self.number_of_samples else self.number_of_samples
-                if end_range - start_range < self.sample_rate:
-                    continue  # less than 1s
-                this_chunk = baseline_chunk.copy()
-                this_chunk.append((this_bin, start_range, end_range,))
-                chunks.append(np.hstack(this_chunk))
-
-        return chunks
-
     def create_animal_pipeline(self):
         """
         Creates an instance of :class:`Animal` that implements the pipeline for the animal selected by the user
@@ -230,14 +158,12 @@ class Recording(object):
         """
         import importlib
 
-        has_identifier, has_classifier = check_pipeline_avalability(self._animal_name)
-
-        if has_identifier:
+        if self.params["identifier"]:
             AnimalClass = getattr(importlib.import_module("vocalpy.pipelines." + self._animal_name), self._animal_name.title())
         else:
             print("implement error, animal pipeline not available")
 
-        return AnimalClass(self._animal_name.lower(), has_identifier, has_classifier)
+        return AnimalClass(self._animal_name.lower(), self.params)
 
     def identify_vocalizations(self):
         """
@@ -249,8 +175,8 @@ class Recording(object):
 
         # -- distribute Recording chunks to available cores
         # -- process each chunk and find candidate vocalizations
-        results = Parallel(n_jobs=self.args.threads, require="sharedmem")(
-            delayed(self._animal.identify_vocalizations)(chunk=i) for i in self.chunks
+        results = Parallel(n_jobs=self.params["threads"], require="sharedmem")(
+            delayed(self._animal.identify_vocalizations)(chunk=i) for i in self.audio.chunks
         )
 
         # -- create list of vocals found in the recording
@@ -275,7 +201,7 @@ class Recording(object):
         """
         Recording has already been processed -> clear segments
         """
-        self.chunks = None
+        self.audio.chunks = None
         return 0
 
     def classify_vocalizations(self):
@@ -284,7 +210,7 @@ class Recording(object):
         """
         logger = getLogger()
 
-        if self._animal._has_classifier is True:
+        if self.params["classifier"]:
             # -- save spectrograms (used in noise classifier)
             logger.info("saving spectrograms of candidate vocalizations")
             timeAsaving = time()
@@ -319,7 +245,7 @@ class Recording(object):
         """
         Loads :class:`ListOfVocals`  from a python object file
         """
-        return load_file("list_of_vocals", self.output_dir)
+        return load_pickle_file("list_of_vocals", self.output_dir)
 
     def save_recording_data_to_csv(self, list_of_vocals=None, path=None):
         """

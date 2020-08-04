@@ -16,9 +16,9 @@ from os import makedirs
 from os.path import basename, exists, isdir, isfile, join, splitext
 
 
-def save_file(file, filename, path):
+def write_pickle_file(file, filename, path):
     """
-    Saves vocalpy object to a path
+    Writes vocalpy pickle object to a path
 
     Parameters
     ----------
@@ -40,9 +40,9 @@ def save_file(file, filename, path):
     pickle.dump(file, open(join(path, filename + ".vocalpy"), "wb"))
 
 
-def load_file(filename, path):
+def load_pickle_file(filename, path):
     """
-    Loads vocalpy object from a path
+    Loads vocalpy pickle object from a path
 
     Parameters
     ----------
@@ -230,6 +230,22 @@ def read_yaml(path_to_file):
     with open(path_to_file, "r") as ymlfile:
         yml_data = yaml.safe_load(ymlfile)
     return yml_data
+
+
+def write_yaml(data, path_to_file):
+    """
+    Writes a YAML configuration file
+
+    Parameters
+    ----------
+    data : dict
+        dict data to write as a YAML file
+    path_to_file : str
+        path to YAML file
+
+    """
+    with open(path_to_file, "w") as ymlfile:
+        yaml.dump(data, ymlfile, sort_keys=False)
 
 
 def read_audio(path_to_file, start=0, stop=None):

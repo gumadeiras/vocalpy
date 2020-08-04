@@ -46,7 +46,9 @@ def validate_arguments(args):
     """
     validate_animal(args.animal)
     validate_bin_size(args.bin_size)
-    args.frequency = validate_frequency_range(args.frequency, args.animal)
+    args.lower_frequency, args.higher_frequency = validate_frequency_range(
+        args.lower_frequency, args.higher_frequency, args.animal
+    )
     validate_thread_count(args.threads)
     return args
 
@@ -67,16 +69,16 @@ def validate_bin_size(bin_size):
     return 0
 
 
-def validate_frequency_range(frequency_range, animal):
-    if frequency_range == "default":
+def validate_frequency_range(lower_frequency, higher_frequency, animal):
+    if lower_frequency == higher_frequency == "default":
         if animal == "mouse":
-            return "45000,125000"
+            return 45000, 125000
         if animal == "rat":
-            return "20000,125000"
+            return 18000, 125000
         if animal == "guineapig":
-            return "0,22000"
+            return 0, 22000
     else:
-        low_freq, high_freq = [int(f) for f in frequency_range.split(",")]
+        low_freq, high_freq = int(lower_frequency), int(higher_frequency)
         if (low_freq > high_freq) & (high_freq != -1):
             print(
                 "low frequency cutoff must be lower \
@@ -87,7 +89,7 @@ def validate_frequency_range(frequency_range, animal):
                 high_freq={high_freq}"
             )
             exit()
-    return frequency_range
+    return low_freq, high_freq
 
 
 def validate_thread_count(threads):
@@ -103,40 +105,6 @@ def validate_thread_count(threads):
         print(f"provided value: {threads}")
         print(f"computer thread count: {num_cores}")
     return 0
-
-
-def check_pipeline_avalability(animal):
-    """
-    Reads the YAML configuration file for pipeline availability and checks if the animal selected by the user has a
-    pipeline implemented
-
-    Parameters
-    ----------
-    animal : str
-        animal pipeline selected by the user
-
-    Returns
-    -------
-    has_identifier : bool
-        availability of the vocalization identifier pipeline
-    has_classifier : bool
-        availability of the vocalization classification pipeline
-    """
-
-    # ToDo: also return pipeline parameters
-    pipelines_configs = read_yaml(join(dirname(__file__), pardir, "configs", "pipelines_parameters.yml"))
-
-    identifier_pipelines = []
-    classifier_pipelines = []
-    for animal_pipeline, available in pipelines_configs["pipelines"].items():
-        if available["identifier"]:
-            identifier_pipelines.append(animal_pipeline)
-        if available["classifier"]:
-            classifier_pipelines.append(animal_pipeline)
-
-    has_identifier = animal in identifier_pipelines
-    has_classifier = animal in classifier_pipelines
-    return has_identifier, has_classifier
 
 
 def create_dataframe_from_list_of_vocals(list_of_vocals):

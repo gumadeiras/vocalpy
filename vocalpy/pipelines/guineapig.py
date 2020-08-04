@@ -26,15 +26,17 @@ class Guineapig(Animal):
         return self.identifier(chunk)
 
     def classify_vocalizations(self, network_type, list_of_vocals, path_to_spectrograms):
-        pass
+        raise NotImplementedError("classify_vocalizations not implemented for guinea pigs")
 
-    def check_if_vocals_are_close(base_vocal, next_vocal):
+    def check_if_vocals_are_close(self, base_vocal, next_vocal):
         # -- conditions to check:
         # -- 1) next vocal starts within 100ms from base vocal start time AND
         # -- next vocal frequency is higher than the base vocal frequency
         # -- 2) next vocal starts within 100ms from base vocal end time AND
         # -- next vocal frequency is higher than the base vocal frequency
         # -- 3) next vocal starts/ends within base vocal start/end (harmonic)
+        # -- 4) duration limit
+
         max_interval = 0.1  # 100ms
         condition_1 = (np.abs(base_vocal.end - next_vocal.start) < max_interval) and (
             next_vocal.min_freq > base_vocal.max_freq
@@ -43,10 +45,11 @@ class Guineapig(Animal):
             next_vocal.min_freq > base_vocal.max_freq
         )
         condition_3 = next_vocal.start >= base_vocal.start and next_vocal.end <= base_vocal.end
+        condition_4 = base_vocal.duration <= 0.25
 
-        return True if (condition_1 or condition_2 or condition_3) else False
+        return True if condition_4 and (condition_1 or condition_2 or condition_3) else False
 
-    def identifier(chunk):
+    def identifier(self, chunk):
         from vocalpy.modules.vocal import Vocal
         from vocalpy.modules.list_of_vocals import ListOfVocals
 
@@ -55,31 +58,19 @@ class Guineapig(Animal):
         timeBinA = time()
 
         # -- unwrap chunk
-        (
-            recording_path,
-            output_dir,
-            spectrogram_dir,
-            mask_dir,
-            sample_rate,
-            bin_size,
-            low_frequency_cutoff,
-            high_frequency_cutoff,
-            args,
-            # sample_range,
-            this_bin,
-            start_range,
-            end_range,
-        ) = chunk
+        audio_path, output_dir, spectrogram_dir, mask_dir, sample_rate, bin_size, this_bin, start_range, end_range = chunk
 
-        # -- make sure bin is an int
-        # -- np.hstack converts ints to floats when creating chunks
-        this_bin = int(this_bin)
-        start_range = int(start_range)
-        end_range = int(end_range)
+        # -- np.hstack converts everything to strings
+        # -- yup, this is ugly
+        sample_rate = int(sample_rate.astype(np.float))
+        bin_size = int(bin_size.astype(np.float))
+        this_bin = int(this_bin.astype(np.float))
+        start_range = int(start_range.astype(np.float))
+        end_range = int(end_range.astype(np.float))
 
         timeAudioRead = time()
         logger.info(f"[bin {this_bin}]: reading audio;")
-        sample_range, __ = read_audio(recording_path, start=start_range, stop=end_range)
+        sample_range, __ = read_audio(audio_path, start=start_range, stop=end_range)
         logger.info(f"[bin {this_bin}]: read audio runtime: {time() - timeAudioRead:.2f}s;")
 
         timeASpectrogram = time()
@@ -101,16 +92,15 @@ class Guineapig(Animal):
             samples=sample_range,
             fs=sample_rate,
             window_type="barthann",
-            window_size=1024,
-            noverlap=512,
-            nfft=2048,
-            low_frequency_cutoff=low_frequency_cutoff,
-            high_frequency_cutoff=high_frequency_cutoff,
+            window_size=512,
+            noverlap=256,
+            nfft=1024,
+            lower_frequency_cutoff=self.params["lower_frequency_cutoff"],
+            higher_frequency_cutoff=self.params["higher_frequency_cutoff"],
         )
 
         time_res = sample_range.shape[0] / sample_rate / t.shape[0]
-        freq_res = (np.max(f) - low_frequency_cutoff) / f.shape[0]
-
+        freq_res = (np.max(f) - self.params["lower_frequency_cutoff"]) / f.shape[0]
         logger.info(f"[bin {this_bin}]: spectrogram runtime: {time() - timeASpectrogram:.2f}s")
         logger.info(f"[bin {this_bin}]: time resolution: {time_res * 1000:.2f}ms")
         logger.info(f"[bin {this_bin}]: freq resolution: {freq_res:.2f}Hz")
@@ -119,13 +109,31 @@ class Guineapig(Animal):
         B = normalize(data=Pxx)
 
         # -- saturate extreme values
-        B = contrast_adjustment(data=B, lower_percentile=1, upper_percentile=99)
+        # B = contrast_adjustment(data=B, lower_percentile=1, upper_percentile=99)
+        p1, p99 = np.percentile(B, (1, 99))
+        B[B < p1] = 0
+        B[B > p1] = 1
 
         # -- binarize spectrogram
-        B = bradley_roth(B, t=50)
+        B = bradley_roth(B, t=20)
 
         # -- median filter
         B = ndimage.median_filter(B, size=(4, 4))
+
+        # # -- kernels for morphological operations
+        # kernel_rect = np.ones((2, 4), np.uint8)
+        # kernel_line1 = np.ones((1, 4), np.uint8)
+        # kernel_line2 = np.ones((1, 5), np.uint8)
+        # kernel_square = np.ones((2, 2), np.uint8)
+
+        # # -- morphological operations
+        # erode11 = cv2.dilate(B, kernel_line1, iterations=1)
+        # dilate12 = cv2.erode(erode11, kernel_rect, iterations=1)
+        # dilate13 = cv2.dilate(dilate12, kernel_line2, iterations=1)
+        # erode14 = cv2.erode(dilate13, kernel_line1, iterations=1)
+
+        # erode14 = cv2.erode(erode14, kernel_square, iterations=1)
+        # erode14 = cv2.dilate(erode14, kernel_square, iterations=1)
 
         timeAConnectedComponents = time()
         connectivity = 4
@@ -140,7 +148,7 @@ class Guineapig(Animal):
         grain = np.zeros((output.shape))
 
         # -- threshold connected components by minimum area
-        min_area = 40
+        min_area = 100
         for i in range(0, num_cc):
             if areas[i] >= min_area:
                 grain[output == i + 1] = 255
@@ -150,9 +158,9 @@ class Guineapig(Animal):
         # -- one more opening to make sure
         # -- segmentation covers *at least* the real area
         grain = grain.astype(np.uint8)
-        kernel_cross = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.uint8)
+        # kernel_cross = np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], dtype=np.uint8)
         # kernel_line3 = np.ones((1, 3), dtype=np.uint8)
-        grain = cv2.erode(grain, kernel_cross, iterations=1)
+        # grain = cv2.erode(grain, kernel_cross, iterations=1)
 
         # -- get connected components stats
         timeARegionProps = time()
@@ -182,7 +190,7 @@ class Guineapig(Animal):
             end = np.max(prop.coords[:, 1])
             duration = end - start
 
-            if duration < 5:
+            if (duration < self.params["min_vocal_duration"]) | (duration > self.params["max_vocal_duration"]):
                 continue
 
             # -- get spectrogram and mask around
@@ -231,9 +239,9 @@ class Guineapig(Animal):
 
             min_freq_coord = np.min(prop.coords[:, 0])
             max_freq_coord = np.max(prop.coords[:, 0])
-            min_freq = (min_freq_coord * freq_res) + low_frequency_cutoff
-            max_freq = (max_freq_coord * freq_res) + low_frequency_cutoff
-            avg_freq = (np.mean(prop.coords[:, 0]) * freq_res) + low_frequency_cutoff
+            min_freq = (min_freq_coord * freq_res) + self.params["lower_frequency_cutoff"]
+            max_freq = (max_freq_coord * freq_res) + self.params["lower_frequency_cutoff"]
+            avg_freq = (np.mean(prop.coords[:, 0]) * freq_res) + self.params["lower_frequency_cutoff"]
             bandwidth = max_freq - min_freq
 
             new_vocal = Vocal(
@@ -268,8 +276,8 @@ class Guineapig(Animal):
         if vocal_list:
             vocal_list = ListOfVocals(vocals_in_recording=np.asarray(vocal_list))
             timeAConnectVocals = time()
-            vocal_list.connect_vocals(animal="guineapig")
-            vocal_list.connect_vocals(animal="guineapig")
+            self.connect_vocals(vocal_list)
+            self.connect_vocals(vocal_list)
             vocal_list.update_centroids()
 
             spectrogram_range = 100  # 100 ~ 2232ms @ 11.61ms resolution

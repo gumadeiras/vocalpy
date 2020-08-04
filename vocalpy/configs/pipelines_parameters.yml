@@ -1,3 +1,7 @@
+# --
+# -- default values if no parameters are provided by the user
+# --
+
 pipelines:
   generic:
     identifier: False
@@ -5,18 +9,33 @@ pipelines:
   mouse:
     identifier: True
     classifier: True
-    defaults:
-      nfft: 1024
-      window_type: "hamming"
-      window_size: 256
-      noverlap: 128
-      low_frequency_cutoff: 45000
-      high_frequency_cutoff: 125000
-      min_vocal_duration: 5
-      max_vocal_duration: 250
+    nfft: 1024
+    window_type: "hamming"
+    window_size: 256
+    noverlap: 128
+    lower_frequency_cutoff: 45000
+    higher_frequency_cutoff: 125000
+    min_vocal_duration: 5
+    max_vocal_duration: 250
   rat:
     identifier: True
     classifier: True
+    nfft: 1024
+    window_type: "hamming"
+    window_size: 256
+    noverlap: 128
+    lower_frequency_cutoff: 18000
+    higher_frequency_cutoff: 125000
+    min_vocal_duration: 5
+    max_vocal_duration: 750
   guineapig:
     identifier: True
     classifier: False
+    nfft: 1024
+    window_type: "barthann"
+    window_size: 512
+    noverlap: 256
+    lower_frequency_cutoff: 250
+    higher_frequency_cutoff: 20000
+    min_vocal_duration: 5
+    max_vocal_duration: 3000

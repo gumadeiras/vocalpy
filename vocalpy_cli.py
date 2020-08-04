@@ -24,13 +24,12 @@ if __name__ == "__main__":
         default=60,
     )
     p.add_argument(
-        "-f",
-        "--frequency",
-        help="frequency cutoffs; 'lower range,upper range'; '0,-1' to use full range",
-        type=str,
-        default="default",
+        "-lf", "--lower_frequency_cutoff", help="lower frequency cutoff", type=int, default="default",
     )
-    p.add_argument("-t", "--threads", help="number of threads to use (default=max)", type=int, default=-1)
+    p.add_argument(
+        "-hf", "--higher_frequency_cutoff", help="higher frequency cutoff", type=int, default="default",
+    )
+    p.add_argument("-t", "--threads", help="number of threads to use (default=max/2)", type=int, default=-1)
     p.add_argument("-v", "--verbose", help="enable verbose output", action="store_true")
     p.add_argument("-l", "--validation", help="saves overlay of segmentation for manual verifcation", action="store_true")
     args = p.parse_args()
@@ -51,8 +50,8 @@ if __name__ == "__main__":
         print(f"number of audio files: {len(list_of_files)}; number of files to be processed: {len(list_of_output_dirs)}")
         exit()
 
-    # -- validate arguments provided by the user
-    validate_arguments(args)
+    # # -- validate arguments provided by the user
+    # validate_arguments(args)
 
     # -- process each input file sequentially
     # -- each file is broken into chunks
@@ -77,8 +76,8 @@ if __name__ == "__main__":
         print(recording)
 
         logger.info(f"recording object created ({time() - timeStart:.2f}s)")
-        logger.info(f"recording duration: {recording.recording_duration:.2f} seconds")
-        logger.info(f"splitting audio into {recording.bins} chunks")
+        logger.info(f"recording duration: {recording.audio.audio_duration:.2f} seconds")
+        logger.info(f"splitting audio into {recording.audio.bins} chunks")
 
         # -- identify vocalizations
         recording.identify_vocalizations()
