@@ -3,7 +3,7 @@ numpy>=1.17.4
 pandas>=0.25.3
 Pillow>=6.2.2
 SoundFile==0.10.3.post1
-opencv-python==3.4.5.20 # pyforms requires this version
+opencv-python==4.2.0.32 # pyforms requires this version
 scipy>=1.3.1
 scikit-image>=0.15.0
 joblib>=0.14.1
