@@ -9,7 +9,7 @@ import warnings
 
 import pandas as pd
 
-from os.path import join, dirname, pardir
+from os.path import join
 from multiprocessing import cpu_count
 
 from vocalpy.errors import ValidationError
@@ -47,26 +47,22 @@ def create_logger(args=None, out_dir=None):
     """
     Creates a logger to log information during execution
     """
+    log_path = join(out_dir, "output.log")
     handlers = [logging.FileHandler(f"{out_dir}/output.log")]
     if args.verbose:
         handlers.append(logging.StreamHandler())
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
-            datefmt="%d-%b-%y %H:%M:%S",
-            handlers=handlers,
-            force=True,
-        )
-        logging.info("verbose output on")
-    else:
-        print(f"logging to file: {join(out_dir, 'output.log')}")
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
-            datefmt="%d-%b-%y %H:%M:%S",
-            handlers=handlers,
-            force=True,
-        )
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
+        datefmt="%d-%b-%y %H:%M:%S",
+        handlers=handlers,
+        force=True,
+    )
+    logger = logging.getLogger()
+    logger.info(f"logging to file: {log_path}")
+    if args.verbose:
+        logger.info("verbose output on")
+    return logger
 
 
 def validate_arguments(args):

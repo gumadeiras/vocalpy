@@ -5,7 +5,6 @@ __license__ = "Apache License, Version 2.0"
 __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 from time import time
-from logging import getLogger
 from argparse import ArgumentParser
 
 from vocalpy.errors import VocalPyError
@@ -62,8 +61,7 @@ def main(argv=None):
         output_dir = list_of_output_dirs[file_idx]
 
         create_directory(output_dir)
-        create_logger(args, output_dir)
-        logger = getLogger()
+        logger = create_logger(args, output_dir)
         logger.info(f"selected file:\n{audio_path}")
         logger.info(f"output files will be saved to:\n{output_dir}")
         logger.info(f"selected animal pipeline: {args.animal}")

@@ -37,11 +37,21 @@ def cli_args():
 def test_create_logger_writes_to_output_log(tmp_path):
     args = Namespace(verbose=False)
 
-    create_logger(args, tmp_path)
-    logging.getLogger().info("pipeline ready")
+    logger = create_logger(args, tmp_path)
+    logger.info("pipeline ready")
 
     output = (tmp_path / "output.log").read_text()
+    assert logger is logging.getLogger()
+    assert "logging to file:" in output
     assert "pipeline ready" in output
+
+
+def test_create_logger_stays_quiet_without_verbose_stdout(tmp_path, capsys):
+    create_logger(Namespace(verbose=False), tmp_path)
+
+    captured = capsys.readouterr()
+
+    assert captured.out == ""
 
 
 def test_validate_arguments_applies_default_frequency_cutoffs(cli_args):
