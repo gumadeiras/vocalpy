@@ -29,3 +29,8 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 html_extra_path = ["CNAME", ".nojekyll"]
+html_show_sourcelink = False
+html_theme_options = {
+    "collapse_navigation": False,
+    "navigation_depth": 4,
+}
