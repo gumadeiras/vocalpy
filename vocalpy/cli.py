@@ -13,6 +13,12 @@ from vocalpy.utils.misc import create_logger
 from vocalpy.utils.io import parse_input_path, create_output_directory_structure, create_directory
 
 
+def int_or_default(value):
+    if value == "default":
+        return value
+    return int(value)
+
+
 def build_parser():
     p = ArgumentParser()
     p.add_argument("-a", "--animal", help="choose from ['mouse', 'rat']", type=str, default="mouse")
@@ -24,8 +30,12 @@ def build_parser():
         type=int,
         default=60,
     )
-    p.add_argument("-lf", "--lower_frequency_cutoff", help="lower frequency cutoff", type=int, default="default")
-    p.add_argument("-hf", "--higher_frequency_cutoff", help="higher frequency cutoff", type=int, default="default")
+    p.add_argument(
+        "-lf", "--lower_frequency_cutoff", help="lower frequency cutoff", type=int_or_default, default="default"
+    )
+    p.add_argument(
+        "-hf", "--higher_frequency_cutoff", help="higher frequency cutoff", type=int_or_default, default="default"
+    )
     p.add_argument("-t", "--threads", help="number of threads to use (default=max/2)", type=int, default=-1)
     p.add_argument("-v", "--verbose", help="enable verbose output", action="store_true")
     p.add_argument("-l", "--validation", help="saves overlay of segmentation for manual verifcation", action="store_true")

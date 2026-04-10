@@ -181,6 +181,7 @@ class Guineapig(Animal):
         index = 0
         end = 0
         for prop in props:
+            min_intensity, max_intensity, mean_intensity = self.get_region_intensity_stats(prop)
             start = np.min(prop.coords[:, 1])
             if index > 0:
                 interval = np.abs(end - start)
@@ -205,7 +206,7 @@ class Guineapig(Animal):
             # -- right edge: +200 is after vector end index
             bg_intensity = self.estimate_background_intensity(Pxx, centroid_time, spectro_range)
 
-            if not self.has_minimum_contrast(prop.mean_intensity, bg_intensity):
+            if not self.has_minimum_contrast(mean_intensity, bg_intensity):
                 continue
 
             if this_bin == 1:
@@ -238,9 +239,9 @@ class Guineapig(Animal):
                 max_freq_coord=max_freq_coord,
                 avg_freq=avg_freq,
                 bandwidth=bandwidth,
-                min_intensity=prop.min_intensity,
-                max_intensity=prop.max_intensity,
-                avg_intensity=prop.mean_intensity,
+                min_intensity=min_intensity,
+                max_intensity=max_intensity,
+                avg_intensity=mean_intensity,
                 bg_intensity=bg_intensity,
                 area=prop.area,
                 centroid=np.rint(prop.centroid).astype(int),

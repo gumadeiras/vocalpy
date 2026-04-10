@@ -117,3 +117,12 @@ def test_minimum_contrast_uses_db_difference_not_ratio():
 
     assert animal.has_minimum_contrast(-40.0, -50.0) is True
     assert animal.has_minimum_contrast(-48.5, -50.0) is False
+
+
+def test_region_intensity_stats_supports_new_skimage_property_names():
+    animal = StubAnimal("mouse", {})
+    prop = SimpleNamespace(intensity_min=-90.0, intensity_max=-55.0, intensity_mean=-72.0)
+
+    min_intensity, max_intensity, mean_intensity = animal.get_region_intensity_stats(prop)
+
+    assert (min_intensity, max_intensity, mean_intensity) == (-90.0, -55.0, -72.0)

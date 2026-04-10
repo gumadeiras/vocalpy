@@ -81,6 +81,15 @@ class Animal(ABC):
         min_contrast_db = self.params.get("min_contrast_db", 3.0)
         return (signal_intensity - background_intensity) >= min_contrast_db
 
+    def get_region_intensity_stats(self, prop):
+        """
+        Read intensity statistics across skimage regionprops API versions.
+        """
+        min_intensity = prop.intensity_min if hasattr(prop, "intensity_min") else prop.min_intensity
+        max_intensity = prop.intensity_max if hasattr(prop, "intensity_max") else prop.max_intensity
+        mean_intensity = prop.intensity_mean if hasattr(prop, "intensity_mean") else prop.mean_intensity
+        return min_intensity, max_intensity, mean_intensity
+
     @abstractmethod
     def identify_vocalizations(self, chunk):
         return NotImplemented
