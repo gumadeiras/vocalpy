@@ -47,7 +47,7 @@ vocalpy -p /path/to/recording.wav
 # Use the rat pipeline instead
 vocalpy -a rat -p /path/to/recording.wav
 
-# Also run neural segmentation — produces a binary mask per vocal saved under cnn_mask/
+# Also run autoencoder-based segmentation — produces a binary mask per vocal saved under cnn_mask/
 vocalpy -p /path/to/recording.wav --segmenter
 
 # Save spectrogram-overlay images so you can manually verify detections

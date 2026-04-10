@@ -54,7 +54,7 @@ Each file gets its own `{name}_outputs/` directory.
 | `-t / --threads` | Number of parallel workers (`-1` = half of available cores) | `-1` |
 | `-v / --verbose` | Print detailed progress to the terminal | off |
 | `-l / --validation` | Save spectrogram-overlay images for manual review of detections | off |
-| `--segmenter` | Run neural segmentation ([SqueakOut](https://github.com/gumadeiras/squeakout)) after detection and classification | off |
+| `--segmenter` | Run autoencoder-based segmentation ([SqueakOut](https://github.com/gumadeiras/squeakout)) after detection and classification | off |
 | `--segmentation_model_path` | Path to a custom SqueakOut checkpoint file | Bundled |
 | `--segmentation_threshold` | Probability threshold for converting segmentation output to a binary mask | `0.51` |
 
@@ -90,7 +90,7 @@ recording_outputs/
 ├── spectrogram/                            # per-vocal spectrogram image (one PNG per call)
 ├── mask/                                   # per-vocal binary detection mask (one PNG per call)
 ├── spectrogram_validation/                 # spectrogram + mask overlay images (-l flag only)
-└── cnn_mask/                               # neural segmentation masks (--segmenter only)
+└── cnn_mask/                               # autoencoder-based segmentation masks (--segmenter only)
 ```
 
 The **CSV** is the fastest way to inspect results — open it in any spreadsheet tool or load it with pandas. The **`.vocalpy` files** let you reload the full pipeline output in Python for further analysis, filtering, or visualization without rerunning detection. The **spectrogram images** are useful for quickly browsing individual calls. The **validation overlays** (`-l`) show the detection mask drawn on top of the spectrogram, which is helpful for understanding what the detector found and catching misdetections.
@@ -112,7 +112,7 @@ Each row is one detected vocalization. For mouse and rat, `top1` and `top2` cont
 | `orientation` | Angle of the principal axis of the detected region — useful for characterizing call shape |
 | `top1` / `top2` | Top-1 and top-2 class label predictions from the type classifier (mouse and rat only) |
 
-## Neural segmentation
+## Autoencoder-based segmentation
 
 ```sh
 vocalpy -p /path/to/recording.wav --segmenter
