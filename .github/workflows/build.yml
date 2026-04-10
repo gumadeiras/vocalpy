@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: [ master ]
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 jobs:
   build:
     strategy:
@@ -48,7 +45,7 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --ignore=E203,E501,W503 --statistics
     - name: Test with pytest
       run: |
-        pytest --cov=./vocalpy --cov-report=xml
+        pytest
     - name: Validate bundled models
       run: |
         vocalpy-models validate --smoke-test
@@ -63,8 +60,3 @@ jobs:
           --max-top2-mismatches-total 0 \
           --max-start-delta-ms 0.0 \
           --max-end-delta-ms 0.0
-    - name: Code coverage
-      uses: codecov/codecov-action@v5
-      with:
-        token: ${{ secrets.codecov_token }}
-        files: ./coverage.xml
