@@ -16,8 +16,9 @@ pipelines:
     noverlap: 128
     lower_frequency_cutoff: 45000
     higher_frequency_cutoff: 125000
-    min_vocal_duration: 5
-    max_vocal_duration: 250
+    # legacy duration limits are expressed in spectrogram frames, not ms
+    min_vocal_duration_frames: 5
+    max_vocal_duration_frames: 250
   rat:
     identifier: True
     classifier: True
@@ -28,8 +29,9 @@ pipelines:
     noverlap: 128
     lower_frequency_cutoff: 18000
     higher_frequency_cutoff: 125000
-    min_vocal_duration: 5
-    max_vocal_duration: 750
+    # legacy duration limits are expressed in spectrogram frames, not ms
+    min_vocal_duration_frames: 5
+    max_vocal_duration_frames: 750
   guineapig:
     identifier: True
     classifier: False
@@ -40,5 +42,6 @@ pipelines:
     noverlap: 256
     lower_frequency_cutoff: 250
     higher_frequency_cutoff: 20000
-    min_vocal_duration: 5
-    max_vocal_duration: 3000
+    # legacy duration limits are expressed in spectrogram frames, not ms
+    min_vocal_duration_frames: 5
+    max_vocal_duration_frames: 3000

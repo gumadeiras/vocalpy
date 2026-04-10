@@ -98,6 +98,7 @@ class Mouse(Animal):
 
         time_res = (sample_range.shape[0] / sample_rate) / t.shape[0]
         freq_res = (np.max(f) - self.params["lower_frequency_cutoff"]) / f.shape[0]
+        min_duration_frames, max_duration_frames = self.get_duration_limits_in_frames(time_res * 1000)
         logger.info(f"[bin {this_bin}]: spectrogram runtime: {time() - timeASpectrogram:.2f}s")
         logger.info(f"[bin {this_bin}]: time resolution: {time_res * 1000:.2f}ms")
         logger.info(f"[bin {this_bin}]: freq resolution: {freq_res:.2f}Hz")
@@ -181,7 +182,7 @@ class Mouse(Animal):
             end = np.max(prop.coords[:, 1])
             duration = end - start
 
-            if (duration < self.params["min_vocal_duration"]) | (duration > self.params["max_vocal_duration"]):
+            if (duration < min_duration_frames) | (duration > max_duration_frames):
                 continue
 
             # -- get spectrogram and mask around

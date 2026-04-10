@@ -126,3 +126,20 @@ def test_region_intensity_stats_supports_new_skimage_property_names():
     min_intensity, max_intensity, mean_intensity = animal.get_region_intensity_stats(prop)
 
     assert (min_intensity, max_intensity, mean_intensity) == (-90.0, -55.0, -72.0)
+
+
+def test_duration_limits_preserve_legacy_frame_based_thresholds():
+    animal = StubAnimal("mouse", {"min_vocal_duration": 5, "max_vocal_duration": 250})
+
+    min_duration, max_duration = animal.get_duration_limits_in_frames(time_resolution_ms=0.512)
+
+    assert (min_duration, max_duration) == (5, 250)
+
+
+def test_duration_limits_can_be_expressed_explicitly_in_milliseconds():
+    animal = StubAnimal("mouse", {"min_vocal_duration_ms": 5.0, "max_vocal_duration_ms": 250.0})
+
+    min_duration, max_duration = animal.get_duration_limits_in_frames(time_resolution_ms=0.512)
+
+    assert min_duration == 10
+    assert max_duration == 488

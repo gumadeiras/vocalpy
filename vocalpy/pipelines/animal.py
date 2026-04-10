@@ -90,6 +90,30 @@ class Animal(ABC):
         mean_intensity = prop.intensity_mean if hasattr(prop, "intensity_mean") else prop.mean_intensity
         return min_intensity, max_intensity, mean_intensity
 
+    def get_duration_limits_in_frames(self, time_resolution_ms):
+        """
+        Resolve duration thresholds to spectrogram-frame counts.
+
+        Legacy configs used `min_vocal_duration` / `max_vocal_duration` as
+        frame counts despite the ambiguous name. Preserve that behavior while
+        allowing explicit frame or millisecond keys going forward.
+        """
+        if "min_vocal_duration_ms" in self.params:
+            min_duration = int(np.ceil(self.params["min_vocal_duration_ms"] / time_resolution_ms))
+        elif "min_vocal_duration_frames" in self.params:
+            min_duration = int(self.params["min_vocal_duration_frames"])
+        else:
+            min_duration = int(self.params["min_vocal_duration"])
+
+        if "max_vocal_duration_ms" in self.params:
+            max_duration = int(np.floor(self.params["max_vocal_duration_ms"] / time_resolution_ms))
+        elif "max_vocal_duration_frames" in self.params:
+            max_duration = int(self.params["max_vocal_duration_frames"])
+        else:
+            max_duration = int(self.params["max_vocal_duration"])
+
+        return min_duration, max_duration
+
     @abstractmethod
     def identify_vocalizations(self, chunk):
         return NotImplemented
