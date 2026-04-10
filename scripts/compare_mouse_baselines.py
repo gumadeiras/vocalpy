@@ -30,6 +30,7 @@ class ComparisonResult:
     top2_mismatches: int
     max_start_delta_ms: float
     max_end_delta_ms: float
+    extra_image_paths: list[Path]
 
 
 def parse_args(argv=None):
@@ -38,20 +39,30 @@ def parse_args(argv=None):
     parser.add_argument("--work-dir", type=Path, default=None)
     parser.add_argument("--tolerance-ms", type=float, default=3.0)
     parser.add_argument("--keep-work-dir", action="store_true")
+    parser.add_argument("--validation", action="store_true")
     parser.add_argument("--fail-on-drift", action="store_true")
+    parser.add_argument("--max-extra-total", type=int, default=None)
+    parser.add_argument("--max-missing-total", type=int, default=0)
+    parser.add_argument("--max-top1-mismatches-total", type=int, default=None)
+    parser.add_argument("--max-top2-mismatches-total", type=int, default=None)
+    parser.add_argument("--max-start-delta-ms", type=float, default=None)
+    parser.add_argument("--max-end-delta-ms", type=float, default=None)
     parser.add_argument("files", nargs="*", default=list(DEFAULT_FILES))
     return parser.parse_args(argv)
 
 
-def run_pipeline(audio_dir: Path, work_dir: Path, names: list[str]) -> None:
+def run_pipeline(audio_dir: Path, work_dir: Path, names: list[str], validation: bool) -> None:
     for name in names:
         source_audio = audio_dir / f"{name}.wav"
         run_dir = work_dir / name
         run_dir.mkdir(parents=True, exist_ok=True)
         run_audio = run_dir / source_audio.name
         shutil.copy2(source_audio, run_audio)
+        command = [sys.executable, "-m", "vocalpy.cli", "-a", "mouse", "-p", str(run_audio)]
+        if validation:
+            command.append("-l")
         subprocess.run(
-            [sys.executable, "-m", "vocalpy.cli", "-a", "mouse", "-p", str(run_audio)],
+            command,
             check=True,
         )
 
@@ -97,6 +108,13 @@ def compare_pair(name: str, audio_dir: Path, work_dir: Path, tolerance_ms: float
         top1_mismatches = 0
         top2_mismatches = 0
 
+    validation_dir = work_dir / name / f"{name}_outputs" / "spectrogram_validation"
+    extra_image_paths = []
+    if validation_dir.exists():
+        for current_index in extra.index.tolist():
+            image_paths = sorted(validation_dir.glob(f"{current_index + 1}_*.png"))
+            extra_image_paths.extend(image_paths)
+
     return ComparisonResult(
         name=name,
         baseline_count=len(baseline),
@@ -108,6 +126,7 @@ def compare_pair(name: str, audio_dir: Path, work_dir: Path, tolerance_ms: float
         top2_mismatches=top2_mismatches,
         max_start_delta_ms=max_start_delta_ms,
         max_end_delta_ms=max_end_delta_ms,
+        extra_image_paths=extra_image_paths,
     )
 
 
@@ -127,6 +146,10 @@ def print_result(result: ComparisonResult) -> None:
         cols = ["start(s)", "end(s)", "duration(ms)", "avg_intensity", "bg_intensity", "class_top1", "class_top2"]
         print("extra rows:")
         print(result.extra_rows[cols].to_string(index=False))
+        if result.extra_image_paths:
+            print("extra validation images:")
+            for path in result.extra_image_paths:
+                print(path)
     if not result.missing_rows.empty:
         cols = ["start(s)", "end(s)", "duration(ms)", "avg_intensity", "bg_intensity", "class_top1", "class_top2"]
         print("missing rows:")
@@ -145,14 +168,44 @@ def main(argv=None):
         work_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        run_pipeline(args.audio_dir, work_dir, args.files)
+        run_pipeline(args.audio_dir, work_dir, args.files, args.validation)
         results = [compare_pair(name, args.audio_dir, work_dir, args.tolerance_ms) for name in args.files]
         drift_found = False
+        extra_total = 0
+        missing_total = 0
+        top1_total = 0
+        top2_total = 0
+        max_start_delta_ms = 0.0
+        max_end_delta_ms = 0.0
         for result in results:
             print_result(result)
+            extra_total += result.extra_rows.shape[0]
+            missing_total += result.missing_rows.shape[0]
+            top1_total += result.top1_mismatches
+            top2_total += result.top2_mismatches
+            max_start_delta_ms = max(max_start_delta_ms, result.max_start_delta_ms)
+            max_end_delta_ms = max(max_end_delta_ms, result.max_end_delta_ms)
             if result.extra_rows.shape[0] or result.missing_rows.shape[0] or result.top1_mismatches or result.top2_mismatches:
                 drift_found = True
+        print(
+            "totals: "
+            f"extra={extra_total} missing={missing_total} "
+            f"top1_mismatches={top1_total} top2_mismatches={top2_total} "
+            f"max_start_delta_ms={max_start_delta_ms:.3f} max_end_delta_ms={max_end_delta_ms:.3f}"
+        )
         print(f"work_dir={work_dir}")
+        if args.max_extra_total is not None and extra_total > args.max_extra_total:
+            return 1
+        if args.max_missing_total is not None and missing_total > args.max_missing_total:
+            return 1
+        if args.max_top1_mismatches_total is not None and top1_total > args.max_top1_mismatches_total:
+            return 1
+        if args.max_top2_mismatches_total is not None and top2_total > args.max_top2_mismatches_total:
+            return 1
+        if args.max_start_delta_ms is not None and max_start_delta_ms > args.max_start_delta_ms:
+            return 1
+        if args.max_end_delta_ms is not None and max_end_delta_ms > args.max_end_delta_ms:
+            return 1
         return 1 if (args.fail_on_drift and drift_found) else 0
     finally:
         if temp_dir is not None and not args.keep_work_dir:
