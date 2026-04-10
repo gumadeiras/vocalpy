@@ -6,6 +6,8 @@ __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 from abc import ABC, abstractmethod
 
+import numpy as np
+
 
 class Animal(ABC):
     """
@@ -15,6 +17,69 @@ class Animal(ABC):
     def __init__(self, animal, params):
         self.params = params
         self._animal = animal
+
+    def parse_chunk(self, chunk):
+        """
+        Convert the mixed-type chunk payload back into typed values.
+        """
+        (
+            audio_path,
+            output_dir,
+            spectrogram_dir,
+            mask_dir,
+            sample_rate,
+            bin_size,
+            this_bin,
+            start_range,
+            end_range,
+        ) = chunk
+
+        return (
+            audio_path,
+            output_dir,
+            spectrogram_dir,
+            mask_dir,
+            int(float(sample_rate)),
+            int(float(bin_size)),
+            int(float(this_bin)),
+            int(float(start_range)),
+            int(float(end_range)) if end_range is not None else None,
+        )
+
+    def get_centered_window_bounds(self, center, window_radius, max_width):
+        """
+        Clamp a centered window to valid bounds while preserving width when possible.
+        """
+        target_width = min(max_width, window_radius * 2)
+        if max_width <= target_width:
+            return 0, max_width
+
+        start = center - window_radius
+        end = center + window_radius
+
+        if start < 0:
+            end = min(max_width, end - start)
+            start = 0
+
+        if end > max_width:
+            start = max(0, start - (end - max_width))
+            end = max_width
+
+        return int(start), int(end)
+
+    def estimate_background_intensity(self, spectrogram, center, window_radius):
+        """
+        Estimate local background intensity around a candidate vocalization.
+        """
+        start, end = self.get_centered_window_bounds(center, window_radius, spectrogram.shape[1])
+        return float(np.mean(spectrogram[:, start:end]))
+
+    def has_minimum_contrast(self, signal_intensity, background_intensity):
+        """
+        Compare signal and background in dB space.
+        """
+        min_contrast_db = self.params.get("min_contrast_db", 3.0)
+        return (signal_intensity - background_intensity) >= min_contrast_db
 
     @abstractmethod
     def identify_vocalizations(self, chunk):
@@ -38,48 +103,28 @@ class Animal(ABC):
         list_of_vocals : :class:`ListOfVocals`
             list of vocal candidates to be connected
         """
-        import numpy as np
+        vocals = [] if list_of_vocals.vocals_in_recording is None else list(list_of_vocals.vocals_in_recording)
+        if not vocals:
+            list_of_vocals.vocals_in_recording = []
+            list_of_vocals.number_of_vocals = 0
+            list_of_vocals.vocals_combined = True
+            return 0
 
-        new_list_of_vocals = []
+        merged_vocals = []
+        current_vocal = vocals[0]
 
-        idx = 0
-        there_are_vocals = True
-        while there_are_vocals is True:
-            # merge this blobs with blobs that are close
-            try:
-                base_vocal = list_of_vocals.vocals_in_recording[idx]
-                new_vocal = base_vocal
-                next_vocal = list_of_vocals.vocals_in_recording[idx + 1]
-            except:
-                # -- there are no more vocals to connect
-                new_list_of_vocals.append(new_vocal)
-                there_are_vocals = False
-                break
+        for next_vocal in vocals[1:]:
+            if self.check_if_vocals_are_close(current_vocal, next_vocal):
+                current_vocal = self.combine_vocals(current_vocal, next_vocal)
+            else:
+                merged_vocals.append(current_vocal)
+                current_vocal = next_vocal
 
-            next_vocal_is_close = self.check_if_vocals_are_close(base_vocal, next_vocal)
-
-            # -- get next vocal (idx)
-            idx = idx + 1
-            while next_vocal_is_close is True:
-                # while there are blobs close by, continue combining them
-                new_vocal = self.combine_vocals(new_vocal, next_vocal)
-                try:
-                    next_vocal = list_of_vocals.vocals_in_recording[idx + 1]
-                    next_vocal_is_close = self.check_if_vocals_are_close(new_vocal, next_vocal)
-                except:
-                    next_vocal_is_close = False
-                idx = idx + 1
-
-            # when last vocal is combined, sometimes gets duplicated; check why
-            new_list_of_vocals.append(new_vocal)
-
-        try:
-            list_of_vocals.vocals_in_recording = np.hstack(new_list_of_vocals)
-        except:
-            list_of_vocals.vocals_in_recording = new_list_of_vocals
-
-        list_of_vocals.number_of_vocals = len(list_of_vocals.vocals_in_recording)
+        merged_vocals.append(current_vocal)
+        list_of_vocals.vocals_in_recording = np.asarray(merged_vocals, dtype=object)
+        list_of_vocals.number_of_vocals = len(merged_vocals)
         list_of_vocals.vocals_combined = True
+        return 0
 
     def combine_vocals(self, first_vocal, second_vocal):
         """
