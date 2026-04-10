@@ -94,16 +94,20 @@ def load_checkpoint(checkpoint, model, device, optimizer=None):
     import torch
 
     if not exists(checkpoint):
-        print(f"file does not exist {checkpoint}")
-        exit()
+        raise FileNotFoundError(f"checkpoint does not exist: {checkpoint}")
 
-    checkpoint = torch.load(checkpoint, map_location=torch.device(device))
-    model.load_state_dict(checkpoint["state_dict"])
+    checkpoint_data = torch.load(checkpoint, map_location=torch.device(device))
+    if not isinstance(checkpoint_data, dict) or "state_dict" not in checkpoint_data:
+        raise ValueError(f"checkpoint is missing state_dict: {checkpoint}")
 
-    if optimizer:
-        optimizer.load_state_dict(checkpoint["optim_dict"])
+    model.load_state_dict(checkpoint_data["state_dict"])
 
-    return checkpoint
+    if optimizer is not None:
+        if "optim_dict" not in checkpoint_data:
+            raise ValueError(f"checkpoint is missing optim_dict: {checkpoint}")
+        optimizer.load_state_dict(checkpoint_data["optim_dict"])
+
+    return checkpoint_data
 
 
 def load_model(model_path, device):
