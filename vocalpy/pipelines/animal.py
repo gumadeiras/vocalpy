@@ -16,6 +16,7 @@ from skimage import exposure, measure
 
 from vocalpy.utils.io import read_audio
 from vocalpy.nn.classifier import VocalClassifier
+from vocalpy.nn.segmenter import VocalSegmenter
 from vocalpy.nn.datasets import create_array_from_list_of_vocals
 from vocalpy.nn.pretrained_models import get_pretrained_model_spec
 from vocalpy.utils.signal_processing import compute_spectrogram
@@ -45,6 +46,18 @@ class Animal(ABC):
         classifier = VocalClassifier(network_type=network_type, source=source)
         predictions = classifier.classify_list_of_vocals(list_of_vocals)
         return predictions, classifier.classes
+
+    def segment_vocalizations(self, list_of_vocals, source=None, path_to_model=None, threshold=0.5):
+        if list_of_vocals.number_of_vocals == 0:
+            return np.empty((0, 0, 0), dtype=np.uint8)
+
+        source = create_array_from_list_of_vocals(list_of_vocals) if source is None else source
+        segmenter = VocalSegmenter(
+            source=source,
+            path_to_model=path_to_model,
+            threshold=threshold,
+        )
+        return segmenter.segment_list_of_vocals(list_of_vocals)
 
     def parse_chunk(self, chunk):
         """

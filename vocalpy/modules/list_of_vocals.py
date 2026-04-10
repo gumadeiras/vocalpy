@@ -219,6 +219,21 @@ class ListOfVocals(object):
             vocal.save_mask_as_image(path=output_dir, filename=str(filename))
         return 0
 
+    def save_cnn_masks(self, output_dir=None):
+        """
+        Saves the neural segmentation mask image to the output directory
+
+        Parameters
+        ----------
+        output_dir : str, optional
+            path to output directory to save the files
+        """
+        for filename, vocal in enumerate(self.vocals_in_recording, start=1):
+            if vocal.cnn_mask is None:
+                continue
+            vocal.save_cnn_mask_as_image(path=output_dir, filename=str(filename))
+        return 0
+
     def remove_spectrograms(self):
         """
         Removes the spectrogram data from each :class:`Vocal` in the :class:`ListOfVocals`
@@ -234,6 +249,30 @@ class ListOfVocals(object):
         for vocal in self.vocals_in_recording:
             vocal.mask = None
         return 0
+
+    def add_segmentation_masks_to_vocals(self, masks):
+        """
+        Updates :class:`ListOfVocals` with neural-network segmentation masks.
+
+        Parameters
+        ----------
+        masks : numpy.ndarray
+            binary mask predictions shaped (N, H, W)
+        """
+        masks = np.asarray(masks)
+        if masks.shape[0] != self.number_of_vocals:
+            raise ValueError(
+                "number of vocals and segmentation masks differ. "
+                f"number of vocals: {self.number_of_vocals}; "
+                f"number of masks: {masks.shape[0]}"
+            )
+
+        for idx, vocal in enumerate(self.vocals_in_recording):
+            vocal.cnn_mask = masks[idx]
+        return 0
+
+    def has_cnn_masks(self):
+        return any(vocal.cnn_mask is not None for vocal in self.vocals_in_recording)
 
     def remove_vocals_classified_as_noise(self, predictions):
         """

@@ -15,6 +15,13 @@ from os.path import join, basename, splitext
 import torchvision.transforms as transforms
 
 
+def build_image_transform(image_size=(224, 224), repeat_channels=True):
+    transform_steps = [transforms.Resize(image_size), transforms.ToTensor()]
+    if repeat_channels:
+        transform_steps.append(transforms.Lambda(lambda x: x.repeat(3, 1, 1)))
+    return transforms.Compose(transform_steps)
+
+
 class VocalDatasetFromFolder(data.Dataset):
     """
     Creates a vocalization dataset from a directory containing spectrograms
@@ -33,12 +40,10 @@ class VocalDatasetFromFolder(data.Dataset):
         self.filenames = sorted([basename(splitext(f)[0]) for f in glob(join(self.dataset_path, "*.png"))], key=int,)
         # -- build back full path to images
         self.images = [join(self.dataset_path, f + ".png") for f in self.filenames]
-        self.transform = transform
+        self.transform = transform or build_image_transform(repeat_channels=False)
 
     def __getitem__(self, index):
         x = Image.open(self.images[index]).convert("RGB")
-        if self.transform is None:
-            self.transform = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor()])
         return self.transform(x)
 
     def __len__(self):
@@ -69,19 +74,15 @@ class VocalDatasetFromArray(data.Dataset):
             self.width = 0
         else:
             self.len, self.height, self.width = self.data.shape
-        self.transform = transform
+        self.transform = transform or transforms.Compose(
+            [
+                transforms.ToPILImage(),
+                *build_image_transform(repeat_channels=True).transforms,
+            ]
+        )
 
     def __getitem__(self, index):
         x = self.data[index]
-        if self.transform is None:
-            self.transform = transforms.Compose(
-                [
-                    transforms.ToPILImage(),
-                    transforms.Resize((224, 224)),
-                    transforms.ToTensor(),
-                    transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
-                ]
-            )
         return self.transform(x)
 
     def __len__(self):

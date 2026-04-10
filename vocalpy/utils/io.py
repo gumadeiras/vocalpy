@@ -226,7 +226,10 @@ def load_model(model_path, device):
     """
     import torch
 
-    return torch.load(model_path, map_location=torch.device(device))
+    try:
+        return torch.load(model_path, map_location=torch.device(device), weights_only=False)
+    except TypeError:
+        return torch.load(model_path, map_location=torch.device(device))
 
 
 def parse_input_path(path=None, search_tree=False):

@@ -182,3 +182,33 @@ def test_shared_classify_vocalizations_short_circuits_empty_list(monkeypatch):
 
     assert predictions.tolist() == []
     assert classes == ["noise", "vocal"]
+
+
+def test_shared_segment_vocalizations_uses_common_segmenter(monkeypatch):
+    captured = {}
+
+    class FakeSegmenter:
+        def __init__(self, source, path_to_model, threshold):
+            captured["source"] = source
+            captured["path_to_model"] = path_to_model
+            captured["threshold"] = threshold
+
+        def segment_list_of_vocals(self, list_of_vocals):
+            captured["list_of_vocals"] = list_of_vocals
+            return np.ones((2, 3, 4), dtype=np.uint8) * 255
+
+    animal = StubAnimal("mouse", {})
+    vocals = SimpleNamespace(number_of_vocals=2)
+
+    monkeypatch.setattr("vocalpy.pipelines.animal.VocalSegmenter", FakeSegmenter)
+    monkeypatch.setattr("vocalpy.pipelines.animal.create_array_from_list_of_vocals", lambda value: "derived-array")
+
+    predictions = animal.segment_vocalizations(vocals, path_to_model="/tmp/segmenter.pt", threshold=0.7)
+
+    assert captured == {
+        "source": "derived-array",
+        "path_to_model": "/tmp/segmenter.pt",
+        "threshold": 0.7,
+        "list_of_vocals": vocals,
+    }
+    assert predictions.shape == (2, 3, 4)

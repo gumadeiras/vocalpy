@@ -78,6 +78,17 @@ def test_list_of_vocals_defaults_to_empty_array_state(list_of_vocals_module):
     assert list_of_vocals.vocals_in_recording.tolist() == []
 
 
+def test_add_segmentation_masks_to_vocals_assigns_masks(list_of_vocals_module):
+    vocal = SimpleNamespace(cnn_mask=None)
+    list_of_vocals = make_list_of_vocals(list_of_vocals_module, [vocal])
+    mask = np.ones((1, 2, 3), dtype=np.uint8) * 255
+
+    list_of_vocals.add_segmentation_masks_to_vocals(mask)
+
+    assert np.array_equal(vocal.cnn_mask, mask[0])
+    assert list_of_vocals.has_cnn_masks() is True
+
+
 def test_combine_list_of_list_of_vocals_handles_all_empty_inputs(list_of_vocals_module):
     list_of_vocals = list_of_vocals_module.ListOfVocals()
     empty_segment = list_of_vocals_module.ListOfVocals()

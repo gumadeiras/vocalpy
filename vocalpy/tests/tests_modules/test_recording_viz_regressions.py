@@ -68,6 +68,24 @@ def test_recording_update_vocals_with_class_classification_raises_on_prediction_
         recording.update_vocals_with_class_classification(np.empty((0, 2)), ["flat", "up_fm"])
 
 
+def test_recording_update_vocals_with_segmentation_masks_raises_on_prediction_mismatch():
+    recording = Recording.__new__(Recording)
+    recording._list_of_vocals = SimpleNamespace(number_of_vocals=1)
+
+    with pytest.raises(RecordingStateError, match="number of vocals and segmenter predictions differ"):
+        recording.update_vocals_with_segmentation_masks(np.empty((0, 2, 2), dtype=np.uint8))
+
+
+def test_recording_segment_vocalizations_requires_model_path_when_enabled():
+    recording = Recording.__new__(Recording)
+    recording.params = {"segmenter": True, "segmentation_model_path": None, "segmentation_threshold": 0.5}
+    recording._animal = SimpleNamespace(_animal="mouse")
+    recording._list_of_vocals = SimpleNamespace(number_of_vocals=1)
+
+    with pytest.raises(ConfigurationError, match="segmenter enabled but no segmentation_model_path"):
+        recording.segment_vocalizations()
+
+
 def test_viz_initialization_derives_group_names_from_recording_paths(monkeypatch):
     monkeypatch.setattr(Viz, "create_viz_for_each_recording", lambda self: 0)
     monkeypatch.setattr(Viz, "create_group_viz", lambda self: 0)

@@ -237,6 +237,34 @@ class Recording(object):
         else:
             logger.info(f"no classifier available for animal type: {self._animal._animal}")
 
+    def segment_vocalizations(self):
+        """
+        Segment identified vocalizations using the configured neural network model.
+        """
+        logger = getLogger()
+
+        if not self.params.get("segmenter", False):
+            logger.info(f"no segmenter available for animal type: {self._animal._animal}")
+            return 0
+
+        list_of_vocals = self._require_list_of_vocals()
+
+        segmentation_model_path = self.params.get("segmentation_model_path")
+        if not segmentation_model_path:
+            raise ConfigurationError("segmenter enabled but no segmentation_model_path was provided")
+
+        logger.info("segmenting vocalizations")
+        time_segmentation = time()
+        predictions = self._animal.segment_vocalizations(
+            list_of_vocals=list_of_vocals,
+            path_to_model=segmentation_model_path,
+            threshold=self.params["segmentation_threshold"],
+        )
+        logger.info("adding segmentation masks to vocals")
+        self.update_vocals_with_segmentation_masks(predictions)
+        logger.info(f"done segmenting vocals ({time() - time_segmentation:.0f}s)")
+        return 0
+
     def load_list_of_vocals(self):
         """
         Loads :class:`ListOfVocals`  from a python object file
@@ -315,6 +343,22 @@ class Recording(object):
         list_of_vocals.save_masks(output_dir=path)
         return 0
 
+    def save_cnn_masks(self, list_of_vocals=None, path=None):
+        """
+        Saves the neural-network segmentation masks to the output directory.
+
+        Parameters
+        ----------
+        list_of_vocals : :class:`ListOfVocals`, optional
+        path : str, optional
+        """
+        list_of_vocals = self._require_list_of_vocals(list_of_vocals)
+        path = path if path is not None else self.output_dir
+        remove_directory(join(path, "cnn_mask"))
+        create_directory(join(path, "cnn_mask"))
+        list_of_vocals.save_cnn_masks(output_dir=path)
+        return 0
+
     def remove_spectrograms_and_masks_from_object(self, list_of_vocals=None):
         """
         Removes the directories containing the spectrograms and segmentation images in
@@ -380,6 +424,25 @@ class Recording(object):
         self._list_of_vocals.add_classification_to_vocals(predictions, classes)
         return 0
 
+    def update_vocals_with_segmentation_masks(self, predictions):
+        """
+        Updates :class:`ListOfVocals` with neural-network segmentation masks.
+
+        Parameters
+        ----------
+        predictions : numpy.ndarray
+            segmentation mask predictions for each vocal
+        """
+        if self._list_of_vocals.number_of_vocals != predictions.shape[0]:
+            raise RecordingStateError(
+                "number of vocals and segmenter predictions differ. "
+                f"number of vocals: {self._list_of_vocals.number_of_vocals}; "
+                f"number of predictions: {predictions.shape[0]}"
+            )
+
+        self._list_of_vocals.add_segmentation_masks_to_vocals(predictions)
+        return 0
+
     def save_outputs(self, validation_flag):
         logger = getLogger()
 
@@ -387,6 +450,8 @@ class Recording(object):
         timeAsaving = time()
         if validation_flag is True:
             self.save_validation_images(path=self.output_dir)
+        if self._list_of_vocals is not None and self._list_of_vocals.has_cnn_masks():
+            self.save_cnn_masks(path=self.output_dir)
         # self.save_recording_object(path=self.output_dir)
         self.remove_spectrograms_and_masks_from_object()
         self.save_recording_object(filename="recording_without_spectrograms", path=self.output_dir)

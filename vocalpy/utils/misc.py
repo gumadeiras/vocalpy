@@ -81,6 +81,7 @@ def validate_arguments(args):
     )
     _set_frequency_range_args(args, validated_lower, validated_higher)
     validate_thread_count(args.threads)
+    validate_segmentation_arguments(args)
     return args
 
 
@@ -129,6 +130,22 @@ def validate_thread_count(threads):
             f"provided value: {threads}; computer thread count: {num_cores}",
             UserWarning,
             stacklevel=2,
+        )
+    return 0
+
+
+def validate_segmentation_arguments(args):
+    if not hasattr(args, "segmenter"):
+        return 0
+
+    if args.segmenter and not getattr(args, "segmentation_model_path", None):
+        raise ValidationError("segmentation_model_path is required when --segmenter is enabled")
+
+    threshold = getattr(args, "segmentation_threshold", "default")
+    if threshold != "default" and not (0 < float(threshold) < 1):
+        raise ValidationError(
+            "segmentation threshold must be between 0 and 1. "
+            f"provided value: {threshold}"
         )
     return 0
 

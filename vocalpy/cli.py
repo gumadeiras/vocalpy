@@ -19,6 +19,12 @@ def int_or_default(value):
     return int(value)
 
 
+def float_or_default(value):
+    if value == "default":
+        return value
+    return float(value)
+
+
 def build_parser():
     p = ArgumentParser()
     p.add_argument("-a", "--animal", help="choose from ['mouse', 'rat']", type=str, default="mouse")
@@ -39,6 +45,19 @@ def build_parser():
     p.add_argument("-t", "--threads", help="number of threads to use (default=max/2)", type=int, default=-1)
     p.add_argument("-v", "--verbose", help="enable verbose output", action="store_true")
     p.add_argument("-l", "--validation", help="saves overlay of segmentation for manual verifcation", action="store_true")
+    p.add_argument("--segmenter", help="enable neural segmentation over detected vocal crops", action="store_true")
+    p.add_argument(
+        "--segmentation_model_path",
+        help="path to a serialized PyTorch segmentation model",
+        type=str,
+        default=None,
+    )
+    p.add_argument(
+        "--segmentation_threshold",
+        help="probability threshold for binary vocal masks",
+        type=float_or_default,
+        default="default",
+    )
     return p
 
 
@@ -75,6 +94,7 @@ def main(argv=None):
 
         recording.identify_vocalizations()
         recording.classify_vocalizations()
+        recording.segment_vocalizations()
         recording.save_outputs(validation_flag=args.validation)
 
         logger.info(f"total runtime: {(time() - time_start) // 60:.0f}m {(time() - time_start) % 60:.0f}s")
