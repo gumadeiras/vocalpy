@@ -166,3 +166,19 @@ def test_shared_classify_vocalizations_uses_common_classifier(monkeypatch):
     assert captured == {"network_type": "noise", "source": "derived-array", "list_of_vocals": vocals}
     assert predictions.tolist() == [True, False]
     assert classes == ["noise", "vocal"]
+
+
+def test_shared_classify_vocalizations_short_circuits_empty_list(monkeypatch):
+    animal = StubAnimal("mouse", {})
+    vocals = SimpleNamespace(number_of_vocals=0)
+
+    monkeypatch.setattr(
+        "vocalpy.pipelines.animal.get_pretrained_model_spec",
+        lambda network_type: SimpleNamespace(classes=("noise", "vocal")),
+    )
+    monkeypatch.setattr("vocalpy.pipelines.animal.VocalClassifier", lambda *args, **kwargs: None)
+
+    predictions, classes = animal.classify_vocalizations("noise", vocals)
+
+    assert predictions.tolist() == []
+    assert classes == ["noise", "vocal"]

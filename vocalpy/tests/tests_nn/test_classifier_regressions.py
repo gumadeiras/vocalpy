@@ -7,7 +7,9 @@ __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 
+from vocalpy.errors import ValidationError
 from vocalpy.nn.classifier import VocalClassifier
 
 
@@ -95,3 +97,18 @@ def test_classify_list_of_vocals_noise_moves_predictions_to_cpu(monkeypatch):
 
     assert prediction.cpu_called is True
     assert result.tolist() == [True]
+
+
+def test_classifier_rejects_unknown_network_type():
+    with pytest.raises(ValidationError, match="network_type must be 'noise' or 'class'"):
+        VocalClassifier("unknown", np.empty((0, 0, 0)))
+
+
+def test_classify_list_of_vocals_returns_empty_predictions_for_empty_input():
+    classifier = VocalClassifier.__new__(VocalClassifier)
+    classifier.network_type = "class"
+    classifier.classes = ["flat", "up_fm"]
+
+    result = classifier.classify_list_of_vocals(SimpleNamespace(number_of_vocals=0))
+
+    assert result.shape == (0, 2)

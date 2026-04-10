@@ -69,3 +69,20 @@ def test_add_spectrograms_to_vocals_preserves_requested_width_at_left_edge(list_
     assert np.array_equal(vocal.mask[:, :3], np.zeros((4, 3), dtype=np.uint8))
     assert np.array_equal(vocal.mask[:, 3:], full_mask[:, :5])
     assert vocal.centroid == [1, 4]
+
+
+def test_list_of_vocals_defaults_to_empty_array_state(list_of_vocals_module):
+    list_of_vocals = list_of_vocals_module.ListOfVocals()
+
+    assert list_of_vocals.number_of_vocals == 0
+    assert list_of_vocals.vocals_in_recording.tolist() == []
+
+
+def test_combine_list_of_list_of_vocals_handles_all_empty_inputs(list_of_vocals_module):
+    list_of_vocals = list_of_vocals_module.ListOfVocals()
+    empty_segment = list_of_vocals_module.ListOfVocals()
+
+    list_of_vocals.combine_list_of_list_of_vocals([empty_segment])
+
+    assert list_of_vocals.number_of_vocals == 0
+    assert list_of_vocals.vocals_combined is True
