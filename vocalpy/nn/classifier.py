@@ -11,7 +11,6 @@ import numpy as np
 import torch.nn as nn
 import torchvision.models as models
 
-from torch.autograd import Variable
 from torch.nn.functional import softmax
 from os.path import join, dirname, pardir
 
@@ -57,6 +56,14 @@ class VocalClassifier(object):
         self.dataset = self.create_dataset(source)
         self.dataloader = datasets.create_dataloader(self.dataset, self.batch_size)
 
+    @staticmethod
+    def build_mobilenet_v2_classifier(num_classes):
+        model = models.mobilenet_v2(weights=None)
+        model.classifier = nn.Sequential(
+            nn.Dropout(0.2), nn.Linear(1280, 1024), nn.ReLU(inplace=True), nn.Linear(1024, num_classes),
+        )
+        return model
+
     def load_pretrained_noise_model(self, device, model=None):
         """
         Loads pretrained Class CNN model by default, trained to classify spectrograms
@@ -69,23 +76,19 @@ class VocalClassifier(object):
         model : str, optional
             path to checkpoint for a neural network model
         """
-        if model is None:
-            model = models.mobilenet_v2()
-            model.classifier = nn.Sequential(
-                nn.Dropout(0.2), nn.Linear(1280, 1024), nn.ReLU(inplace=True), nn.Linear(1024, 2),
-            )
-
+        noise_model = self.build_mobilenet_v2_classifier(2)
+        model_path = model
+        if model_path is None:
             model_path = join(dirname(__file__), pardir, "nn", "pretrained", "noise_model.pth.tar")
             classifier_dir_path = os.path.dirname(os.path.abspath(__file__))
             model_path = join(classifier_dir_path, model_path)
-            load_checkpoint(model_path, model, device)
-            model.eval()
 
-        else:
-            load_checkpoint(model, device)
+        load_checkpoint(model_path, noise_model, device)
+        noise_model = noise_model.to(device)
+        noise_model.eval()
 
         self.classes = ["noise", "vocal"]
-        return model
+        return noise_model
 
     def load_pretrained_class_model(self, device, model=None):
         """
@@ -102,21 +105,16 @@ class VocalClassifier(object):
         model : str, optional
             path to checkpoint for a neural network model
         """
-        if model is None:
-            model = models.mobilenet_v2()
-            # -- add extra layers after the 'classifier' sequence
-            model.classifier = nn.Sequential(
-                nn.Dropout(0.2), nn.Linear(1280, 1024), nn.ReLU(inplace=True), nn.Linear(1024, 11),
-            )
-
+        class_model = self.build_mobilenet_v2_classifier(11)
+        model_path = model
+        if model_path is None:
             model_path = join(dirname(__file__), pardir, "nn", "pretrained", "class_model.pth.tar")
             classifier_dir_path = os.path.dirname(os.path.abspath(__file__))
             model_path = join(classifier_dir_path, model_path)
-            load_checkpoint(model_path, model, device)
-            model.eval()
 
-        else:
-            load_checkpoint(model, device)
+        load_checkpoint(model_path, class_model, device)
+        class_model = class_model.to(device)
+        class_model.eval()
 
         self.classes = [
             "chevron",
@@ -131,7 +129,7 @@ class VocalClassifier(object):
             "two_steps",
             "up_fm",
         ]
-        return model
+        return class_model
 
     def create_dataset(self, source):
         """
@@ -179,13 +177,12 @@ class VocalClassifier(object):
         predictions = []
 
         # compute metrics over the dataset
-        for itr, image in enumerate(self.dataloader):
-            image = image.to(self.device)
-            image = Variable(image)
-
-            score = self.model(image)
-            predicted = softmax(score.data, dim=1)
-            predictions.append(predicted.numpy())
+        with torch.no_grad():
+            for itr, image in enumerate(self.dataloader):
+                image = image.to(self.device)
+                score = self.model(image)
+                predicted = softmax(score, dim=1)
+                predictions.append(predicted.cpu().numpy())
 
         return np.vstack(predictions)
 
@@ -201,13 +198,12 @@ class VocalClassifier(object):
         predictions = []
 
         # compute metrics over the dataset
-        for itr, image in enumerate(self.dataloader):
-            image = image.to(self.device)
-            image = Variable(image)
-
-            score = self.model(image)
-            _, predicted = torch.max(score.data, 1)
-            predictions.append(predicted.numpy())
+        with torch.no_grad():
+            for itr, image in enumerate(self.dataloader):
+                image = image.to(self.device)
+                score = self.model(image)
+                _, predicted = torch.max(score, 1)
+                predictions.append(predicted.cpu().numpy())
 
         return np.hstack(predictions).astype("bool")
 

@@ -121,30 +121,28 @@ def create_dataframe_from_list_of_vocals(list_of_vocals):
     dataframe : :class:`pandas.DataFrame`
         dataframe containing all vocals from the list of vocals
     """
-    dataframe = pd.DataFrame(
-        columns=[
-            "bin_number",
-            "start(s)",
-            "end(s)",
-            "duration(ms)",
-            "interval(s)",
-            "min_freq",
-            "max_freq",
-            "avg_freq",
-            "bandwidth",
-            "min_intensity",
-            "max_intensity",
-            "avg_intensity",
-            "bg_intensity",
-            "area(pixels)",
-            "centroid_y",
-            "class_top1",
-            "class_top2",
-        ]
-    )
-
+    columns = [
+        "bin_number",
+        "start(s)",
+        "end(s)",
+        "duration(ms)",
+        "interval(s)",
+        "min_freq",
+        "max_freq",
+        "avg_freq",
+        "bandwidth",
+        "min_intensity",
+        "max_intensity",
+        "avg_intensity",
+        "bg_intensity",
+        "area(pixels)",
+        "centroid_y",
+        "class_top1",
+        "class_top2",
+    ]
+    records = []
     for vocal in list_of_vocals.vocals_in_recording:
-        dataframe = dataframe.append(
+        records.append(
             {
                 "bin_number": vocal.bin_number,
                 "start(s)": vocal.start,
@@ -163,9 +161,10 @@ def create_dataframe_from_list_of_vocals(list_of_vocals):
                 "centroid_y": vocal.centroid[0],
                 "class_top1": vocal.top1,
                 "class_top2": vocal.top2,
-            },
-            ignore_index=True,
+            }
         )
+
+    dataframe = pd.DataFrame.from_records(records, columns=columns)
 
     # -- sort vocalizations by start time and save csv
     dataframe.sort_values(

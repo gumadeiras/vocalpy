@@ -206,28 +206,27 @@ class SingleViz(object):
         return self._recording_data._list_of_vocals
 
     def create_object_dataframe(self):
-        recording_df = pd.DataFrame(
-            columns=[
-                "bin_number",
-                "start",
-                "end",
-                "duration",
-                "interval",
-                "min_freq",
-                "max_freq",
-                "avg_freq",
-                "bandwidth",
-                "min_intensity",
-                "max_intensity",
-                "avg_intensity",
-                "bg_intensity",
-                "area",
-                "centroid_y",
-            ]
-        )
+        columns = [
+            "bin_number",
+            "start",
+            "end",
+            "duration",
+            "interval",
+            "min_freq",
+            "max_freq",
+            "avg_freq",
+            "bandwidth",
+            "min_intensity",
+            "max_intensity",
+            "avg_intensity",
+            "bg_intensity",
+            "area",
+            "centroid_y",
+        ]
+        records = []
 
         for vocal in iter(self._list_of_vocals.vocals_in_recording):
-            recording_df = recording_df.append(
+            records.append(
                 {
                     "bin_number": vocal.bin_number,
                     "start": vocal.start,
@@ -244,10 +243,10 @@ class SingleViz(object):
                     "bg_intensity": vocal.bg_intensity,
                     "area": vocal.area,
                     "centroid_y": vocal.centroid[0],
-                },
-                ignore_index=True,
+                }
             )
 
+        recording_df = pd.DataFrame.from_records(records, columns=columns)
         recording_df.index = np.arange(1, len(recording_df) + 1)
         return recording_df
 
