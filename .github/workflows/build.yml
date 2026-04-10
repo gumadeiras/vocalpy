@@ -48,12 +48,12 @@ jobs:
       if: matrix.os == 'macos-latest'
       run: |
         python scripts/compare_mouse_baselines.py \
-          --max-extra-total 4 \
+          --max-extra-total 0 \
           --max-missing-total 0 \
-          --max-top1-mismatches-total 1 \
-          --max-top2-mismatches-total 3 \
-          --max-start-delta-ms 1.5 \
-          --max-end-delta-ms 0.1
+          --max-top1-mismatches-total 0 \
+          --max-top2-mismatches-total 0 \
+          --max-start-delta-ms 0.0 \
+          --max-end-delta-ms 0.0
     - name: Code coverage
       uses: codecov/codecov-action@v5
       with:
