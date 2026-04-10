@@ -15,6 +15,8 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.pardir))
 
+from vocalpy import __version__
+
 
 # -- Project information -----------------------------------------------------
 
@@ -23,7 +25,7 @@ copyright = "2020, Dietrich Lab"
 author = "Gustavo Madeira Santana"
 
 # The full version, including alpha/beta/rc tags
-release = "0.1alpha"
+release = __version__
 
 
 # -- General configuration ---------------------------------------------------
