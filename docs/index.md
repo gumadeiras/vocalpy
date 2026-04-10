@@ -2,7 +2,8 @@
 
 VocalPy detects and classifies animal vocalizations from audio recordings.
 The maintained package surface is centered on the packaged CLI, bundled
-classifier checkpoints, and the shipped mouse example fixtures.
+classifier checkpoints, optional neural vocal segmentation, and the shipped
+mouse example fixtures.
 
 ## Start here
 
@@ -27,6 +28,12 @@ python scripts/compare_example_baselines.py --species mouse
 `.vocalpy` artifacts now use a versioned envelope with object-type metadata.
 Legacy raw-pickle `.vocalpy` files still load, but maintained fixtures are
 expected to be rewritten through the current package helpers.
+
+Optional neural vocal segmentation can be enabled from the CLI with:
+
+```sh
+vocalpy --path_to_audio /path/to/audio.wav --segmenter --segmentation_model_path /path/to/segmenter.pt
+```
 
 ## API reference
 
