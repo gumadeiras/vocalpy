@@ -1,14 +1,19 @@
 import os
 import sys
+import tomllib
+
+from pathlib import Path
 
 sys.path.insert(0, os.path.abspath(os.path.pardir))
 
-from vocalpy import __version__
+ROOT = Path(__file__).resolve().parent.parent
+with (ROOT / "pyproject.toml").open("rb") as pyproject_file:
+    PYPROJECT = tomllib.load(pyproject_file)
 
 project = "VocalPy"
 copyright = "2020, Dietrich Lab"
 author = "Gustavo Madeira Santana"
-release = __version__
+release = PYPROJECT["project"]["version"]
 extensions = [
     "myst_parser",
     "sphinx.ext.autodoc",
