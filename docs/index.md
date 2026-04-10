@@ -9,6 +9,13 @@ input shape, and SHA256 hashes. Validate them with:
 vocalpy-models validate --smoke-test
 ```
 
+## Serialized outputs
+
+`.vocalpy` artifacts now use a versioned envelope with object-type metadata so
+`recording` and `list_of_vocals` payloads can be validated on load. Legacy raw
+pickle `.vocalpy` files still load, but maintained fixtures should be rewritten
+through the current package helpers.
+
 ## Example baselines
 
 Shipped example baseline fixtures are declared in `examples/audios/baselines.yml`.

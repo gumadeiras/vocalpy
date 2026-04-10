@@ -55,6 +55,12 @@ python -m pip install -r requirements.txt
 - Constraints for the tested dependency set live in `constraints/base.txt` and `constraints/dev.txt`.
 - Bundled classifier checkpoints ship with sidecar metadata in `vocalpy/nn/pretrained/*.metadata.json`.
 
+#### Serialized outputs
+
+- `.vocalpy` files now use a versioned VocalPy envelope with object-type metadata.
+- Legacy raw-pickle `.vocalpy` files still load for backward compatibility.
+- Maintained recording fixtures such as `recording_without_spectrograms.vocalpy` are expected to deserialize as `recording` objects.
+
 #### Bundled model validation
 
 Validate the shipped checkpoints and print their metadata:
