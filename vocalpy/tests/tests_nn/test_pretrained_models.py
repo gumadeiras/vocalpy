@@ -13,6 +13,8 @@ from vocalpy.nn.pretrained_models import PRETRAINED_MODEL_SPECS, validate_pretra
 def test_bundled_checkpoint_hashes_match_expected_metadata():
     for spec in PRETRAINED_MODEL_SPECS.values():
         assert validate_pretrained_model_file(spec.path, expected_sha256=spec.sha256) == spec.sha256
+        assert spec.metadata_path.exists() is True
+        assert spec.input_shape == (3, 224, 224)
 
 
 def test_bundled_noise_checkpoint_loads_and_runs_on_cpu():

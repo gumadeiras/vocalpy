@@ -44,6 +44,9 @@ jobs:
     - name: Test with pytest
       run: |
         pytest --cov=./vocalpy --cov-report=xml
+    - name: Validate bundled models
+      run: |
+        vocalpy-models validate --smoke-test
     - name: Mouse Baseline Smoke
       if: matrix.os == 'macos-latest'
       run: |

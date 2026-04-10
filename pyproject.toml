@@ -55,6 +55,7 @@ notebooks = [
 
 [project.scripts]
 vocalpy = "vocalpy.cli:main"
+vocalpy-models = "vocalpy.model_cli:main"
 
 [project.urls]
 Homepage = "https://github.com/gumadeiras/vocalpy"
@@ -69,6 +70,7 @@ include = ["vocalpy*"]
 [tool.setuptools.package-data]
 vocalpy = [
   "configs/*.yml",
+  "nn/pretrained/*.json",
   "nn/pretrained/*.pth.tar",
 ]
 

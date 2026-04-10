@@ -53,3 +53,13 @@ python -m pip install -r requirements.txt
 
 - Project metadata now lives in `pyproject.toml`.
 - Constraints for the tested dependency set live in `constraints/base.txt` and `constraints/dev.txt`.
+- Bundled classifier checkpoints ship with sidecar metadata in `vocalpy/nn/pretrained/*.metadata.json`.
+
+#### Bundled model validation
+
+Validate the shipped checkpoints and print their metadata:
+
+```sh
+vocalpy-models list
+vocalpy-models validate --smoke-test
+```

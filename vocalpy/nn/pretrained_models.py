@@ -5,52 +5,65 @@ __license__ = "Apache License, Version 2.0"
 __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 import hashlib
+import json
 
 from dataclasses import dataclass
 from pathlib import Path
+
+
+PRETRAINED_DIR = Path(__file__).with_name("pretrained")
+PRETRAINED_MODEL_METADATA_FILES = sorted(PRETRAINED_DIR.glob("*.metadata.json"))
 
 
 @dataclass(frozen=True)
 class PretrainedModelSpec:
     network_type: str
     filename: str
+    architecture: str
     num_classes: int
     classes: tuple[str, ...]
+    input_shape: tuple[int, ...]
+    checkpoint_keys: tuple[str, ...]
     sha256: str
+    source: str
+    source_version: str
+    notes: str
 
     @property
     def path(self) -> Path:
-        return Path(__file__).with_name("pretrained") / self.filename
+        return PRETRAINED_DIR / self.filename
+
+    @property
+    def metadata_path(self) -> Path:
+        return PRETRAINED_DIR / f"{self.path.stem}.metadata.json"
 
 
-PRETRAINED_MODEL_SPECS = {
-    "noise": PretrainedModelSpec(
-        network_type="noise",
-        filename="noise_model.pth.tar",
-        num_classes=2,
-        classes=("noise", "vocal"),
-        sha256="454ed81137edfe22c2908185499ff67e7217be45d60d0ac4f6264e3d256e106a",
-    ),
-    "class": PretrainedModelSpec(
-        network_type="class",
-        filename="class_model.pth.tar",
-        num_classes=11,
-        classes=(
-            "chevron",
-            "complex",
-            "down_fm",
-            "flat",
-            "mult_steps",
-            "rev_chevron",
-            "short",
-            "step_down",
-            "step_up",
-            "two_steps",
-            "up_fm",
-        ),
-        sha256="223cb63c5295284d67298a9cdddaa24e57df07e7c826d3cd6c23ed66a503e939",
-    ),
-}
+def _load_pretrained_model_spec(path: str | Path) -> PretrainedModelSpec:
+    metadata = json.loads(Path(path).read_text())
+    return PretrainedModelSpec(
+        network_type=metadata["network_type"],
+        filename=metadata["filename"],
+        architecture=metadata["architecture"],
+        num_classes=int(metadata["num_classes"]),
+        classes=tuple(metadata["classes"]),
+        input_shape=tuple(metadata["input_shape"]),
+        checkpoint_keys=tuple(metadata["checkpoint_keys"]),
+        sha256=metadata["sha256"],
+        source=metadata["source"],
+        source_version=metadata["source_version"],
+        notes=metadata["notes"],
+    )
+
+
+def load_pretrained_model_specs() -> dict[str, PretrainedModelSpec]:
+    specs = {}
+    for metadata_path in PRETRAINED_MODEL_METADATA_FILES:
+        spec = _load_pretrained_model_spec(metadata_path)
+        specs[spec.network_type] = spec
+    return specs
+
+
+PRETRAINED_MODEL_SPECS = load_pretrained_model_specs()
 
 
 def get_pretrained_model_spec(network_type: str) -> PretrainedModelSpec:

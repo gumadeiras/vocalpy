@@ -1,4 +1,13 @@
 # VocalPy
+
+## Bundled models
+
+Bundled classifier checkpoints include sidecar metadata with architecture, classes,
+input shape, and SHA256 hashes. Validate them with:
+
+```sh
+vocalpy-models validate --smoke-test
+```
 ![Python Versions](https://img.shields.io/badge/python-3.12-blue)
 ![Platforms](https://img.shields.io/badge/platform-linux--64%20%7C%20osx--64-lightgrey)
 ![build](https://github.com/gumadeiras/vocalpy/workflows/build/badge.svg?branch=master)
