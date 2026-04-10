@@ -71,6 +71,7 @@ include = ["vocalpy*"]
 vocalpy = [
   "configs/*.yml",
   "nn/pretrained/*.json",
+  "nn/pretrained/*.ckpt",
   "nn/pretrained/*.pth.tar",
 ]
 

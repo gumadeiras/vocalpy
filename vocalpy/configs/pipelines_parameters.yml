@@ -10,7 +10,7 @@ pipelines:
     identifier: True
     classifier: True
     segmenter: False
-    segmentation_threshold: 0.5
+    segmentation_threshold: 0.51
     segmentation_model_path:
     min_contrast_db: 3.0
     nfft: 1024
@@ -26,7 +26,7 @@ pipelines:
     identifier: True
     classifier: True
     segmenter: False
-    segmentation_threshold: 0.5
+    segmentation_threshold: 0.51
     segmentation_model_path:
     min_contrast_db: 3.0
     nfft: 1024
@@ -42,7 +42,7 @@ pipelines:
     identifier: True
     classifier: False
     segmenter: False
-    segmentation_threshold: 0.5
+    segmentation_threshold: 0.51
     segmentation_model_path:
     min_contrast_db: 3.0
     nfft: 1024

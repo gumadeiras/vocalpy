@@ -76,14 +76,27 @@ def test_recording_update_vocals_with_segmentation_masks_raises_on_prediction_mi
         recording.update_vocals_with_segmentation_masks(np.empty((0, 2, 2), dtype=np.uint8))
 
 
-def test_recording_segment_vocalizations_requires_model_path_when_enabled():
+def test_recording_segment_vocalizations_uses_optional_model_path_when_enabled():
     recording = Recording.__new__(Recording)
-    recording.params = {"segmenter": True, "segmentation_model_path": None, "segmentation_threshold": 0.5}
+    recording.params = {"segmenter": True, "segmentation_model_path": None, "segmentation_threshold": 0.51}
     recording._animal = SimpleNamespace(_animal="mouse")
     recording._list_of_vocals = SimpleNamespace(number_of_vocals=1)
+    captured = {}
 
-    with pytest.raises(ConfigurationError, match="segmenter enabled but no segmentation_model_path"):
-        recording.segment_vocalizations()
+    def fake_segment_vocalizations(list_of_vocals, path_to_model, threshold):
+        captured["list_of_vocals"] = list_of_vocals
+        captured["path_to_model"] = path_to_model
+        captured["threshold"] = threshold
+        return np.ones((1, 2, 2), dtype=np.uint8)
+
+    recording._animal.segment_vocalizations = fake_segment_vocalizations
+    recording.update_vocals_with_segmentation_masks = lambda predictions: captured.setdefault("predictions", predictions)
+
+    recording.segment_vocalizations()
+
+    assert captured["path_to_model"] is None
+    assert captured["threshold"] == 0.51
+    assert captured["list_of_vocals"] is recording._list_of_vocals
 
 
 def test_viz_initialization_derives_group_names_from_recording_paths(monkeypatch):

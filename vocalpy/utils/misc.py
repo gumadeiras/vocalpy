@@ -138,9 +138,6 @@ def validate_segmentation_arguments(args):
     if not hasattr(args, "segmenter"):
         return 0
 
-    if args.segmenter and not getattr(args, "segmentation_model_path", None):
-        raise ValidationError("segmentation_model_path is required when --segmenter is enabled")
-
     threshold = getattr(args, "segmentation_threshold", "default")
     if threshold != "default" and not (0 < float(threshold) < 1):
         raise ValidationError(

@@ -43,11 +43,11 @@ def test_segmenter_loads_in_memory_model_to_requested_device():
     assert model.eval_called is True
 
 
-def test_segmenter_rejects_missing_model_source():
+def test_segmenter_rejects_non_module_in_memory_model():
     segmenter = VocalSegmenter.__new__(VocalSegmenter)
 
-    with pytest.raises(ValidationError, match="segmentation model path is required"):
-        segmenter.load_segmentation_model("cpu")
+    with pytest.raises(ValidationError, match="torch.nn.Module"):
+        segmenter.load_segmentation_model("cpu", model=object())
 
 
 def test_segment_list_of_vocals_thresholds_and_resizes_predictions():
@@ -55,7 +55,7 @@ def test_segment_list_of_vocals_thresholds_and_resizes_predictions():
     segmenter.threshold = 0.5
     segmenter.output_shape = (4, 4)
     segmenter.device = "cpu"
-    segmenter.dataloader = [torch.zeros((1, 3, 224, 224), dtype=torch.float32)]
+    segmenter.dataloader = [torch.zeros((1, 1, 512, 512), dtype=torch.float32)]
     segmenter.model = lambda image: torch.tensor([[[[0.0, 1.0], [2.0, -2.0]]]], dtype=torch.float32)
 
     result = segmenter.segment_list_of_vocals(SimpleNamespace(number_of_vocals=1))

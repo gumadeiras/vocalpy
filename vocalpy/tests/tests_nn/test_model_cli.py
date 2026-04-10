@@ -15,7 +15,7 @@ def test_model_cli_lists_bundled_metadata_as_json(capsys):
     payload = json.loads(capsys.readouterr().out)
 
     assert exit_code == 0
-    assert [entry["network_type"] for entry in payload] == ["noise", "class"]
+    assert [entry["network_type"] for entry in payload] == ["noise", "class", "segment"]
     assert payload[0]["filename"] == "noise_model.pth.tar"
 
 

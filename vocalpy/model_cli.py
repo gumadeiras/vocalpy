@@ -11,6 +11,7 @@ import torch
 from argparse import ArgumentParser
 
 from vocalpy.nn.classifier import VocalClassifier
+from vocalpy.nn.segmenter import VocalSegmenter
 from vocalpy.nn.pretrained_models import PRETRAINED_MODEL_SPECS, get_pretrained_model_spec, validate_pretrained_model_file
 
 
@@ -25,7 +26,7 @@ def build_parser():
     )
     parser.add_argument(
         "--network-type",
-        choices=["class", "noise", "all"],
+        choices=["class", "noise", "segment", "all"],
         default="all",
         help="model type to inspect or validate",
     )
@@ -44,7 +45,7 @@ def build_parser():
 
 def get_selected_specs(network_type):
     if network_type == "all":
-        return [PRETRAINED_MODEL_SPECS["noise"], PRETRAINED_MODEL_SPECS["class"]]
+        return [PRETRAINED_MODEL_SPECS["noise"], PRETRAINED_MODEL_SPECS["class"], PRETRAINED_MODEL_SPECS["segment"]]
     return [get_pretrained_model_spec(network_type)]
 
 
@@ -72,6 +73,18 @@ def list_specs(specs):
 
 
 def run_smoke_test(spec):
+    if spec.network_type == "segment":
+        segmenter = VocalSegmenter.__new__(VocalSegmenter)
+        model = segmenter.load_segmentation_model(torch.device("cpu"))
+        dummy_input = torch.zeros((1, *spec.input_shape), dtype=torch.float32)
+        output_a = model(dummy_input)
+        output_b = model(dummy_input)
+        torch.testing.assert_close(output_a, output_b)
+        return {
+            "output_shape": list(output_a.shape),
+            "finite": bool(torch.isfinite(output_a).all()),
+        }
+
     classifier = VocalClassifier.__new__(VocalClassifier)
     loader = classifier.load_pretrained_class_model if spec.network_type == "class" else classifier.load_pretrained_noise_model
     model = loader(torch.device("cpu"))

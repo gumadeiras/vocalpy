@@ -249,15 +249,11 @@ class Recording(object):
 
         list_of_vocals = self._require_list_of_vocals()
 
-        segmentation_model_path = self.params.get("segmentation_model_path")
-        if not segmentation_model_path:
-            raise ConfigurationError("segmenter enabled but no segmentation_model_path was provided")
-
         logger.info("segmenting vocalizations")
         time_segmentation = time()
         predictions = self._animal.segment_vocalizations(
             list_of_vocals=list_of_vocals,
-            path_to_model=segmentation_model_path,
+            path_to_model=self.params.get("segmentation_model_path"),
             threshold=self.params["segmentation_threshold"],
         )
         logger.info("adding segmentation masks to vocals")

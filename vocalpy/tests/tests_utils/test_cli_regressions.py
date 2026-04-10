@@ -35,11 +35,8 @@ def test_cli_exits_with_parser_error_for_invalid_input(capsys):
     assert "error: audio path is not a file or directory" in captured.err
 
 
-def test_cli_exits_with_parser_error_when_segmenter_lacks_model_path(capsys):
-    with pytest.raises(SystemExit) as excinfo:
-        main(["--segmenter"])
+def test_cli_accepts_segmenter_without_explicit_model_path():
+    args = build_parser().parse_args(["--segmenter"])
 
-    captured = capsys.readouterr()
-
-    assert excinfo.value.code == 2
-    assert "error: segmentation_model_path is required when --segmenter is enabled" in captured.err
+    assert args.segmenter is True
+    assert args.segmentation_model_path is None

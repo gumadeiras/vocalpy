@@ -8,10 +8,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision.transforms as transforms
 
 from vocalpy.errors import ValidationError
-from vocalpy.nn import datasets
-from vocalpy.utils.io import load_model
+from vocalpy.nn.datasets import build_image_transform, create_dataloader
+from vocalpy.nn.pretrained_models import get_pretrained_model_spec, validate_pretrained_model_file
+from vocalpy.nn.squeakout import DEFAULT_IMAGE_SIZE, DEFAULT_MASK_THRESHOLD, load_squeakout_checkpoint
 
 
 class VocalSegmenter(object):
@@ -23,7 +25,7 @@ class VocalSegmenter(object):
     map for each crop.
     """
 
-    def __init__(self, source, batch_size=32, path_to_model=None, threshold=0.5, model=None):
+    def __init__(self, source, batch_size=32, path_to_model=None, threshold=DEFAULT_MASK_THRESHOLD, model=None):
         self.batch_size = batch_size
         self.path_to_model = path_to_model
         self.threshold = self._validate_threshold(threshold)
@@ -33,7 +35,7 @@ class VocalSegmenter(object):
 
         self.model = self.load_segmentation_model(self.device, path_to_model=path_to_model, model=model)
         self.dataset = self.create_dataset(source)
-        self.dataloader = datasets.create_dataloader(self.dataset, self.batch_size) if len(self.dataset) > 0 else []
+        self.dataloader = create_dataloader(self.dataset, self.batch_size) if len(self.dataset) > 0 else []
         self.output_shape = (self.dataset.height, self.dataset.width)
 
     @staticmethod
@@ -44,26 +46,30 @@ class VocalSegmenter(object):
         return threshold
 
     def load_segmentation_model(self, device, path_to_model=None, model=None):
-        if model is None and path_to_model is None:
-            raise ValidationError("segmentation model path is required when no in-memory model is provided")
+        spec = get_pretrained_model_spec("segment")
+        self.input_shape = tuple(spec.input_shape)
 
-        resolved_model = model if model is not None else load_model(path_to_model, device)
-        if isinstance(resolved_model, dict) and "model" in resolved_model:
-            resolved_model = resolved_model["model"]
-        if not isinstance(resolved_model, nn.Module):
-            raise ValidationError(
-                "segmentation model must resolve to a torch.nn.Module. "
-                f"received type: {resolved_model.__class__.__name__}"
-            )
+        if model is not None:
+            if not isinstance(model, nn.Module):
+                raise ValidationError(
+                    "segmentation model must resolve to a torch.nn.Module. "
+                    f"received type: {model.__class__.__name__}"
+                )
+            return model.to(device).eval()
 
-        resolved_model = resolved_model.to(device)
-        resolved_model.eval()
-        return resolved_model
+        resolved_model_path = spec.path if path_to_model is None else path_to_model
+        expected_sha256 = spec.sha256 if path_to_model is None else None
+        self.checkpoint_sha256 = validate_pretrained_model_file(
+            resolved_model_path,
+            expected_sha256=expected_sha256,
+        )
+        self.checkpoint_path = str(resolved_model_path)
+        return load_squeakout_checkpoint(resolved_model_path, device=device)
 
     def create_dataset(self, source):
         if not isinstance(source, np.ndarray):
             raise ValidationError("segmentation source must be a numpy.ndarray of vocal spectrogram crops")
-        return datasets.VocalDatasetFromArray(source)
+        return VocalSegmentationDatasetFromArray(source, image_size=self.input_shape[-2:])
 
     def empty_predictions(self):
         height, width = self.output_shape
@@ -114,3 +120,27 @@ class VocalSegmenter(object):
             mode="nearest",
         ).squeeze(1)
         return ((resized >= self.threshold).to(dtype=torch.uint8) * 255).cpu().numpy()
+
+
+class VocalSegmentationDatasetFromArray(torch.utils.data.Dataset):
+    def __init__(self, data, image_size=DEFAULT_IMAGE_SIZE, transform=None):
+        self.data = np.asarray(data, dtype=np.uint8)
+        if self.data.size == 0:
+            self.len = 0
+            self.height = 0
+            self.width = 0
+        else:
+            self.len, self.height, self.width = self.data.shape
+        self.transform = transform or transforms.Compose(
+            [
+                transforms.ToPILImage(),
+                transforms.Grayscale(num_output_channels=1),
+                *build_image_transform(image_size=image_size, repeat_channels=False).transforms,
+            ]
+        )
+
+    def __getitem__(self, index):
+        return self.transform(self.data[index])
+
+    def __len__(self):
+        return len(self.data)
