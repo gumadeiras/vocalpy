@@ -133,7 +133,7 @@ def parse_input_path(path=None, search_tree=False):
         path provided by the user
     """
     if path is None:
-        print("usage: python vocalpy.py --audio_path='/path/to/audio'")
+        print("usage: vocalpy --path_to_audio='/path/to/audio'")
         return -1
     if isdir(path):
         print("audio path is a directory, geting all .wav files")

@@ -1,5 +1,5 @@
 # VocalPy
-![Python Versions](https://img.shields.io/badge/python-3.6%20%7C%203.7-blue)
+![Python Versions](https://img.shields.io/badge/python-3.12-blue)
 ![Platforms](https://img.shields.io/badge/platform-linux--64%20%7C%20osx--64-lightgrey)
 ![build](https://github.com/gumadeiras/vocalpy/workflows/build/badge.svg?branch=master)
 [![codecov](https://codecov.io/gh/gumadeiras/vocalpy/branch/master/graph/badge.svg?token=vBVu77sJ5R)](https://codecov.io/gh/gumadeiras/vocalpy)
@@ -12,15 +12,16 @@
 
 ## quickstart (recommended)
 
-It is not required, but **highly recommended** to install using a virtual environment (see [conda](https://docs.conda.io/en/latest/miniconda.html) or [venv](https://docs.python.org/3/library/venv.html)).
+It is not required, but **highly recommended** to install using a virtual environment. The supported runtime is Python `3.12`.
 
-For `conda`:
+For `micromamba`:
 ```sh
-conda create -y --name vocalpy-env python=3.7
-conda activate vocalpy-env
+micromamba create -y -n vocalpy python=3.12
+micromamba activate vocalpy
 git clone https://github.com/gumadeiras/vocalpy.git
 cd vocalpy
-pip install -r requirements.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements-dev.txt
 ```
 
 ## direct from source
@@ -30,10 +31,11 @@ To clone the repository locally and install in editable mode run
 ```sh
 git clone https://github.com/gumadeiras/vocalpy.git
 cd vocalpy
-pip install -r requirements.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
 # code documentation
 
-- [Index](./genindex.html)
-- [Python Module Index](./py-modindex.html)
+- <a href="genindex.html">Index</a>
+- <a href="py-modindex.html">Python Module Index</a>
