@@ -22,6 +22,7 @@ from vocalpy.utils.io import (
     load_recording_data,
     load_vocalpy_file,
     parse_input_path,
+    rewrite_vocalpy_file,
     remove_directory,
     write_pickle_file,
 )
@@ -81,6 +82,22 @@ def test_load_vocalpy_file_rejects_unknown_format_version(tmp_path):
 
     with pytest.raises(SerializationError, match="unsupported VocalPy serialization version"):
         load_vocalpy_file(path, expected_object_type="recording")
+
+
+def test_rewrite_vocalpy_file_upgrades_legacy_pickle_to_current_envelope(tmp_path):
+    path = tmp_path / "legacy.vocalpy"
+    payload = {"legacy": True}
+    with path.open("wb") as output_file:
+        pickle.dump(payload, output_file)
+
+    rewrite_vocalpy_file(path, expected_object_type="recording")
+
+    with path.open("rb") as input_file:
+        envelope = pickle.load(input_file)
+
+    assert envelope["format"] == VOCALPY_SERIALIZATION_FORMAT
+    assert envelope["object_type"] == "recording"
+    assert load_vocalpy_file(path, expected_object_type="recording") == payload
 
 
 def test_load_checkpoint(tmp_path):

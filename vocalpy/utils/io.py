@@ -8,6 +8,7 @@ import glob
 import yaml
 import shutil
 import pickle
+import tempfile
 
 import numpy as np
 import soundfile as sf
@@ -102,6 +103,22 @@ def load_vocalpy_file(path, expected_object_type=None):
     with file_path.open("rb") as input_file:
         value = pickle.load(input_file)
     return _unwrap_serialized_payload(value, file_path, expected_object_type=expected_object_type)
+
+
+def rewrite_vocalpy_file(path, expected_object_type=None, object_type=None):
+    """
+    Rewrite a VocalPy artifact through the current versioned envelope.
+    """
+    file_path = Path(path)
+    payload = load_vocalpy_file(file_path, expected_object_type=expected_object_type)
+    resolved_object_type = object_type or expected_object_type or _infer_serialized_object_type(payload)
+    envelope = _build_serialization_envelope(payload, resolved_object_type)
+
+    with tempfile.NamedTemporaryFile("wb", dir=file_path.parent, delete=False) as temp_file:
+        pickle.dump(envelope, temp_file)
+        temp_path = Path(temp_file.name)
+    temp_path.replace(file_path)
+    return file_path
 
 
 def write_pickle_file(file, filename, path, object_type=None):
