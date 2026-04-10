@@ -6,12 +6,41 @@ __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 from types import SimpleNamespace
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
 from vocalpy.errors import ConfigurationError, RecordingStateError, ValidationError
 from vocalpy.modules.recording import Recording
 from vocalpy.modules.viz import SingleViz, Viz
+
+
+def make_visual_vocal(bin_number, start, end, avg_freq=60000, avg_intensity=-15):
+    return SimpleNamespace(
+        bin_number=bin_number,
+        start=start,
+        end=end,
+        duration=(end - start) * 1000,
+        interval=0.0,
+        min_freq=avg_freq - 5000,
+        max_freq=avg_freq + 5000,
+        avg_freq=avg_freq,
+        bandwidth=10000,
+        min_intensity=avg_intensity - 5,
+        max_intensity=avg_intensity + 5,
+        avg_intensity=avg_intensity,
+        bg_intensity=avg_intensity - 10,
+        area=10,
+        centroid=(3, 4),
+    )
+
+
+def make_visual_recording(vocals, duration_seconds, group_name="not set"):
+    return SimpleNamespace(
+        audio=SimpleNamespace(audio_duration=duration_seconds),
+        _list_of_vocals=SimpleNamespace(vocals_in_recording=vocals, number_of_vocals=len(vocals)),
+        group_name=group_name,
+    )
 
 
 def test_recording_create_animal_pipeline_raises_when_identifier_disabled():
@@ -131,3 +160,73 @@ def test_viz_combine_viz_dataframes_requires_non_empty_list():
 def test_single_viz_requires_recording_path():
     with pytest.raises(ValidationError, match="recording_path"):
         SingleViz()
+
+
+def test_single_viz_uses_audio_duration_when_recording_duration_is_missing(monkeypatch):
+    recording = make_visual_recording([make_visual_vocal(1, 0.2, 0.4)], duration_seconds=180)
+    monkeypatch.setattr("vocalpy.modules.viz.load_recording_data", lambda _: recording)
+
+    viz = SingleViz("/tmp/mouse_1_outputs/recording_without_spectrograms.vocalpy")
+
+    assert viz._duration == 3
+    assert viz._bins == 3
+
+
+def test_single_viz_preserves_empty_bins_in_datapoints(monkeypatch):
+    vocals = [
+        make_visual_vocal(1, 0.2, 0.4, avg_freq=55000),
+        make_visual_vocal(3, 120.2, 120.4, avg_freq=85000),
+    ]
+    recording = make_visual_recording(vocals, duration_seconds=180)
+    monkeypatch.setattr("vocalpy.modules.viz.load_recording_data", lambda _: recording)
+
+    viz = SingleViz("/tmp/mouse_1_outputs/recording_without_spectrograms.vocalpy")
+    data_values = viz.get_datapoints("avg_freq")
+
+    assert data_values.columns.tolist() == [1, 2, 3]
+    assert data_values[1].dropna().tolist() == [55000]
+    assert data_values[2].isna().all()
+    assert data_values[3].dropna().tolist() == [85000]
+
+
+def test_viz_derives_one_fallback_group_name_per_group(monkeypatch):
+    recordings = {
+        "/tmp/mouse_1_outputs/recording_without_spectrograms.vocalpy": make_visual_recording(
+            [make_visual_vocal(1, 0.2, 0.4)], duration_seconds=60
+        ),
+        "/tmp/mouse_2_outputs/recording_without_spectrograms.vocalpy": make_visual_recording(
+            [make_visual_vocal(1, 0.6, 0.8)], duration_seconds=60
+        ),
+    }
+    monkeypatch.setattr("vocalpy.modules.viz.load_recording_data", lambda path: recordings[path])
+
+    viz = Viz(
+        [[
+            "/tmp/mouse_1_outputs/recording_without_spectrograms.vocalpy",
+            "/tmp/mouse_2_outputs/recording_without_spectrograms.vocalpy",
+        ]]
+    )
+
+    assert viz._group_names.tolist() == ["group_1"]
+    assert viz._number_of_groups == 1
+    assert len(viz._list_of_viz[0]) == 2
+
+
+def test_group_pointplot_uses_data_driven_axes(monkeypatch):
+    recording = make_visual_recording(
+        [
+            make_visual_vocal(1, 0.2, 0.4, avg_freq=20000),
+            make_visual_vocal(12, 660.2, 660.4, avg_freq=26000),
+        ],
+        duration_seconds=720,
+    )
+    monkeypatch.setattr("vocalpy.modules.viz.load_recording_data", lambda _: recording)
+
+    viz = Viz([["/tmp/mouse_1_outputs/recording_without_spectrograms.vocalpy"]], group_names=["cohort"])
+    viz.group_pointplot("avg_freq")
+
+    ax = plt.gcf().axes[0]
+
+    assert ax.get_xlim()[1] >= 11.5
+    assert ax.get_ylim()[0] < 30000
+    plt.close("all")
