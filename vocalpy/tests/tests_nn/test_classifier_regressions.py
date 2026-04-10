@@ -7,7 +7,6 @@ __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 from types import SimpleNamespace
 
 import numpy as np
-import pytest
 
 from vocalpy.nn.classifier import VocalClassifier
 
@@ -55,6 +54,7 @@ def test_load_pretrained_noise_model_moves_model_to_requested_device(monkeypatch
     model = FakeModel()
 
     monkeypatch.setattr(VocalClassifier, "build_mobilenet_v2_classifier", staticmethod(lambda num_classes: model))
+    monkeypatch.setattr("vocalpy.nn.classifier.validate_pretrained_model_file", lambda path, expected_sha256=None: "abc123")
     monkeypatch.setattr("vocalpy.nn.classifier.load_checkpoint", lambda path, model_obj, device: None)
 
     returned_model = classifier.load_pretrained_noise_model("cuda", "custom-checkpoint.pth.tar")
@@ -63,6 +63,8 @@ def test_load_pretrained_noise_model_moves_model_to_requested_device(monkeypatch
     assert model.to_device == "cuda"
     assert model.eval_called is True
     assert classifier.classes == ["noise", "vocal"]
+    assert classifier.checkpoint_path == "custom-checkpoint.pth.tar"
+    assert classifier.checkpoint_sha256 == "abc123"
 
 
 def test_classify_list_of_vocals_class_moves_predictions_to_cpu(monkeypatch):

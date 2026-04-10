@@ -4,7 +4,6 @@
 __license__ = "Apache License, Version 2.0"
 __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
-import os
 import torch
 
 import numpy as np
@@ -12,10 +11,10 @@ import torch.nn as nn
 import torchvision.models as models
 
 from torch.nn.functional import softmax
-from os.path import join, dirname, pardir
 
 from vocalpy.utils.io import load_checkpoint
 from vocalpy.nn import datasets
+from vocalpy.nn.pretrained_models import get_pretrained_model_spec, validate_pretrained_model_file
 
 
 class VocalClassifier(object):
@@ -64,6 +63,21 @@ class VocalClassifier(object):
         )
         return model
 
+    def _load_pretrained_model(self, device, model_path, network_type):
+        spec = get_pretrained_model_spec(network_type)
+        resolved_model_path = spec.path if model_path is None else model_path
+        expected_sha256 = spec.sha256 if model_path is None else None
+        self.checkpoint_sha256 = validate_pretrained_model_file(resolved_model_path, expected_sha256=expected_sha256)
+        self.checkpoint_path = str(resolved_model_path)
+
+        classifier_model = self.build_mobilenet_v2_classifier(spec.num_classes)
+        load_checkpoint(self.checkpoint_path, classifier_model, device)
+        classifier_model = classifier_model.to(device)
+        classifier_model.eval()
+
+        self.classes = list(spec.classes)
+        return classifier_model
+
     def load_pretrained_noise_model(self, device, model=None):
         """
         Loads pretrained Class CNN model by default, trained to classify spectrograms
@@ -76,19 +90,7 @@ class VocalClassifier(object):
         model : str, optional
             path to checkpoint for a neural network model
         """
-        noise_model = self.build_mobilenet_v2_classifier(2)
-        model_path = model
-        if model_path is None:
-            model_path = join(dirname(__file__), pardir, "nn", "pretrained", "noise_model.pth.tar")
-            classifier_dir_path = os.path.dirname(os.path.abspath(__file__))
-            model_path = join(classifier_dir_path, model_path)
-
-        load_checkpoint(model_path, noise_model, device)
-        noise_model = noise_model.to(device)
-        noise_model.eval()
-
-        self.classes = ["noise", "vocal"]
-        return noise_model
+        return self._load_pretrained_model(device=device, model_path=model, network_type="noise")
 
     def load_pretrained_class_model(self, device, model=None):
         """
@@ -105,31 +107,7 @@ class VocalClassifier(object):
         model : str, optional
             path to checkpoint for a neural network model
         """
-        class_model = self.build_mobilenet_v2_classifier(11)
-        model_path = model
-        if model_path is None:
-            model_path = join(dirname(__file__), pardir, "nn", "pretrained", "class_model.pth.tar")
-            classifier_dir_path = os.path.dirname(os.path.abspath(__file__))
-            model_path = join(classifier_dir_path, model_path)
-
-        load_checkpoint(model_path, class_model, device)
-        class_model = class_model.to(device)
-        class_model.eval()
-
-        self.classes = [
-            "chevron",
-            "complex",
-            "down_fm",
-            "flat",
-            "mult_steps",
-            "rev_chevron",
-            "short",
-            "step_down",
-            "step_up",
-            "two_steps",
-            "up_fm",
-        ]
-        return class_model
+        return self._load_pretrained_model(device=device, model_path=model, network_type="class")
 
     def create_dataset(self, source):
         """
