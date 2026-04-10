@@ -17,11 +17,11 @@ jobs:
 
     steps:
     - name : Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         lfs: true
     - name: Set up ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install OS dependencies
@@ -52,7 +52,8 @@ jobs:
     - name: Mouse Baseline Smoke
       if: matrix.os == 'macos-latest'
       run: |
-        python scripts/compare_mouse_baselines.py \
+        python scripts/compare_example_baselines.py \
+          --species mouse \
           --max-extra-total 0 \
           --max-missing-total 0 \
           --max-top1-mismatches-total 0 \

@@ -8,6 +8,17 @@ input shape, and SHA256 hashes. Validate them with:
 ```sh
 vocalpy-models validate --smoke-test
 ```
+
+## Example baselines
+
+Shipped example baseline fixtures are declared in `examples/audios/baselines.yml`.
+The current repo only ships mouse audio, so rat and guinea pig baseline support
+is implemented through the shared manifest-driven tooling and becomes active as
+soon as those fixtures are added.
+
+```sh
+python scripts/compare_example_baselines.py --species mouse
+```
 ![Python Versions](https://img.shields.io/badge/python-3.12-blue)
 ![Platforms](https://img.shields.io/badge/platform-linux--64%20%7C%20osx--64-lightgrey)
 ![build](https://github.com/gumadeiras/vocalpy/workflows/build/badge.svg?branch=master)

@@ -63,3 +63,19 @@ Validate the shipped checkpoints and print their metadata:
 vocalpy-models list
 vocalpy-models validate --smoke-test
 ```
+
+#### Example baseline validation
+
+Validate the shipped example fixtures against the current pipeline:
+
+```sh
+python scripts/compare_example_baselines.py --species mouse
+```
+
+The fixture manifest lives in `examples/audios/baselines.yml`. When rat or
+guinea pig sample audio is added, register the new fixture there and the same
+tooling and CI gate can validate it.
+
+Bundled model metadata also records repo-history provenance for each checkpoint
+so future model swaps can be traced back to the commit where the artifact first
+appeared in this repo.
