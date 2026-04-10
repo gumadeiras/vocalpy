@@ -70,7 +70,7 @@ Run the comparison script afterward to confirm the rewritten fixtures now pass.
 
 ## Docs deploy
 
-Docs publish automatically from `master` to `https://vocalpy.gumadeiras.com` via GitHub Pages. No manual step needed — merging to `master` triggers the deploy.
+Docs publish automatically from `main` to `https://vocalpy.gumadeiras.com` via GitHub Pages. No manual step needed; merging to `main` triggers the deploy.
 
 DNS record:
 
