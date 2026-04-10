@@ -4,14 +4,15 @@
 __license__ = "Apache License, Version 2.0"
 __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
-from pathlib import Path
+import pickle
 
-import numpy as np
 import pytest
 import torch
 
-from vocalpy.errors import InputPathError
+from vocalpy.errors import InputPathError, SerializationError
 from vocalpy.utils.io import (
+    VOCALPY_SERIALIZATION_FORMAT,
+    VOCALPY_SERIALIZATION_VERSION,
     create_directory,
     create_output_directory_structure,
     get_output_directory_for_audio_file,
@@ -19,6 +20,7 @@ from vocalpy.utils.io import (
     load_model,
     load_pickle_file,
     load_recording_data,
+    load_vocalpy_file,
     parse_input_path,
     remove_directory,
     write_pickle_file,
@@ -28,20 +30,57 @@ from vocalpy.utils.io import (
 def test_write_and_load_pickle_file_round_trip(tmp_path):
     payload = {"detected_vocals": 3}
 
-    write_pickle_file(payload, "recording", tmp_path)
+    file_path = write_pickle_file(payload, "recording", tmp_path, object_type="recording")
     loaded = load_pickle_file("recording", tmp_path)
 
+    with file_path.open("rb") as input_file:
+        envelope = pickle.load(input_file)
+
+    assert envelope["format"] == VOCALPY_SERIALIZATION_FORMAT
+    assert envelope["format_version"] == VOCALPY_SERIALIZATION_VERSION
+    assert envelope["object_type"] == "recording"
     assert loaded == payload
 
 
 def test_load_recording_data_round_trip(tmp_path):
-    path = tmp_path / "recording.npy"
-    expected = np.asarray([1, 2, 3])
-    np.save(path, expected)
+    path = write_pickle_file({"name": "mouse"}, "recording_without_spectrograms", tmp_path, object_type="recording")
 
     loaded = load_recording_data(path)
 
-    assert np.array_equal(loaded, expected)
+    assert loaded == {"name": "mouse"}
+
+
+def test_load_vocalpy_file_keeps_legacy_pickle_compatibility(tmp_path):
+    path = tmp_path / "legacy.vocalpy"
+    payload = {"legacy": True}
+    with path.open("wb") as output_file:
+        pickle.dump(payload, output_file)
+
+    loaded = load_vocalpy_file(path, expected_object_type="recording")
+
+    assert loaded == payload
+
+
+def test_load_vocalpy_file_rejects_type_mismatch(tmp_path):
+    path = write_pickle_file({"name": "mouse"}, "recording_without_spectrograms", tmp_path, object_type="recording")
+
+    with pytest.raises(SerializationError, match="type mismatch"):
+        load_vocalpy_file(path, expected_object_type="list_of_vocals")
+
+
+def test_load_vocalpy_file_rejects_unknown_format_version(tmp_path):
+    path = tmp_path / "broken.vocalpy"
+    payload = {
+        "format": VOCALPY_SERIALIZATION_FORMAT,
+        "format_version": VOCALPY_SERIALIZATION_VERSION + 1,
+        "object_type": "recording",
+        "payload": {"broken": True},
+    }
+    with path.open("wb") as output_file:
+        pickle.dump(payload, output_file)
+
+    with pytest.raises(SerializationError, match="unsupported VocalPy serialization version"):
+        load_vocalpy_file(path, expected_object_type="recording")
 
 
 def test_load_checkpoint(tmp_path):

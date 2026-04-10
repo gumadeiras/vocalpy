@@ -56,7 +56,7 @@ class ListOfVocals(object):
         path : str
             path to save the object
         """
-        write_pickle_file(self, "list_of_vocals", path)
+        write_pickle_file(self, "list_of_vocals", path, object_type="list_of_vocals")
 
     def update_intervals(self):
         """

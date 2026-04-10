@@ -23,3 +23,7 @@ class RecordingStateError(VocalPyError):
 
 class InputPathError(ValidationError):
     """Raised when the requested audio input path is missing or invalid."""
+
+
+class SerializationError(VocalPyError):
+    """Raised when a serialized VocalPy object is malformed or incompatible."""

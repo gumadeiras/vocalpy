@@ -14,11 +14,97 @@ import soundfile as sf
 
 from os import makedirs
 from os.path import basename, exists, isdir, isfile, join, splitext
+from pathlib import Path
 
-from vocalpy.errors import InputPathError
+from vocalpy import __version__
+from vocalpy.errors import InputPathError, SerializationError
 
 
-def write_pickle_file(file, filename, path):
+VOCALPY_FILE_EXTENSION = ".vocalpy"
+VOCALPY_SERIALIZATION_FORMAT = "vocalpy-object"
+VOCALPY_SERIALIZATION_VERSION = 1
+
+
+def get_vocalpy_file_path(filename, path):
+    return Path(path) / f"{filename}{VOCALPY_FILE_EXTENSION}"
+
+
+def _infer_serialized_object_type(payload):
+    class_name = payload.__class__.__name__.lower()
+    if class_name == "recording":
+        return "recording"
+    if class_name == "listofvocals":
+        return "list_of_vocals"
+    return class_name
+
+
+def _build_serialization_envelope(payload, object_type):
+    return {
+        "format": VOCALPY_SERIALIZATION_FORMAT,
+        "format_version": VOCALPY_SERIALIZATION_VERSION,
+        "package_version": __version__,
+        "object_type": object_type,
+        "payload": payload,
+    }
+
+
+def _is_serialization_envelope(value):
+    return isinstance(value, dict) and value.get("format") == VOCALPY_SERIALIZATION_FORMAT
+
+
+def _unwrap_serialized_payload(value, source, expected_object_type=None):
+    if not _is_serialization_envelope(value):
+        return value
+
+    format_version = value.get("format_version")
+    if format_version != VOCALPY_SERIALIZATION_VERSION:
+        raise SerializationError(
+            f"unsupported VocalPy serialization version {format_version} in {source}; "
+            f"expected {VOCALPY_SERIALIZATION_VERSION}"
+        )
+
+    object_type = value.get("object_type")
+    if expected_object_type is not None and object_type != expected_object_type:
+        raise SerializationError(
+            f"serialized object type mismatch in {source}: "
+            f"expected {expected_object_type}, found {object_type}"
+        )
+
+    if "payload" not in value:
+        raise SerializationError(f"serialized object payload missing in {source}")
+
+    return value["payload"]
+
+
+def write_vocalpy_file(payload, filename, path, object_type=None):
+    """
+    Serialize a VocalPy object with versioned metadata.
+    """
+    if exists(path) is False:
+        raise ValueError(f"path does not existe: {path}")
+
+    resolved_object_type = object_type or _infer_serialized_object_type(payload)
+    file_path = get_vocalpy_file_path(filename, path)
+    envelope = _build_serialization_envelope(payload, resolved_object_type)
+    with file_path.open("wb") as output_file:
+        pickle.dump(envelope, output_file)
+    return file_path
+
+
+def load_vocalpy_file(path, expected_object_type=None):
+    """
+    Load a VocalPy serialized object with legacy raw-pickle compatibility.
+    """
+    file_path = Path(path)
+    if file_path.exists() is False:
+        raise ValueError(f"file does not existe: {path}")
+
+    with file_path.open("rb") as input_file:
+        value = pickle.load(input_file)
+    return _unwrap_serialized_payload(value, file_path, expected_object_type=expected_object_type)
+
+
+def write_pickle_file(file, filename, path, object_type=None):
     """
     Writes vocalpy pickle object to a path
 
@@ -36,14 +122,10 @@ def write_pickle_file(file, filename, path):
     ValueError
         if the path does not exist
     """
-    if exists(path) is False:
-        raise ValueError(f"path does not existe: {path}")
-
-    with open(join(path, filename + ".vocalpy"), "wb") as output_file:
-        pickle.dump(file, output_file)
+    return write_vocalpy_file(file, filename, path, object_type=object_type)
 
 
-def load_pickle_file(filename, path):
+def load_pickle_file(filename, path, expected_object_type=None):
     """
     Loads vocalpy pickle object from a path
 
@@ -62,8 +144,10 @@ def load_pickle_file(filename, path):
     if exists(path) is False:
         raise ValueError(f"path does not existe: {path}")
 
-    with open(join(path, filename + ".vocalpy"), "rb") as input_file:
-        return pickle.load(input_file)
+    return load_vocalpy_file(
+        get_vocalpy_file_path(filename, path),
+        expected_object_type=expected_object_type,
+    )
 
 
 def load_recording_data(path):
@@ -80,9 +164,7 @@ def load_recording_data(path):
     ValueError
         if the file does not exist
     """
-    if exists(path) is False:
-        raise ValueError(f"file does not existe: {path}")
-    return np.load(path, allow_pickle=True)
+    return load_vocalpy_file(path, expected_object_type="recording")
 
 
 def load_checkpoint(checkpoint, model, device, optimizer=None):

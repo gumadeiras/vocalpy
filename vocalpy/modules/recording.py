@@ -110,7 +110,7 @@ class Recording(object):
         self._group_name = new_group_name
 
     def save_recording_object(self, path, filename="recording"):
-        write_pickle_file(self, filename, path)
+        write_pickle_file(self, filename, path, object_type="recording")
 
     def create_user_parameters_yaml(self, args):
         user_params_yaml = load_user_parameters(args)
@@ -241,7 +241,7 @@ class Recording(object):
         """
         Loads :class:`ListOfVocals`  from a python object file
         """
-        return load_pickle_file("list_of_vocals", self.output_dir)
+        return load_pickle_file("list_of_vocals", self.output_dir, expected_object_type="list_of_vocals")
 
     def save_recording_data_to_csv(self, list_of_vocals=None, path=None):
         """
