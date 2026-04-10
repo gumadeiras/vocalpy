@@ -26,6 +26,13 @@ soon as those fixtures are added.
 ```sh
 python scripts/compare_example_baselines.py --species mouse
 ```
+
+## Example notebooks
+
+The example notebooks under `examples/` are split between a small maintained
+demo surface and older archived research notebooks. Use `examples/README.md`
+as the canonical guide before treating a notebook as current package
+documentation.
 ![Python Versions](https://img.shields.io/badge/python-3.12-blue)
 ![Platforms](https://img.shields.io/badge/platform-linux--64%20%7C%20osx--64-lightgrey)
 ![build](https://github.com/gumadeiras/vocalpy/workflows/build/badge.svg?branch=master)

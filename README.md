@@ -82,6 +82,9 @@ The fixture manifest lives in `examples/audios/baselines.yml`. When rat or
 guinea pig sample audio is added, register the new fixture there and the same
 tooling and CI gate can validate it.
 
+Notebook examples live under `examples/`. The maintained versus archived
+notebook boundary is documented in `examples/README.md`.
+
 Bundled model metadata also records repo-history provenance for each checkpoint
 so future model swaps can be traced back to the commit where the artifact first
 appeared in this repo.
