@@ -250,6 +250,23 @@ class ListOfVocals(object):
             vocal.mask = None
         return 0
 
+    def remove_cnn_masks(self):
+        """
+        Removes the neural segmentation data from each :class:`Vocal` in the :class:`ListOfVocals`
+        """
+        for vocal in self.vocals_in_recording:
+            vocal.cnn_mask = None
+        return 0
+
+    def remove_visual_data(self):
+        """
+        Removes transient image payloads from each :class:`Vocal`.
+        """
+        self.remove_spectrograms()
+        self.remove_masks()
+        self.remove_cnn_masks()
+        return 0
+
     def add_segmentation_masks_to_vocals(self, masks):
         """
         Updates :class:`ListOfVocals` with neural-network segmentation masks.

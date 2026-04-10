@@ -78,7 +78,7 @@ def test_recording_update_vocals_with_segmentation_masks_raises_on_prediction_mi
 
 def test_recording_segment_vocalizations_uses_optional_model_path_when_enabled():
     recording = Recording.__new__(Recording)
-    recording.params = {"segmenter": True, "segmentation_model_path": None, "segmentation_threshold": 0.51}
+    recording.params = {"segmenter": True, "segmentation_model_path": None}
     recording._animal = SimpleNamespace(_animal="mouse")
     recording._list_of_vocals = SimpleNamespace(number_of_vocals=1)
     captured = {}
@@ -95,7 +95,7 @@ def test_recording_segment_vocalizations_uses_optional_model_path_when_enabled()
     recording.segment_vocalizations()
 
     assert captured["path_to_model"] is None
-    assert captured["threshold"] == 0.51
+    assert captured["threshold"] is None
     assert captured["list_of_vocals"] is recording._list_of_vocals
 
 

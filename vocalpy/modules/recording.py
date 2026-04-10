@@ -254,7 +254,7 @@ class Recording(object):
         predictions = self._animal.segment_vocalizations(
             list_of_vocals=list_of_vocals,
             path_to_model=self.params.get("segmentation_model_path"),
-            threshold=self.params["segmentation_threshold"],
+            threshold=self.params.get("segmentation_threshold"),
         )
         logger.info("adding segmentation masks to vocals")
         self.update_vocals_with_segmentation_masks(predictions)
@@ -357,16 +357,14 @@ class Recording(object):
 
     def remove_spectrograms_and_masks_from_object(self, list_of_vocals=None):
         """
-        Removes the directories containing the spectrograms and segmentation images in
-        the Recording Object output directory
+        Removes transient image payloads from the in-memory Vocal objects.
 
         Parameters
         ----------
         list_of_vocals : :class:`ListOfVocals`, optional
         """
         list_of_vocals = self._require_list_of_vocals(list_of_vocals)
-        list_of_vocals.remove_spectrograms()
-        list_of_vocals.remove_masks()
+        list_of_vocals.remove_visual_data()
         return 0
 
     def create_dataset(self, list_of_vocals=None):

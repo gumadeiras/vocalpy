@@ -89,6 +89,17 @@ def test_add_segmentation_masks_to_vocals_assigns_masks(list_of_vocals_module):
     assert list_of_vocals.has_cnn_masks() is True
 
 
+def test_remove_visual_data_clears_all_transient_images(list_of_vocals_module):
+    vocal = SimpleNamespace(spectrogram=np.ones((2, 2)), mask=np.ones((2, 2)), cnn_mask=np.ones((2, 2)))
+    list_of_vocals = make_list_of_vocals(list_of_vocals_module, [vocal])
+
+    list_of_vocals.remove_visual_data()
+
+    assert vocal.spectrogram is None
+    assert vocal.mask is None
+    assert vocal.cnn_mask is None
+
+
 def test_combine_list_of_list_of_vocals_handles_all_empty_inputs(list_of_vocals_module):
     list_of_vocals = list_of_vocals_module.ListOfVocals()
     empty_segment = list_of_vocals_module.ListOfVocals()

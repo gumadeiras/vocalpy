@@ -47,7 +47,7 @@ class Animal(ABC):
         predictions = classifier.classify_list_of_vocals(list_of_vocals)
         return predictions, classifier.classes
 
-    def segment_vocalizations(self, list_of_vocals, source=None, path_to_model=None, threshold=0.5):
+    def segment_vocalizations(self, list_of_vocals, source=None, path_to_model=None, threshold=None):
         if list_of_vocals.number_of_vocals == 0:
             return np.empty((0, 0, 0), dtype=np.uint8)
 
