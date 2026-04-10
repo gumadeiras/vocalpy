@@ -6,11 +6,11 @@ __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 
 from time import time
-from os import makedirs
 from logging import getLogger
 from joblib import Parallel, delayed
-from os.path import join, split, splitext, exists
+from os.path import join, split, splitext
 
+from vocalpy.errors import ConfigurationError, RecordingStateError
 from vocalpy.modules.audio import Audio
 from vocalpy.modules.list_of_vocals import ListOfVocals
 from vocalpy.configs.configs import load_user_parameters, write_user_parameters
@@ -21,6 +21,7 @@ from vocalpy.utils.io import (
     create_directory,
     remove_directory,
     save_dataframe_as_csv,
+    get_output_directory_for_audio_file,
 )
 
 
@@ -129,18 +130,13 @@ class Recording(object):
         self.recording_dir = basepath
         self.recording_name = filename
         filename = splitext(filename)[0]
-        self.output_dir = join(self.recording_dir, filename + "_outputs")
+        self.output_dir = get_output_directory_for_audio_file(recording_path)
         self.spectrogram_dir = join(self.output_dir, "spectrogram")
         self.mask_dir = join(self.output_dir, "mask")
 
-        if not exists(self.output_dir):
-            makedirs(self.output_dir, exist_ok=True)
-
-        if not exists(self.spectrogram_dir):
-            makedirs(self.spectrogram_dir, exist_ok=True)
-
-        if not exists(self.mask_dir):
-            makedirs(self.mask_dir, exist_ok=True)
+        create_directory(self.output_dir)
+        create_directory(self.spectrogram_dir)
+        create_directory(self.mask_dir)
 
     def create_animal_pipeline(self):
         """
@@ -158,12 +154,18 @@ class Recording(object):
         """
         import importlib
 
-        if self.params["identifier"]:
-            AnimalClass = getattr(importlib.import_module("vocalpy.pipelines." + self._animal_name), self._animal_name.title())
-        else:
-            print("implement error, animal pipeline not available")
+        if not self.params["identifier"]:
+            raise ConfigurationError(f"animal pipeline is not available for {self._animal_name}")
+
+        AnimalClass = getattr(importlib.import_module("vocalpy.pipelines." + self._animal_name), self._animal_name.title())
 
         return AnimalClass(self._animal_name.lower(), self.params)
+
+    def _require_list_of_vocals(self, list_of_vocals=None):
+        resolved_list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
+        if resolved_list_of_vocals is None:
+            raise RecordingStateError("recording has no list of vocals")
+        return resolved_list_of_vocals
 
     def identify_vocalizations(self):
         """
@@ -251,20 +253,16 @@ class Recording(object):
         list_of_vocals : :class:`ListOfVocals`, optional
         path : str, optional
         """
-        # -- save metadata to a csv file
-        if list_of_vocals is None and self._has_list_of_vocals is not True:
-            return -1
-        list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
-
-        if path is None:
-            path = self.output_dir
+        list_of_vocals = self._require_list_of_vocals(list_of_vocals)
+        path = path if path is not None else self.output_dir
 
         if list_of_vocals.intervals_fixed is False:
             list_of_vocals.update_intervals()
 
-        recording_df = create_dataframe_from_list_of_vocals(self.list_of_vocals)
+        recording_df = create_dataframe_from_list_of_vocals(list_of_vocals)
 
-        save_dataframe_as_csv(dataframe=recording_df, path=self.output_dir, filename=self.recording_name)
+        save_dataframe_as_csv(dataframe=recording_df, path=path, filename=self.recording_name)
+        return 0
 
     def save_spectrograms(self, list_of_vocals=None, path=None):
         """
@@ -275,9 +273,7 @@ class Recording(object):
         list_of_vocals : :class:`ListOfVocals`, optional
         path : str, optional
         """
-        if self._has_list_of_vocals is not True and list_of_vocals is None:
-            return -1
-        list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
+        list_of_vocals = self._require_list_of_vocals(list_of_vocals)
         path = path if path is not None else self.output_dir
         remove_directory(join(path, "spectrogram"))
         create_directory(join(path, "spectrogram"))
@@ -293,9 +289,7 @@ class Recording(object):
         list_of_vocals : :class:`ListOfVocals`, optional
         path : str, optional
         """
-        if self._has_list_of_vocals is not True and list_of_vocals is None:
-            return -1
-        list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
+        list_of_vocals = self._require_list_of_vocals(list_of_vocals)
         path = path if path is not None else self.output_dir
         remove_directory(join(path, "spectrogram_validation"))
         create_directory(join(path, "spectrogram_validation"))
@@ -311,9 +305,7 @@ class Recording(object):
         list_of_vocals : :class:`ListOfVocals`, optional
         path : str, optional
         """
-        if self._has_list_of_vocals is not True and list_of_vocals is None:
-            return -1
-        list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
+        list_of_vocals = self._require_list_of_vocals(list_of_vocals)
         path = path if path is not None else self.output_dir
         remove_directory(join(path, "spectrogram"))
         create_directory(join(path, "spectrogram"))
@@ -332,9 +324,7 @@ class Recording(object):
         ----------
         list_of_vocals : :class:`ListOfVocals`, optional
         """
-        if self._has_list_of_vocals is not True and list_of_vocals is None:
-            return -1
-        list_of_vocals = list_of_vocals if list_of_vocals is not None else self._list_of_vocals
+        list_of_vocals = self._require_list_of_vocals(list_of_vocals)
         list_of_vocals.remove_spectrograms()
         list_of_vocals.remove_masks()
         return 0
@@ -346,12 +336,8 @@ class Recording(object):
         # ToDo
         # create from list of vocals or save spectrograms
         # create filename list etc and create from folder path
-        if self.has_list_of_vocals is not True and list_of_vocals is None:
-            return -1
-        list_of_vocals = list_of_vocals if list_of_vocals is not None else self.load_list_of_vocals()
-
-        print("create_dataset not implemented")
-        return NotImplemented
+        self._require_list_of_vocals(list_of_vocals)
+        raise NotImplementedError("create_dataset is not implemented")
 
     def remove_vocals_classified_as_noise_from_list_of_vocals(self, predictions):
         """
@@ -362,10 +348,6 @@ class Recording(object):
         predictions : List[float]
             Neural Network classification predictions for the :class:`ListOfVocals`
         """
-
-        # -- if list of vocals is empty, there are no predictions
-        if isinstance(predictions, int) and predictions == -1:
-            return predictions
 
         # -- remove vocals that were classifier as noise
         self._list_of_vocals.remove_vocals_classified_as_noise(predictions)
@@ -386,19 +368,13 @@ class Recording(object):
             Labels used for classifying vocalizations
         """
 
-        # -- if list of vocals is empty, there are no predictions
-        if isinstance(predictions, int) and predictions == -1:
-            return predictions
-
         # -- make sure number of predictions is the same as number of vocals
-        try:
-            assert self._list_of_vocals.number_of_vocals == predictions.shape[0]
-        except AssertionError:
-            print(
-                f"[error] number of vocals: {self._list_of_vocals.number_of_vocals}; \
-                number of predictions: {predictions.shape[0]}"
+        if self._list_of_vocals.number_of_vocals != predictions.shape[0]:
+            raise RecordingStateError(
+                "number of vocals and classifier predictions differ. "
+                f"number of vocals: {self._list_of_vocals.number_of_vocals}; "
+                f"number of predictions: {predictions.shape[0]}"
             )
-            exit()
 
         # -- add probability distribution for each vocal, top1 and top2 classes
         self._list_of_vocals.add_classification_to_vocals(predictions, classes)

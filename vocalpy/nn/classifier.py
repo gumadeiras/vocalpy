@@ -12,6 +12,7 @@ import torchvision.models as models
 
 from torch.nn.functional import softmax
 
+from vocalpy.errors import ValidationError
 from vocalpy.utils.io import load_checkpoint
 from vocalpy.nn import datasets
 from vocalpy.nn.pretrained_models import get_pretrained_model_spec, validate_pretrained_model_file
@@ -34,11 +35,12 @@ class VocalClassifier(object):
     """
 
     def __init__(self, network_type, source, batch_size=32, path_to_checkpoint=None):
-        if network_type in ["noise", "class"]:
-            self.network_type = network_type
-        else:
-            print(f"VocalClassifiier network_type must be 'noise' or 'class'")
-            print(f"provided value {network_type}")
+        if network_type not in ["noise", "class"]:
+            raise ValidationError(
+                "VocalClassifier network_type must be 'noise' or 'class'. "
+                f"provided value: {network_type}"
+            )
+        self.network_type = network_type
 
         # self.source = source
         self.batch_size = batch_size
@@ -53,7 +55,7 @@ class VocalClassifier(object):
             self.model = self.load_pretrained_class_model(self.device, self.path_to_checkpoint)
 
         self.dataset = self.create_dataset(source)
-        self.dataloader = datasets.create_dataloader(self.dataset, self.batch_size)
+        self.dataloader = datasets.create_dataloader(self.dataset, self.batch_size) if len(self.dataset) > 0 else []
 
     @staticmethod
     def build_mobilenet_v2_classifier(num_classes):
@@ -124,6 +126,11 @@ class VocalClassifier(object):
 
         return datasets.VocalDatasetFromFolder(source)
 
+    def empty_predictions(self):
+        if self.network_type == "noise":
+            return np.asarray([], dtype=bool)
+        return np.empty((0, len(self.classes)), dtype=float)
+
     def classify_list_of_vocals(self, list_of_vocals):
         """
         Classify a :class:`ListOfVocals` using a Neural Network
@@ -135,8 +142,7 @@ class VocalClassifier(object):
         """
         # -- is list of vocals is empty, just return
         if list_of_vocals.number_of_vocals < 1:
-            print("[classify vocals as noise]: list of vocals is empty")
-            return -1
+            return self.empty_predictions()
 
         if self.network_type == "noise":
             return self.classify_list_of_vocals_noise(list_of_vocals)
@@ -184,7 +190,3 @@ class VocalClassifier(object):
                 predictions.append(predicted.cpu().numpy())
 
         return np.hstack(predictions).astype("bool")
-
-    def remove_candidates_classified_as_noise(self, classifications, list_of_vocals):
-        print("remove_candidates_classified_as_noise() not implemented")
-        return 0

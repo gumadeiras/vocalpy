@@ -63,7 +63,12 @@ class VocalDatasetFromArray(data.Dataset):
 
     def __init__(self, data, transform=None):
         self.data = np.asarray(data, dtype=np.uint8)
-        self.len, self.height, self.width = data.shape
+        if self.data.size == 0:
+            self.len = 0
+            self.height = 0
+            self.width = 0
+        else:
+            self.len, self.height, self.width = self.data.shape
         self.transform = transform
 
     def __getitem__(self, index):
@@ -109,4 +114,6 @@ def create_array_from_list_of_vocals(list_of_vocals):
     array_of_vocals = []
     for vocal in list_of_vocals.vocals_in_recording:
         array_of_vocals.append(vocal.spectrogram)
+    if not array_of_vocals:
+        return np.empty((0, 0, 0), dtype=np.uint8)
     return np.asarray(array_of_vocals)

@@ -8,6 +8,8 @@ import torch
 
 import numpy as np
 
+from vocalpy.utils.io import write_pickle_file
+
 
 class ListOfVocals(object):
     """
@@ -20,17 +22,23 @@ class ListOfVocals(object):
     """
 
     def __init__(self, vocals_in_recording=None):
-        if vocals_in_recording is not None:
-            self.vocals_in_recording = np.hstack(vocals_in_recording)
-            self.number_of_vocals = len(self.vocals_in_recording)
-        else:
-            self.vocals_in_recording = None
-            self.number_of_vocals = None
+        self.vocals_in_recording = self._normalize_vocals(vocals_in_recording)
+        self.number_of_vocals = len(self.vocals_in_recording)
 
         self.vocals_combined = False
         self.intervals_fixed = False
         self.centroid_spectro_fixed = False
         self.coords_fixed = False
+
+    @staticmethod
+    def _normalize_vocals(vocals_in_recording):
+        if vocals_in_recording is None:
+            return np.asarray([], dtype=object)
+
+        normalized_vocals = np.asarray(vocals_in_recording, dtype=object)
+        if normalized_vocals.size == 0:
+            return np.asarray([], dtype=object)
+        return normalized_vocals.reshape(-1)
 
     def __str__(self):
         return f"{self.__class__.__name__}:\n \
@@ -48,8 +56,6 @@ class ListOfVocals(object):
         path : str
             path to save the object
         """
-        from utils import write_pickle_file
-
         write_pickle_file(self, "list_of_vocals", path)
 
     def update_intervals(self):
@@ -57,6 +63,10 @@ class ListOfVocals(object):
         Updates the interval (silence) between vocals. Usually used after combining or removing vocals
         """
         # -- go through vocals and update inter vocal times
+        if self.number_of_vocals == 0:
+            self.intervals_fixed = True
+            return 0
+
         self.vocals_in_recording[0].interval = 0
 
         for idx in range(1, len(self.vocals_in_recording), 1):
@@ -113,21 +123,19 @@ class ListOfVocals(object):
         """
         new_list_of_vocals = []
         for list_of_vocals in list_of_list_of_vocals:
-            try:
-                new_list_of_vocals.append(np.hstack(list_of_vocals.vocals_in_recording))
-            except:
-                # empty list
+            if list_of_vocals is None:
                 continue
+            normalized_vocals = self._normalize_vocals(list_of_vocals.vocals_in_recording)
+            if normalized_vocals.size > 0:
+                new_list_of_vocals.append(normalized_vocals)
 
-        if new_list_of_vocals:
-            self.vocals_in_recording = np.hstack(new_list_of_vocals)
-            self.number_of_vocals = len(self.vocals_in_recording)
-            self.vocals_combined = True
-            self.centroid_spectro_fixed = True
-            return 0
-
-        print("recording has no vocals")
-        exit()
+        self.vocals_in_recording = (
+            np.hstack(new_list_of_vocals) if new_list_of_vocals else np.asarray([], dtype=object)
+        )
+        self.number_of_vocals = len(self.vocals_in_recording)
+        self.vocals_combined = True
+        self.centroid_spectro_fixed = True
+        return 0
 
     def add_spectrograms_to_vocals(self, full_spectrogram, full_mask, spec_range=200):
         """

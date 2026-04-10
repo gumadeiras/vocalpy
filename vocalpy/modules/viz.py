@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 
 from matplotlib.lines import Line2D
 
+from vocalpy.errors import ValidationError
 from vocalpy.utils.io import load_recording_data
 
 
@@ -24,9 +25,8 @@ class Viz(object):
 
     def __init__(self, list_of_groups, group_names=None, bin_size=1):
 
-        if list_of_groups < 1:
-            print("please provide at least one recording for analysis.")
-            exit()
+        if len(list_of_groups) < 1:
+            raise ValidationError("please provide at least one recording for analysis.")
 
         self._list_of_groups = list_of_groups
         self._bin_size = bin_size
@@ -50,12 +50,15 @@ class Viz(object):
                 # -- get recording name and remove trailing '_outputs' (-8)
                 recording_name = os.path.basename(os.path.split(recording)[0])[0:-8]
                 group_names.append(recording_name)
-        self._group_names = np.asarray(group_names)
+        return np.asarray(group_names)
+
+    @property
+    def list_of_groups(self):
+        return self._list_of_groups
 
     def combine_viz_dataframes(self, list_of_viz=None):
-        if list_of_viz is None:
-            print("please provide a list_of_viz")
-            return -1
+        if list_of_viz is None or len(list_of_viz) == 0:
+            raise ValidationError("please provide a non-empty list_of_viz")
 
         dfs = list_of_viz[0]._recording_df
         for i, viz in enumerate(list_of_viz):
@@ -103,8 +106,7 @@ class Viz(object):
 
     def plot(self, plot_type="group", dataname="avg_freq"):
         if plot_type not in ["group", "individual"]:
-            print('type must be "group" or "individual".')
-            exit()
+            raise ValidationError('type must be "group" or "individual".')
 
         if dataname not in [
             "raster",
@@ -119,11 +121,11 @@ class Viz(object):
             "avg_intensity",
             "area",
         ]:
-            print("possible datapoints are:")
-            print(
-                "raster, rate, min_freq, max_freq, avg_freq, duration, bandwidth, min_intensity, max_intensity, avg_intensity, area."
+            raise ValidationError(
+                "possible datapoints are: "
+                "raster, rate, min_freq, max_freq, avg_freq, duration, "
+                "bandwidth, min_intensity, max_intensity, avg_intensity, area."
             )
-            exit()
 
         if plot_type == "group":
             self.plot_group(dataname)
@@ -182,8 +184,7 @@ class SingleViz(object):
     def __init__(self, recording_path=None, bin_size=1):
 
         if recording_path is None:
-            print("please provide a recording_path")
-            exit()
+            raise ValidationError("please provide a recording_path")
 
         self._recording_path = recording_path
         self._recording_data = load_recording_data(self._recording_path)
@@ -256,8 +257,8 @@ class SingleViz(object):
         for idx in range(1, self._bins):
             try:
                 split_array.append(np.where(bin_column == idx * self._bin_size)[0][-1] + 1)
-            except:
-                print(f"recording {self._recording_data.recording_name} had no vocals in bin {idx}")
+            except IndexError:
+                continue
         return split_array
 
     def split_data_by_indices(self, dataframe):

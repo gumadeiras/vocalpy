@@ -17,6 +17,7 @@ from skimage import exposure, measure
 from vocalpy.utils.io import read_audio
 from vocalpy.nn.classifier import VocalClassifier
 from vocalpy.nn.datasets import create_array_from_list_of_vocals
+from vocalpy.nn.pretrained_models import get_pretrained_model_spec
 from vocalpy.utils.signal_processing import compute_spectrogram
 from vocalpy.utils.image_processing import normalize, contrast_adjustment, bradley_roth
 
@@ -34,6 +35,12 @@ class Animal(ABC):
         return self.identifier(chunk)
 
     def classify_vocalizations(self, network_type, list_of_vocals, source=None):
+        if list_of_vocals.number_of_vocals == 0:
+            classes = list(get_pretrained_model_spec(network_type).classes)
+            if network_type == "noise":
+                return np.asarray([], dtype=bool), classes
+            return np.empty((0, len(classes)), dtype=float), classes
+
         source = create_array_from_list_of_vocals(list_of_vocals) if source is None else source
         classifier = VocalClassifier(network_type=network_type, source=source)
         predictions = classifier.classify_list_of_vocals(list_of_vocals)
@@ -283,21 +290,19 @@ class Animal(ABC):
             vocals.append(vocal)
             previous_end = end
 
-        if not vocals:
-            return []
+        list_of_vocals = ListOfVocals(vocals_in_recording=np.asarray(vocals, dtype=object))
+        if list_of_vocals.number_of_vocals > 0:
+            self.connect_vocals(list_of_vocals)
+            list_of_vocals.update_centroids()
 
-        list_of_vocals = ListOfVocals(vocals_in_recording=np.asarray(vocals))
-        self.connect_vocals(list_of_vocals)
-        list_of_vocals.update_centroids()
-
-        spectrogram_range = self.get_output_spectrogram_range()
-        list_of_vocals.update_coords(spectrogram_range)
-        scaled_spectrogram = exposure.rescale_intensity(spectrogram, in_range="image", out_range=np.uint8)
-        list_of_vocals.add_spectrograms_to_vocals(
-            full_spectrogram=np.flipud(scaled_spectrogram),
-            full_mask=np.flipud(candidate_mask),
-            spec_range=spectrogram_range,
-        )
+            spectrogram_range = self.get_output_spectrogram_range()
+            list_of_vocals.update_coords(spectrogram_range)
+            scaled_spectrogram = exposure.rescale_intensity(spectrogram, in_range="image", out_range=np.uint8)
+            list_of_vocals.add_spectrograms_to_vocals(
+                full_spectrogram=np.flipud(scaled_spectrogram),
+                full_mask=np.flipud(candidate_mask),
+                spec_range=spectrogram_range,
+            )
         return list_of_vocals
 
     def identifier(self, chunk):
@@ -355,7 +360,7 @@ class Animal(ABC):
             this_bin,
             bin_size,
         )
-        raw_count = 0 if list_of_vocals == [] else list_of_vocals.number_of_vocals
+        raw_count = list_of_vocals.number_of_vocals
         logger.info(f"[bin {this_bin}]: list of vocals runtime: {time() - time_vocals:.2f}s")
         logger.info(f"[bin {this_bin}]: raw number of vocals: {raw_count}")
         logger.info(f"[bin {this_bin}]: {list_of_vocals}")
