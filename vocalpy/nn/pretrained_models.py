@@ -25,8 +25,10 @@ class PretrainedModelSpec:
     input_shape: tuple[int, ...]
     checkpoint_keys: tuple[str, ...]
     sha256: str
+    storage: str
     source: str
     source_version: str
+    repo_history: dict[str, str]
     notes: str
 
     @property
@@ -54,8 +56,10 @@ def _load_pretrained_model_spec(path: str | Path) -> PretrainedModelSpec:
         input_shape=tuple(metadata["input_shape"]),
         checkpoint_keys=tuple(metadata["checkpoint_keys"]),
         sha256=metadata["sha256"],
+        storage=metadata["storage"],
         source=metadata["source"],
         source_version=metadata["source_version"],
+        repo_history=metadata.get("repo_history", {}),
         notes=metadata["notes"],
     )
 
