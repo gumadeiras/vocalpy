@@ -1,0 +1,25 @@
+{
+  "network_type": "class",
+  "filename": "class_model.pth.tar",
+  "architecture": "mobilenet_v2_classifier",
+  "num_classes": 11,
+  "classes": [
+    "chevron",
+    "complex",
+    "down_fm",
+    "flat",
+    "mult_steps",
+    "rev_chevron",
+    "short",
+    "step_down",
+    "step_up",
+    "two_steps",
+    "up_fm"
+  ],
+  "input_shape": [3, 224, 224],
+  "checkpoint_keys": ["epoch", "state_dict"],
+  "sha256": "223cb63c5295284d67298a9cdddaa24e57df07e7c826d3cd6c23ed66a503e939",
+  "source": "Bundled legacy VocalPy checkpoint",
+  "source_version": "modernized-package-baseline",
+  "notes": "Legacy classifier checkpoint retained during the Python 3.12 and dependency modernization pass."
+}

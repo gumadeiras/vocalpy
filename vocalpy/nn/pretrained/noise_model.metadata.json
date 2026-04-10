@@ -1,0 +1,13 @@
+{
+  "network_type": "noise",
+  "filename": "noise_model.pth.tar",
+  "architecture": "mobilenet_v2_classifier",
+  "num_classes": 2,
+  "classes": ["noise", "vocal"],
+  "input_shape": [3, 224, 224],
+  "checkpoint_keys": ["epoch", "state_dict"],
+  "sha256": "454ed81137edfe22c2908185499ff67e7217be45d60d0ac4f6264e3d256e106a",
+  "source": "Bundled legacy VocalPy checkpoint",
+  "source_version": "modernized-package-baseline",
+  "notes": "Legacy noise-filter checkpoint retained during the Python 3.12 and dependency modernization pass."
+}

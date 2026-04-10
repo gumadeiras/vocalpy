@@ -35,7 +35,12 @@ class PretrainedModelSpec:
 
     @property
     def metadata_path(self) -> Path:
-        return PRETRAINED_DIR / f"{self.path.stem}.metadata.json"
+        checkpoint_name = self.filename
+        if checkpoint_name.endswith(".pth.tar"):
+            checkpoint_name = checkpoint_name[: -len(".pth.tar")]
+        else:
+            checkpoint_name = Path(checkpoint_name).stem
+        return PRETRAINED_DIR / f"{checkpoint_name}.metadata.json"
 
 
 def _load_pretrained_model_spec(path: str | Path) -> PretrainedModelSpec:
