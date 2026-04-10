@@ -6,110 +6,54 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/python/black)
 ![License](https://img.shields.io/badge/license-Apache%202-blue)
 
+VocalPy detects, classifies, and segments animal vocalizations from audio recordings.
+
+Point it at a `.wav` file and it runs a full analysis pipeline: it chunks the audio for parallel processing, detects vocalizations using a spectrogram-based method tuned for the selected species, removes noise candidates with a pretrained classifier, assigns vocalization-type labels, and optionally produces binary segmentation masks for each detected call using SqueakOut. Results land in a CSV, per-vocal spectrogram images, and serialized recording objects — all in an output folder next to the audio file.
+
+**Supported species:** mouse, rat, guinea pig
 
 ## Installation
 
-#### Preliminaries
+Requires Python 3.12 and [Git LFS](https://git-lfs.github.com/) (bundled model checkpoints are stored via Git LFS — clone without it and the models will be missing).
 
-- Make sure you have installed [Git LFS](https://git-lfs.github.com/).
-
-- It is not required, but **highly recommended** to install using a virtual environment.
-- The supported runtime is Python `3.12`.
-
-#### Quickstart with `micromamba` (recommended)
+With `micromamba` (recommended):
 
 ```sh
 micromamba create -y -n vocalpy python=3.12
 micromamba activate vocalpy
 git clone https://github.com/gumadeiras/vocalpy.git
 cd vocalpy
-python -m pip install --upgrade pip
-python -m pip install -r requirements-dev.txt
+pip install --upgrade pip
+pip install -r requirements-dev.txt
 ```
 
-#### Quickstart with `venv`
+With `venv`:
 
 ```sh
 python3.12 -m venv .venv
 source .venv/bin/activate
 git clone https://github.com/gumadeiras/vocalpy.git
 cd vocalpy
-python -m pip install --upgrade pip
-python -m pip install -r requirements-dev.txt
+pip install --upgrade pip
+pip install -r requirements-dev.txt
 ```
 
-#### Direct from source (not recommended)
-
-To clone the repository and install only the runtime dependencies:
-```sh
-git clone https://github.com/gumadeiras/vocalpy.git
-cd vocalpy
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-```
-
-#### Packaging notes
-
-- Project metadata now lives in `pyproject.toml`.
-- Constraints for the tested dependency set live in `constraints/base.txt` and `constraints/dev.txt`.
-- Bundled classifier checkpoints ship with sidecar metadata in `vocalpy/nn/pretrained/*.metadata.json`.
-
-#### Serialized outputs
-
-- `.vocalpy` files now use a versioned VocalPy envelope with object-type metadata.
-- Legacy raw-pickle `.vocalpy` files still load for backward compatibility.
-- Maintained recording fixtures such as `recording_without_spectrograms.vocalpy` are expected to deserialize as `recording` objects.
-
-#### Bundled model validation
-
-Validate the shipped checkpoints and print their metadata:
+## Quick start
 
 ```sh
-vocalpy-models list
-vocalpy-models validate --smoke-test
+# Detect and classify mouse ultrasonic vocalizations (USVs)
+vocalpy -p /path/to/recording.wav
+
+# Use the rat pipeline instead
+vocalpy -a rat -p /path/to/recording.wav
+
+# Also run neural segmentation — produces a binary mask per vocal saved under cnn_mask/
+vocalpy -p /path/to/recording.wav --segmenter
+
+# Save spectrogram-overlay images so you can manually verify detections
+vocalpy -p /path/to/recording.wav -l
 ```
 
-Docs deploy automatically to `https://vocalpy.gumadeiras.com` from the
-`master` branch via GitHub Pages.
+Outputs land in `{audio_name}_outputs/` next to the audio file. The CSV is the quickest way to inspect results; the `.vocalpy` files let you reload the full recording object in Python for further analysis.
 
-DNS record needed:
-`CNAME vocalpy -> gumadeiras.github.io`
-
-#### Example baseline validation
-
-Validate the shipped example fixtures against the current pipeline:
-
-```sh
-python scripts/compare_example_baselines.py --species mouse
-```
-
-The fixture manifest lives in `examples/audios/baselines.yml`. When rat or
-guinea pig sample audio is added, register the new fixture there and the same
-tooling and CI gate can validate it.
-
-Notebook examples live under `examples/`. The maintained versus archived
-notebook boundary is documented in `examples/README.md`.
-
-Bundled model metadata also records repo-history provenance for each checkpoint
-so future model swaps can be traced back to the commit where the artifact first
-appeared in this repo.
-
-#### Optional neural vocal segmentation
-
-VocalPy now supports an optional neural segmentation stage over detected vocal
-crops. This is a separate post-detection step, parallel to classification:
-
-```sh
-vocalpy \
-  --path_to_audio /path/to/audio.wav \
-  --segmenter
-```
-
-- By default this uses the bundled `SqueakOut` checkpoint imported from
-  `gumadeiras/squeakout`.
-- You can override it with `--segmentation_model_path /path/to/squeakout_checkpoint.ckpt`.
-- Input surface: the same per-vocal spectrogram crops used by the classifier,
-  resized to grayscale `1x512x512` for the segmenter.
-- Output contract: a binary mask for each crop, saved under `cnn_mask/` when
-  present.
-- Default threshold: `0.51`. Override with `--segmentation_threshold 0.65`.
+See the [full documentation](https://vocalpy.gumadeiras.com) for CLI reference, output format, and operational checks.
