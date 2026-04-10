@@ -6,7 +6,19 @@ __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 from abc import ABC, abstractmethod
 
+import cv2
 import numpy as np
+
+from time import time
+from scipy import ndimage
+from logging import getLogger
+from skimage import exposure, measure
+
+from vocalpy.utils.io import read_audio
+from vocalpy.nn.classifier import VocalClassifier
+from vocalpy.nn.datasets import create_array_from_list_of_vocals
+from vocalpy.utils.signal_processing import compute_spectrogram
+from vocalpy.utils.image_processing import normalize, contrast_adjustment, bradley_roth
 
 
 class Animal(ABC):
@@ -17,6 +29,15 @@ class Animal(ABC):
     def __init__(self, animal, params):
         self.params = params
         self._animal = animal
+
+    def identify_vocalizations(self, chunk):
+        return self.identifier(chunk)
+
+    def classify_vocalizations(self, network_type, list_of_vocals, source=None):
+        source = create_array_from_list_of_vocals(list_of_vocals) if source is None else source
+        classifier = VocalClassifier(network_type=network_type, source=source)
+        predictions = classifier.classify_list_of_vocals(list_of_vocals)
+        return predictions, classifier.classes
 
     def parse_chunk(self, chunk):
         """
@@ -114,13 +135,233 @@ class Animal(ABC):
 
         return min_duration, max_duration
 
-    @abstractmethod
-    def identify_vocalizations(self, chunk):
-        return NotImplemented
+    def get_spectrogram_kwargs(self):
+        return {
+            "window_type": self.params["window_type"],
+            "window_size": self.params["window_size"],
+            "noverlap": self.params["noverlap"],
+            "nfft": self.params["nfft"],
+            "lower_frequency_cutoff": self.params["lower_frequency_cutoff"],
+            "higher_frequency_cutoff": self.params["higher_frequency_cutoff"],
+        }
 
-    @abstractmethod
-    def classify_vocalizations(self, network_type, list_of_vocals, source=None):
-        return NotImplemented
+    def get_component_min_area(self):
+        return 20
+
+    def get_background_window_radius(self):
+        return 200
+
+    def get_output_spectrogram_range(self):
+        return 206
+
+    def adjust_normalized_spectrogram(self, normalized_spectrogram):
+        return contrast_adjustment(data=normalized_spectrogram, lower_percentile=1, upper_percentile=99)
+
+    def get_median_filter_size(self):
+        return (3, 3)
+
+    def apply_morphology(self, binary_spectrogram):
+        kernel_rect = np.ones((4, 2), np.uint8)
+        kernel_line1 = np.ones((4, 1), np.uint8)
+        kernel_line2 = np.ones((5, 1), np.uint8)
+
+        binary_spectrogram = cv2.erode(binary_spectrogram, kernel_line1, iterations=1)
+        binary_spectrogram = cv2.dilate(binary_spectrogram, kernel_rect, iterations=1)
+        binary_spectrogram = cv2.dilate(binary_spectrogram, kernel_line2, iterations=1)
+        return cv2.erode(binary_spectrogram, kernel_line1, iterations=2)
+
+    def finalize_candidate_mask(self, candidate_mask):
+        kernel_line3 = np.ones((1, 3), dtype=np.uint8)
+        return cv2.dilate(candidate_mask.astype(np.uint8), kernel_line3, iterations=1)
+
+    def build_candidate_mask(self, spectrogram):
+        normalized = normalize(data=spectrogram)
+        adjusted = self.adjust_normalized_spectrogram(normalized)
+        binary = bradley_roth(adjusted, t=20)
+        filtered = ndimage.median_filter(binary, size=self.get_median_filter_size())
+        morphed = self.apply_morphology(filtered)
+        num_components, labels, stats, _ = cv2.connectedComponentsWithStats(morphed, 4, cv2.CV_32S)
+
+        areas = stats[1:, 4]
+        candidate_mask = np.zeros(labels.shape, dtype=np.uint8)
+        min_area = self.get_component_min_area()
+        for index in range(num_components - 1):
+            if areas[index] >= min_area:
+                candidate_mask[labels == index + 1] = 255
+
+        return self.finalize_candidate_mask(candidate_mask)
+
+    def get_sorted_regionprops(self, candidate_mask, spectrogram):
+        labels = measure.label(candidate_mask, background=0)
+        props = measure.regionprops(labels, intensity_image=spectrogram, cache=True)
+        return sorted(props, key=lambda prop: np.min(prop.coords[:, 1]), reverse=False)
+
+    def get_time_range_label(self, sample_range, sample_rate, start_range, end_range):
+        if end_range is None:
+            return (
+                f"time range: {sample_range.shape[0] / sample_rate:.2f}s; "
+                f"audio range: {start_range / sample_rate:.2f}s-end of audio"
+            )
+        return (
+            f"time range: {sample_range.shape[0] / sample_rate:.2f}s; "
+            f"audio range: {start_range / sample_rate:.2f}-{end_range / sample_rate:.2f}s"
+        )
+
+    def get_vocal_times(self, start, end, time_res, this_bin, bin_size):
+        base_offset = (this_bin - 1) * bin_size
+        if this_bin == 1:
+            base_offset += 0.5
+        return (start * time_res) + base_offset, (end * time_res) + base_offset
+
+    def build_vocal_from_prop(self, prop, spectrogram, time_res, freq_res, this_bin, bin_size, lower_frequency_cutoff):
+        from vocalpy.modules.vocal import Vocal
+
+        min_intensity, max_intensity, mean_intensity = self.get_region_intensity_stats(prop)
+        start = int(np.min(prop.coords[:, 1]))
+        end = int(np.max(prop.coords[:, 1]))
+        centroid_time = int(np.ceil(prop.centroid[1]))
+        background_intensity = self.estimate_background_intensity(spectrogram, centroid_time, self.get_background_window_radius())
+        if not self.has_minimum_contrast(mean_intensity, background_intensity):
+            return None
+
+        min_freq_coord = int(np.min(prop.coords[:, 0]))
+        max_freq_coord = int(np.max(prop.coords[:, 0]))
+        start_time, end_time = self.get_vocal_times(start, end, time_res, this_bin, bin_size)
+        min_freq = (min_freq_coord * freq_res) + lower_frequency_cutoff
+        max_freq = (max_freq_coord * freq_res) + lower_frequency_cutoff
+
+        return Vocal(
+            bin_number=this_bin,
+            start=start_time,
+            end=end_time,
+            start_coord=start,
+            end_coord=end,
+            duration=(end - start) * time_res * 1000,
+            interval=0,
+            min_freq=min_freq,
+            max_freq=max_freq,
+            min_freq_coord=min_freq_coord,
+            max_freq_coord=max_freq_coord,
+            avg_freq=(np.mean(prop.coords[:, 0]) * freq_res) + lower_frequency_cutoff,
+            bandwidth=max_freq - min_freq,
+            min_intensity=min_intensity,
+            max_intensity=max_intensity,
+            avg_intensity=mean_intensity,
+            bg_intensity=background_intensity,
+            area=prop.area,
+            centroid=np.rint(prop.centroid).astype(int),
+            coords=prop.coords,
+        )
+
+    def create_list_of_vocals(self, props, spectrogram, candidate_mask, time_res, freq_res, this_bin, bin_size):
+        from vocalpy.modules.list_of_vocals import ListOfVocals
+
+        min_duration_frames, max_duration_frames = self.get_duration_limits_in_frames(time_res * 1000)
+        vocals = []
+        previous_end = None
+
+        for prop in props:
+            start = int(np.min(prop.coords[:, 1]))
+            end = int(np.max(prop.coords[:, 1]))
+            duration = end - start
+            if duration < min_duration_frames or duration > max_duration_frames:
+                continue
+
+            vocal = self.build_vocal_from_prop(
+                prop=prop,
+                spectrogram=spectrogram,
+                time_res=time_res,
+                freq_res=freq_res,
+                this_bin=this_bin,
+                bin_size=bin_size,
+                lower_frequency_cutoff=self.params["lower_frequency_cutoff"],
+            )
+            if vocal is None:
+                continue
+
+            vocal.interval = 0 if previous_end is None else abs(previous_end - start) * time_res
+            vocals.append(vocal)
+            previous_end = end
+
+        if not vocals:
+            return []
+
+        list_of_vocals = ListOfVocals(vocals_in_recording=np.asarray(vocals))
+        self.connect_vocals(list_of_vocals)
+        list_of_vocals.update_centroids()
+
+        spectrogram_range = self.get_output_spectrogram_range()
+        list_of_vocals.update_coords(spectrogram_range)
+        scaled_spectrogram = exposure.rescale_intensity(spectrogram, in_range="image", out_range=np.uint8)
+        list_of_vocals.add_spectrograms_to_vocals(
+            full_spectrogram=np.flipud(scaled_spectrogram),
+            full_mask=np.flipud(candidate_mask),
+            spec_range=spectrogram_range,
+        )
+        return list_of_vocals
+
+    def identifier(self, chunk):
+        logger = getLogger()
+        time_bin_start = time()
+
+        (
+            audio_path,
+            _output_dir,
+            _spectrogram_dir,
+            _mask_dir,
+            sample_rate,
+            bin_size,
+            this_bin,
+            start_range,
+            end_range,
+        ) = self.parse_chunk(chunk)
+
+        time_audio_read = time()
+        logger.info(f"[bin {this_bin}]: reading audio;")
+        sample_range, __ = read_audio(audio_path, start=start_range, stop=end_range)
+        logger.info(f"[bin {this_bin}]: read audio runtime: {time() - time_audio_read:.2f}s;")
+
+        time_spectrogram = time()
+        logger.info(
+            f"[bin {this_bin}]: computing spectrogram; "
+            f"{self.get_time_range_label(sample_range, sample_rate, start_range, end_range)}"
+        )
+        frequencies, times, spectrogram = compute_spectrogram(
+            samples=sample_range,
+            fs=sample_rate,
+            **self.get_spectrogram_kwargs(),
+        )
+        time_res = (sample_range.shape[0] / sample_rate) / times.shape[0]
+        freq_res = (np.max(frequencies) - self.params["lower_frequency_cutoff"]) / frequencies.shape[0]
+        logger.info(f"[bin {this_bin}]: spectrogram runtime: {time() - time_spectrogram:.2f}s")
+        logger.info(f"[bin {this_bin}]: time resolution: {time_res * 1000:.2f}ms")
+        logger.info(f"[bin {this_bin}]: freq resolution: {freq_res:.2f}Hz")
+
+        time_mask = time()
+        candidate_mask = self.build_candidate_mask(spectrogram)
+        logger.info(f"[bin {this_bin}]: candidate mask runtime: {time() - time_mask:.2f}s")
+
+        time_region_props = time()
+        props = self.get_sorted_regionprops(candidate_mask, spectrogram)
+        logger.info(f"[bin {this_bin}]: region props runtime: {time() - time_region_props:.2f}s")
+
+        time_vocals = time()
+        list_of_vocals = self.create_list_of_vocals(
+            props,
+            spectrogram,
+            candidate_mask,
+            time_res,
+            freq_res,
+            this_bin,
+            bin_size,
+        )
+        raw_count = 0 if list_of_vocals == [] else list_of_vocals.number_of_vocals
+        logger.info(f"[bin {this_bin}]: list of vocals runtime: {time() - time_vocals:.2f}s")
+        logger.info(f"[bin {this_bin}]: raw number of vocals: {raw_count}")
+        logger.info(f"[bin {this_bin}]: {list_of_vocals}")
+        logger.info(f"[bin {this_bin}]: bin runtime: {time() - time_bin_start:.2f}s")
+
+        return list_of_vocals
 
     @abstractmethod
     def check_if_vocals_are_close(self, first_vocal, second_vocal):
@@ -169,14 +410,11 @@ class Animal(ABC):
         second_vocal : :class:`Vocal`
             vocals to be combined
         """
-        import numpy as np
         from vocalpy.modules.vocal import Vocal
 
-        # -- combines two vocals
         start_difference = first_vocal.start - second_vocal.start
         end_difference = first_vocal.end - second_vocal.end
 
-        # -- new centroid will be updated from vocal start/end and min/max frequency
         combined_vocal = Vocal(
             bin_number=first_vocal.bin_number
             if (first_vocal.bin_number < second_vocal.bin_number)
@@ -185,7 +423,7 @@ class Animal(ABC):
             start_coord=first_vocal.start_coord if (start_difference < 0) else second_vocal.start_coord,
             end=first_vocal.end if (end_difference > 0) else second_vocal.end,
             end_coord=first_vocal.end_coord if (end_difference > 0) else second_vocal.end_coord,
-            interval=-1,  # -- updated after noise candidates are removed
+            interval=-1,
             min_freq=first_vocal.min_freq if (first_vocal.min_freq < second_vocal.min_freq) else second_vocal.min_freq,
             max_freq=first_vocal.max_freq if (first_vocal.max_freq > second_vocal.max_freq) else second_vocal.max_freq,
             min_freq_coord=first_vocal.min_freq_coord

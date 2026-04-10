@@ -15,9 +15,6 @@ class StubAnimal(Animal):
     def identify_vocalizations(self, chunk):
         return chunk
 
-    def classify_vocalizations(self, network_type, list_of_vocals, source=None):
-        return network_type, list_of_vocals, source
-
     def check_if_vocals_are_close(self, first_vocal, second_vocal):
         return second_vocal.start <= first_vocal.end + 0.6
 
@@ -143,3 +140,29 @@ def test_duration_limits_can_be_expressed_explicitly_in_milliseconds():
 
     assert min_duration == 10
     assert max_duration == 488
+
+
+def test_shared_classify_vocalizations_uses_common_classifier(monkeypatch):
+    captured = {}
+
+    class FakeClassifier:
+        def __init__(self, network_type, source):
+            captured["network_type"] = network_type
+            captured["source"] = source
+            self.classes = ["noise", "vocal"]
+
+        def classify_list_of_vocals(self, list_of_vocals):
+            captured["list_of_vocals"] = list_of_vocals
+            return np.asarray([True, False])
+
+    animal = StubAnimal("mouse", {})
+    vocals = SimpleNamespace(number_of_vocals=2)
+
+    monkeypatch.setattr("vocalpy.pipelines.animal.VocalClassifier", FakeClassifier)
+    monkeypatch.setattr("vocalpy.pipelines.animal.create_array_from_list_of_vocals", lambda value: "derived-array")
+
+    predictions, classes = animal.classify_vocalizations("noise", vocals)
+
+    assert captured == {"network_type": "noise", "source": "derived-array", "list_of_vocals": vocals}
+    assert predictions.tolist() == [True, False]
+    assert classes == ["noise", "vocal"]

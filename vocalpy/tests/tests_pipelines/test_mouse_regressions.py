@@ -63,7 +63,11 @@ def mouse_module(monkeypatch):
     monkeypatch.setitem(sys.modules, "vocalpy.modules.list_of_vocals", fake_list_of_vocals)
     monkeypatch.delitem(sys.modules, "vocalpy.pipelines.mouse", raising=False)
 
-    return importlib.import_module("vocalpy.pipelines.mouse")
+    mouse_module = importlib.import_module("vocalpy.pipelines.mouse")
+    animal_module = importlib.import_module("vocalpy.pipelines.animal")
+    monkeypatch.setattr(animal_module, "read_audio", lambda *args, **kwargs: (_ for _ in ()).throw(StopAfterChunkParse()))
+
+    return mouse_module
 
 
 def test_identifier_does_not_require_removed_numpy_float_alias(mouse_module, monkeypatch):
