@@ -4,6 +4,6 @@ pytest
 pytest-cov
 sphinx
 sphinx-rtd-theme
-recommonmark
+myst-parser
 jupyterlab
 notebook
