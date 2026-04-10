@@ -32,8 +32,11 @@ expected to be rewritten through the current package helpers.
 Optional neural vocal segmentation can be enabled from the CLI with:
 
 ```sh
-vocalpy --path_to_audio /path/to/audio.wav --segmenter --segmentation_model_path /path/to/segmenter.pt
+vocalpy --path_to_audio /path/to/audio.wav --segmenter
 ```
+
+This uses the bundled `SqueakOut` checkpoint by default and accepts the same
+per-vocal crops as the classifier, resized to grayscale `1x512x512`.
 
 ## API reference
 

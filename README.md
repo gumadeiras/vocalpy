@@ -97,12 +97,14 @@ crops. This is a separate post-detection step, parallel to classification:
 ```sh
 vocalpy \
   --path_to_audio /path/to/audio.wav \
-  --segmenter \
-  --segmentation_model_path /path/to/segmenter.pt
+  --segmenter
 ```
 
-- The model must be a serialized PyTorch `nn.Module`.
-- Input surface: the same per-vocal spectrogram crops used by the classifier.
+- By default this uses the bundled `SqueakOut` checkpoint imported from
+  `gumadeiras/squeakout`.
+- You can override it with `--segmentation_model_path /path/to/segment_model.ckpt`.
+- Input surface: the same per-vocal spectrogram crops used by the classifier,
+  resized to grayscale `1x512x512` for the segmenter.
 - Output contract: a binary mask for each crop, saved under `cnn_mask/` when
   present.
-- Default threshold: `0.5`. Override with `--segmentation_threshold 0.65`.
+- Default threshold: `0.51`. Override with `--segmentation_threshold 0.65`.
