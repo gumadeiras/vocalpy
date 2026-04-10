@@ -1,5 +1,2 @@
 # -*- coding: utf-8 -*-
-"""utils module
-
-various functions for io, processing, and everything else
-"""
+"""Utility helpers for I/O, baseline validation, and signal/image processing."""
