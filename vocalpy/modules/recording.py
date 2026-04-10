@@ -119,8 +119,9 @@ class Recording(object):
 
     def create_paths(self, recording_path):
         """
-        Creates directory structure for output files
-        Creates a `spectrogram` and `mask` directories inside the `audio_output` directory
+        Creates directory structure metadata for output files.
+        Image subdirectories are created lazily by the save paths that
+        actually write into them.
 
         Parameters
         ----------
@@ -135,8 +136,6 @@ class Recording(object):
         self.mask_dir = join(self.output_dir, "mask")
 
         create_directory(self.output_dir)
-        create_directory(self.spectrogram_dir)
-        create_directory(self.mask_dir)
 
     def create_animal_pipeline(self):
         """

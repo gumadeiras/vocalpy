@@ -60,6 +60,18 @@ def test_recording_save_spectrograms_requires_vocals():
         recording.save_spectrograms()
 
 
+def test_recording_create_paths_only_creates_output_dir(tmp_path):
+    recording = Recording.__new__(Recording)
+    recording_path = tmp_path / "mouse.wav"
+    recording_path.write_bytes(b"")
+
+    recording.create_paths(str(recording_path))
+
+    assert (tmp_path / "mouse_outputs").is_dir()
+    assert not (tmp_path / "mouse_outputs" / "spectrogram").exists()
+    assert not (tmp_path / "mouse_outputs" / "mask").exists()
+
+
 def test_recording_update_vocals_with_class_classification_raises_on_prediction_mismatch():
     recording = Recording.__new__(Recording)
     recording._list_of_vocals = SimpleNamespace(number_of_vocals=1)
