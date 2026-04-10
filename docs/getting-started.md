@@ -54,7 +54,7 @@ Each file gets its own `{name}_outputs/` directory.
 | `-t / --threads` | Number of parallel workers (`-1` = half of available cores) | `-1` |
 | `-v / --verbose` | Print detailed progress to the terminal | off |
 | `-l / --validation` | Save spectrogram-overlay images for manual review of detections | off |
-| `--segmenter` | Run neural segmentation (SqueakOut) after detection and classification | off |
+| `--segmenter` | Run neural segmentation ([SqueakOut](https://github.com/gumadeiras/squeakout)) after detection and classification | off |
 | `--segmentation_model_path` | Path to a custom SqueakOut checkpoint file | Bundled |
 | `--segmentation_threshold` | Probability threshold for converting segmentation output to a binary mask | `0.51` |
 
@@ -118,12 +118,12 @@ Each row is one detected vocalization. For mouse and rat, `top1` and `top2` cont
 vocalpy -p /path/to/recording.wav --segmenter
 ```
 
-After detection and classification, SqueakOut runs on each detected vocal crop and produces a pixel-level binary mask that outlines the vocalization within the spectrogram. This gives finer spatial information than the bounding-box style detection mask. Masks are saved as PNG images under `cnn_mask/`, one per detected call.
+After detection and classification, [SqueakOut](https://github.com/gumadeiras/squeakout) runs on each detected vocal crop and produces a pixel-level binary mask that outlines the vocalization within the spectrogram. This gives finer spatial information than the bounding-box style detection mask. Masks are saved as PNG images under `cnn_mask/`, one per detected call.
 
 - **Input:** each detected call's spectrogram crop is resized to grayscale `1×512×512` before being fed to the model
 - **Output:** a binary mask at the same resolution as the crop, where white pixels mark the vocalization
 - **Threshold:** the raw model output is a probability map; pixels above the threshold become the mask. The default is `0.51` — lower it to include more of the call boundary, raise it to be more conservative. Override with `--segmentation_threshold`
-- **Custom model:** the bundled SqueakOut checkpoint is used by default. To use a different checkpoint, pass its path with `--segmentation_model_path`
+- **Custom model:** the bundled [SqueakOut](https://github.com/gumadeiras/squeakout) checkpoint is used by default. To use a different checkpoint, pass its path with `--segmentation_model_path`
 
 ## Serialized outputs
 

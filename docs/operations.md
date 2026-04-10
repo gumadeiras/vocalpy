@@ -2,13 +2,13 @@
 
 ## Bundled models
 
-VocalPy ships three pretrained models that run during the analysis pipeline. The `noise` and `class` models are MobileNetV2 classifiers that operate on per-vocal spectrogram crops. The `segment` model is SqueakOut, which produces pixel-level binary masks. All three are packaged as checkpoints under `vocalpy/nn/pretrained/` with sidecar JSON metadata that records their architecture, expected input shape, output classes, SHA-256 checksum, and provenance.
+VocalPy ships three pretrained models that run during the analysis pipeline. The `noise` and `class` models are MobileNetV2 classifiers that operate on per-vocal spectrogram crops. The `segment` model is [SqueakOut](https://github.com/gumadeiras/squeakout), which produces pixel-level binary masks. All three are packaged as checkpoints under `vocalpy/nn/pretrained/` with sidecar JSON metadata that records their architecture, expected input shape, output classes, SHA-256 checksum, and provenance.
 
 | Type | Architecture | Role in pipeline |
 |------|-------------|-----------------|
 | `noise` | MobileNetV2 | Runs first after detection — classifies each candidate as vocal or noise and removes noise candidates |
 | `class` | MobileNetV2 | Runs second — assigns a vocalization-type label to each remaining call |
-| `segment` | SqueakOut (MobileNetV2 backbone) | Runs last when `--segmenter` is passed — generates a binary mask for each call |
+| `segment` | [SqueakOut](https://github.com/gumadeiras/squeakout) (MobileNetV2 backbone) | Runs last when `--segmenter` is passed — generates a binary mask for each call |
 
 ## Validate bundled models
 
