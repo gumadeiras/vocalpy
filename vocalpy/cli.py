@@ -45,10 +45,10 @@ def build_parser():
     p.add_argument("-t", "--threads", help="number of threads to use (default=max/2)", type=int, default=-1)
     p.add_argument("-v", "--verbose", help="enable verbose output", action="store_true")
     p.add_argument("-l", "--validation", help="saves overlay of segmentation for manual verifcation", action="store_true")
-    p.add_argument("--segmenter", help="enable neural segmentation over detected vocal crops", action="store_true")
+    p.add_argument("--segmenter", help="enable SqueakOut neural segmentation over detected vocal crops", action="store_true")
     p.add_argument(
         "--segmentation_model_path",
-        help="path to a serialized PyTorch segmentation model",
+        help="path to a SqueakOut checkpoint; defaults to the bundled checkpoint",
         type=str,
         default=None,
     )

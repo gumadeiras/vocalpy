@@ -50,20 +50,21 @@ def test_segmenter_rejects_non_module_in_memory_model():
         segmenter.load_segmentation_model("cpu", model=object())
 
 
-def test_segment_list_of_vocals_thresholds_and_resizes_predictions():
+def test_segment_list_of_vocals_treats_single_channel_outputs_as_logits():
     segmenter = VocalSegmenter.__new__(VocalSegmenter)
     segmenter.threshold = 0.5
+    segmenter.prediction_type = "logits"
     segmenter.output_shape = (4, 4)
     segmenter.device = "cpu"
     segmenter.dataloader = [torch.zeros((1, 1, 512, 512), dtype=torch.float32)]
-    segmenter.model = lambda image: torch.tensor([[[[0.0, 1.0], [2.0, -2.0]]]], dtype=torch.float32)
+    segmenter.model = lambda image: torch.tensor([[[[0.25, -0.25], [2.0, -2.0]]]], dtype=torch.float32)
 
     result = segmenter.segment_list_of_vocals(SimpleNamespace(number_of_vocals=1))
 
     assert result.shape == (1, 4, 4)
     assert result.dtype == np.uint8
     assert np.all(result[0, :2, :2] == 255)
-    assert np.all(result[0, :2, 2:] == 255)
+    assert np.all(result[0, :2, 2:] == 0)
     assert np.all(result[0, 2:, :2] == 255)
     assert np.all(result[0, 2:, 2:] == 0)
 

@@ -13,7 +13,7 @@ import torchvision.transforms as transforms
 from vocalpy.errors import ValidationError
 from vocalpy.nn.datasets import build_image_transform, create_dataloader
 from vocalpy.nn.pretrained_models import get_pretrained_model_spec, validate_pretrained_model_file
-from vocalpy.nn.squeakout import DEFAULT_IMAGE_SIZE, DEFAULT_MASK_THRESHOLD, load_squeakout_checkpoint
+from vocalpy.nn.squeakout import DEFAULT_IMAGE_SIZE, load_squeakout_checkpoint
 
 
 class VocalSegmenter(object):
@@ -25,10 +25,13 @@ class VocalSegmenter(object):
     map for each crop.
     """
 
-    def __init__(self, source, batch_size=32, path_to_model=None, threshold=DEFAULT_MASK_THRESHOLD, model=None):
+    def __init__(self, source, batch_size=32, path_to_model=None, threshold=None, model=None):
         self.batch_size = batch_size
         self.path_to_model = path_to_model
-        self.threshold = self._validate_threshold(threshold)
+        self.model_spec = self.resolve_model_spec()
+        self.input_shape = tuple(self.model_spec.input_shape)
+        self.prediction_type = self.model_spec.prediction_type or "logits"
+        self.threshold = self._resolve_threshold(threshold)
 
         self.cuda_available = torch.cuda.is_available()
         self.device = torch.device("cuda" if self.cuda_available else "cpu")
@@ -38,16 +41,26 @@ class VocalSegmenter(object):
         self.dataloader = create_dataloader(self.dataset, self.batch_size) if len(self.dataset) > 0 else []
         self.output_shape = (self.dataset.height, self.dataset.width)
 
+    def resolve_model_spec(self):
+        return get_pretrained_model_spec("segment")
+
     @staticmethod
     def _validate_threshold(threshold):
-        threshold = float(threshold)
         if threshold <= 0 or threshold >= 1:
             raise ValidationError(f"segmentation threshold must be between 0 and 1. provided value: {threshold}")
         return threshold
 
+    def _resolve_threshold(self, threshold):
+        threshold = self.model_spec.default_threshold if threshold is None else float(threshold)
+        if threshold is None:
+            raise ValidationError("segmentation threshold is not configured for the selected model")
+        return self._validate_threshold(threshold)
+
     def load_segmentation_model(self, device, path_to_model=None, model=None):
-        spec = get_pretrained_model_spec("segment")
-        self.input_shape = tuple(spec.input_shape)
+        if not hasattr(self, "model_spec"):
+            self.model_spec = self.resolve_model_spec()
+            self.input_shape = tuple(self.model_spec.input_shape)
+            self.prediction_type = self.model_spec.prediction_type or "logits"
 
         if model is not None:
             if not isinstance(model, nn.Module):
@@ -57,13 +70,18 @@ class VocalSegmenter(object):
                 )
             return model.to(device).eval()
 
-        resolved_model_path = spec.path if path_to_model is None else path_to_model
-        expected_sha256 = spec.sha256 if path_to_model is None else None
+        resolved_model_path = self.model_spec.path if path_to_model is None else path_to_model
+        expected_sha256 = self.model_spec.sha256 if path_to_model is None else None
         self.checkpoint_sha256 = validate_pretrained_model_file(
             resolved_model_path,
             expected_sha256=expected_sha256,
         )
         self.checkpoint_path = str(resolved_model_path)
+        if self.model_spec.architecture != "squeakout":
+            raise ValidationError(
+                "unsupported bundled segmentation architecture. "
+                f"provided value: {self.model_spec.architecture}"
+            )
         return load_squeakout_checkpoint(resolved_model_path, device=device)
 
     def create_dataset(self, source):
@@ -91,24 +109,27 @@ class VocalSegmenter(object):
     def _prediction_to_probability_map(self, prediction):
         if prediction.ndim == 4:
             if prediction.shape[1] == 1:
-                logits = prediction[:, 0]
-                return self._to_probability(logits)
+                return self._to_probability_map(prediction[:, 0])
             if prediction.shape[1] == 2:
                 return torch.softmax(prediction, dim=1)[:, 1]
 
         if prediction.ndim == 3:
-            return self._to_probability(prediction)
+            return self._to_probability_map(prediction)
 
         raise ValidationError(
             "segmentation model output must have shape (N,H,W), (N,1,H,W), or (N,2,H,W). "
             f"received shape: {tuple(prediction.shape)}"
         )
 
-    @staticmethod
-    def _to_probability(prediction):
-        if torch.all((prediction >= 0) & (prediction <= 1)):
+    def _to_probability_map(self, prediction):
+        if self.prediction_type == "probabilities":
             return prediction
-        return torch.sigmoid(prediction)
+        if self.prediction_type == "logits":
+            return torch.sigmoid(prediction)
+        raise ValidationError(
+            "unsupported segmentation prediction_type. "
+            f"provided value: {self.prediction_type}"
+        )
 
     def _resize_and_threshold(self, prediction):
         if self.output_shape == (0, 0):

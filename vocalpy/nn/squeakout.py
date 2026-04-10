@@ -16,7 +16,6 @@ import torch.nn.functional as F
 
 
 DEFAULT_IMAGE_SIZE = (512, 512)
-DEFAULT_MASK_THRESHOLD = 0.51
 _UNUSED_CHECKPOINT_KEYS = {
     "backbone.classifier.1.bias",
     "backbone.classifier.1.weight",

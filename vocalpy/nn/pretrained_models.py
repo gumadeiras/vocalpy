@@ -24,6 +24,8 @@ class PretrainedModelSpec:
     classes: tuple[str, ...]
     input_shape: tuple[int, ...]
     checkpoint_keys: tuple[str, ...]
+    prediction_type: str | None
+    default_threshold: float | None
     sha256: str
     storage: str
     source: str
@@ -55,6 +57,10 @@ def _load_pretrained_model_spec(path: str | Path) -> PretrainedModelSpec:
         classes=tuple(metadata["classes"]),
         input_shape=tuple(metadata["input_shape"]),
         checkpoint_keys=tuple(metadata["checkpoint_keys"]),
+        prediction_type=metadata.get("prediction_type"),
+        default_threshold=(
+            float(metadata["default_threshold"]) if metadata.get("default_threshold") is not None else None
+        ),
         sha256=metadata["sha256"],
         storage=metadata["storage"],
         source=metadata["source"],

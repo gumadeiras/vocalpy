@@ -59,6 +59,8 @@ def list_specs(specs):
             "classes": list(spec.classes),
             "input_shape": list(spec.input_shape),
             "checkpoint_keys": list(spec.checkpoint_keys),
+            "prediction_type": spec.prediction_type,
+            "default_threshold": spec.default_threshold,
             "sha256": spec.sha256,
             "storage": spec.storage,
             "source": spec.source,

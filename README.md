@@ -102,7 +102,7 @@ vocalpy \
 
 - By default this uses the bundled `SqueakOut` checkpoint imported from
   `gumadeiras/squeakout`.
-- You can override it with `--segmentation_model_path /path/to/segment_model.ckpt`.
+- You can override it with `--segmentation_model_path /path/to/squeakout_checkpoint.ckpt`.
 - Input surface: the same per-vocal spectrogram crops used by the classifier,
   resized to grayscale `1x512x512` for the segmenter.
 - Output contract: a binary mask for each crop, saved under `cnn_mask/` when

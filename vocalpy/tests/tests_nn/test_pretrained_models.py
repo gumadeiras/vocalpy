@@ -17,6 +17,8 @@ def test_bundled_checkpoint_hashes_match_expected_metadata():
         assert spec.metadata_path.exists() is True
         if spec.network_type == "segment":
             assert spec.input_shape == (1, 512, 512)
+            assert spec.prediction_type == "logits"
+            assert spec.default_threshold == 0.51
         else:
             assert spec.input_shape == (3, 224, 224)
 

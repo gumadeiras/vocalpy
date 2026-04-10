@@ -8,6 +8,8 @@
   ],
   "input_shape": [1, 512, 512],
   "checkpoint_keys": ["state_dict"],
+  "prediction_type": "logits",
+  "default_threshold": 0.51,
   "sha256": "3bd430ca00c8c5a9ac81816c351be34345b290294fb680dc3565be648d142199",
   "storage": "git-lfs",
   "source": "Bundled SqueakOut checkpoint",
