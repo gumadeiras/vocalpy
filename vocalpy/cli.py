@@ -8,8 +8,9 @@ from time import time
 from logging import getLogger
 from argparse import ArgumentParser
 
+from vocalpy.errors import VocalPyError
 from vocalpy.modules.recording import Recording
-from vocalpy.utils.misc import create_logger
+from vocalpy.utils.misc import create_logger, validate_arguments
 from vocalpy.utils.io import parse_input_path, create_output_directory_structure, create_directory
 
 
@@ -43,20 +44,19 @@ def build_parser():
 
 
 def main(argv=None):
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
 
     print("run 'vocalpy --help' to show the help menu")
     print("use '-v' to enable verbose output (recommended)")
 
-    list_of_files = parse_input_path(args.path_to_audio)
-    list_of_output_dirs = create_output_directory_structure(list_of_files)
-
     try:
-        assert len(list_of_files) == len(list_of_output_dirs)
-    except AssertionError:
-        print("list of audio files provided and list to be processed are different")
-        print(f"number of audio files: {len(list_of_files)}; number of files to be processed: {len(list_of_output_dirs)}")
-        return 1
+        args = validate_arguments(args)
+        list_of_files = parse_input_path(args.path_to_audio)
+    except VocalPyError as exc:
+        parser.exit(status=2, message=f"error: {exc}\n")
+
+    list_of_output_dirs = create_output_directory_structure(list_of_files)
 
     time_all_recordings = time()
     logger = None

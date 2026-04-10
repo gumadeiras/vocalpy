@@ -15,6 +15,8 @@ import soundfile as sf
 from os import makedirs
 from os.path import basename, exists, isdir, isfile, join, splitext
 
+from vocalpy.errors import InputPathError
+
 
 def write_pickle_file(file, filename, path):
     """
@@ -37,7 +39,8 @@ def write_pickle_file(file, filename, path):
     if exists(path) is False:
         raise ValueError(f"path does not existe: {path}")
 
-    pickle.dump(file, open(join(path, filename + ".vocalpy"), "wb"))
+    with open(join(path, filename + ".vocalpy"), "wb") as output_file:
+        pickle.dump(file, output_file)
 
 
 def load_pickle_file(filename, path):
@@ -59,7 +62,8 @@ def load_pickle_file(filename, path):
     if exists(path) is False:
         raise ValueError(f"path does not existe: {path}")
 
-    return pickle.load(open(join(path, filename + ".vocalpy"), "rb"))
+    with open(join(path, filename + ".vocalpy"), "rb") as input_file:
+        return pickle.load(input_file)
 
 
 def load_recording_data(path):
@@ -137,10 +141,8 @@ def parse_input_path(path=None, search_tree=False):
         path provided by the user
     """
     if path is None:
-        print("usage: vocalpy --path_to_audio='/path/to/audio'")
-        return -1
+        raise InputPathError("usage: vocalpy --path_to_audio='/path/to/audio'")
     if isdir(path):
-        print("audio path is a directory, geting all .wav files")
         if search_tree:
             types = (
                 join(path, "**/*.wav"),
@@ -158,13 +160,16 @@ def parse_input_path(path=None, search_tree=False):
         files_found = []
         for files in types:
             files_found.extend(glob.glob(files, recursive=search_tree))
-        return files_found
+        return sorted(set(files_found))
     if isfile(path):
-        print("audio path is a file.")
-        return [path]
+        return [str(path)]
 
-    print(f"audio path is not a file or directory: {path}")
-    return -1
+    raise InputPathError(f"audio path is not a file or directory: {path}")
+
+
+def get_output_directory_for_audio_file(path):
+    basepath, _ = splitext(path)
+    return basepath + "_outputs"
 
 
 def create_output_directory_structure(list_of_files):
@@ -177,17 +182,7 @@ def create_output_directory_structure(list_of_files):
         list of files provided by the user
     """
 
-    list_of_output_dirs = []
-    print("list of files detected:")
-    for file in list_of_files:
-        print(basename(file))
-        # -- split '/path/to/file.wav' to ['/path/to/file', '.wav]
-        basepath = splitext(file)
-        # -- output dir will be '/path/to/file_outputs'
-        output_dir = basepath[0] + "_outputs"
-        list_of_output_dirs.append(output_dir)
-
-    return list_of_output_dirs
+    return [get_output_directory_for_audio_file(file) for file in list_of_files]
 
 
 def create_directory(path):

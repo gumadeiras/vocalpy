@@ -5,25 +5,57 @@ __license__ = "Apache License, Version 2.0"
 __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 import logging
+import warnings
 
 import pandas as pd
 
 from os.path import join, dirname, pardir
 from multiprocessing import cpu_count
 
+from vocalpy.errors import ValidationError
 from vocalpy.utils.io import read_yaml
+
+
+SUPPORTED_ANIMALS = ("mouse", "rat", "guineapig")
+DEFAULT_FREQUENCY_CUTOFFS = {
+    "mouse": (45000, 125000),
+    "rat": (18000, 125000),
+    "guineapig": (0, 22000),
+}
+
+
+def _get_frequency_arg_names(args):
+    if hasattr(args, "lower_frequency_cutoff") and hasattr(args, "higher_frequency_cutoff"):
+        return "lower_frequency_cutoff", "higher_frequency_cutoff"
+    if hasattr(args, "lower_frequency") and hasattr(args, "higher_frequency"):
+        return "lower_frequency", "higher_frequency"
+    raise AttributeError("args must expose lower/higher frequency cutoff fields")
+
+
+def _get_frequency_range_args(args):
+    lower_name, higher_name = _get_frequency_arg_names(args)
+    return getattr(args, lower_name), getattr(args, higher_name)
+
+
+def _set_frequency_range_args(args, lower_frequency, higher_frequency):
+    lower_name, higher_name = _get_frequency_arg_names(args)
+    setattr(args, lower_name, lower_frequency)
+    setattr(args, higher_name, higher_frequency)
 
 
 def create_logger(args=None, out_dir=None):
     """
     Creates a logger to log information during execution
     """
+    handlers = [logging.FileHandler(f"{out_dir}/output.log")]
     if args.verbose:
+        handlers.append(logging.StreamHandler())
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
             datefmt="%d-%b-%y %H:%M:%S",
-            handlers=[logging.FileHandler(f"{out_dir}/output.log"), logging.StreamHandler(),],
+            handlers=handlers,
+            force=True,
         )
         logging.info("verbose output on")
     else:
@@ -32,7 +64,8 @@ def create_logger(args=None, out_dir=None):
             level=logging.INFO,
             format="%(asctime)s [%(levelname)-5.5s]  %(message)s",
             datefmt="%d-%b-%y %H:%M:%S",
-            handlers=[logging.FileHandler(f"{out_dir}/output.log"),],
+            handlers=handlers,
+            force=True,
         )
 
 
@@ -46,64 +79,61 @@ def validate_arguments(args):
     """
     validate_animal(args.animal)
     validate_bin_size(args.bin_size)
-    args.lower_frequency, args.higher_frequency = validate_frequency_range(
-        args.lower_frequency, args.higher_frequency, args.animal
+    lower_frequency, higher_frequency = _get_frequency_range_args(args)
+    validated_lower, validated_higher = validate_frequency_range(
+        lower_frequency, higher_frequency, args.animal
     )
+    _set_frequency_range_args(args, validated_lower, validated_higher)
     validate_thread_count(args.threads)
     return args
 
 
 def validate_animal(animal):
-    if animal not in ["mouse", "rat", "guineapig"]:
-        print("available pipelines are: mouse, rat, guineapig")
-        print(f"provided value: {animal}")
-        exit()
+    if animal not in SUPPORTED_ANIMALS:
+        supported = ", ".join(SUPPORTED_ANIMALS)
+        raise ValidationError(f"unsupported animal pipeline '{animal}'. available pipelines: {supported}")
     return 0
 
 
 def validate_bin_size(bin_size):
-    if bin_size < 0:
-        print("bin_size must be a positive integer.")
-        print(f"provided value: {bin_size:2f}")
-        exit()
+    if bin_size <= 0:
+        raise ValidationError(f"bin_size must be a positive integer. provided value: {bin_size}")
     return 0
 
 
 def validate_frequency_range(lower_frequency, higher_frequency, animal):
-    if lower_frequency == higher_frequency == "default":
-        if animal == "mouse":
-            return 45000, 125000
-        if animal == "rat":
-            return 18000, 125000
-        if animal == "guineapig":
-            return 0, 22000
-    else:
-        low_freq, high_freq = int(lower_frequency), int(higher_frequency)
-        if (low_freq > high_freq) & (high_freq != -1):
-            print(
-                "low frequency cutoff must be lower \
-                than the high frequency cutoff."
-            )
-            print(
-                f"provided values: low_freq={low_freq}; \
-                high_freq={high_freq}"
-            )
-            exit()
+    default_low, default_high = DEFAULT_FREQUENCY_CUTOFFS[animal]
+    low_freq = default_low if lower_frequency == "default" else int(lower_frequency)
+    high_freq = default_high if higher_frequency == "default" else int(higher_frequency)
+    if low_freq < 0:
+        raise ValidationError(f"lower frequency cutoff must be non-negative. provided value: {low_freq}")
+    if high_freq != -1 and high_freq < 0:
+        raise ValidationError(
+            f"higher frequency cutoff must be -1 or a non-negative integer. provided value: {high_freq}"
+        )
+    if low_freq > high_freq and high_freq != -1:
+        raise ValidationError(
+            "low frequency cutoff must be lower than the high frequency cutoff. "
+            f"provided values: low_freq={low_freq}; high_freq={high_freq}"
+        )
     return low_freq, high_freq
 
 
 def validate_thread_count(threads):
     num_cores = cpu_count()
     if (threads < -1) or (threads == 0):
-        print("number of threads must be a positive integer.")
-        print(f"provided value: {threads}")
-        print(f"computer core count: {num_cores}")
-        exit()
+        raise ValidationError(
+            "number of threads must be a positive integer or -1. "
+            f"provided value: {threads}; computer core count: {num_cores}"
+        )
     if threads > num_cores:
-        print("WARNING: number of threads is equal or higher than number of available cores.")
-        print("WARNING: if your CPU has hyperthreading, use number of physical cores for better performance.")
-        print(f"provided value: {threads}")
-        print(f"computer thread count: {num_cores}")
+        warnings.warn(
+            "number of threads is equal or higher than number of available cores. "
+            "if your CPU has hyperthreading, use number of physical cores for better performance. "
+            f"provided value: {threads}; computer thread count: {num_cores}",
+            UserWarning,
+            stacklevel=2,
+        )
     return 0
 
 

@@ -8,6 +8,7 @@ __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 from os import cpu_count
 from os.path import join, dirname
 
+from vocalpy.errors import ConfigurationError
 from vocalpy.utils.io import read_yaml, write_yaml
 
 
@@ -27,7 +28,7 @@ def read_default_parameters(args):
     try:
         default_params_pipeline = default_params_pipeline["pipelines"][args.animal.lower()]
     except KeyError as ke:
-        exit(f"could not find animal pipeline with name {ke}")
+        raise ConfigurationError(f"could not find animal pipeline with name {ke}") from ke
 
     default_params = {"animal": args.animal.lower(), **default_params_run, **default_params_pipeline}
     return default_params
