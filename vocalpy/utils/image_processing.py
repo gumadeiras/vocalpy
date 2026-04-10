@@ -76,7 +76,7 @@ def bradley_roth(image, s=None, t=None):
         returns trehsholded image in binary values
     """
     # -- from somewhere
-    img = np.array(image).astype(np.float)
+    img = np.array(image).astype(float)
 
     # -- default window size is round(width/8)
     if s is None:
@@ -113,10 +113,10 @@ def bradley_roth(image, s=None, t=None):
     y2[y2 >= rows] = rows - 1
 
     # -- assert coordinates are integers
-    x1 = x1.astype(np.int)
-    x2 = x2.astype(np.int)
-    y1 = y1.astype(np.int)
-    y2 = y2.astype(np.int)
+    x1 = x1.astype(int)
+    x2 = x2.astype(int)
+    y1 = y1.astype(int)
+    y2 = y2.astype(int)
 
     # -- count how many pixels are in each neighborhood
     count = (x2 - x1) * (y2 - y1)
@@ -138,7 +138,7 @@ def bradley_roth(image, s=None, t=None):
     sums = intImage[f1_y, f1_x] - intImage[f2_y, f2_x] - intImage[f3_y, f3_x] + intImage[f4_y, f4_x]
 
     # -- compute thresholded image and reshape into a 2D grid
-    out = np.zeros(rows * cols, dtype=np.bool)
+    out = np.zeros(rows * cols, dtype=bool)
     out[img.ravel() * count <= sums * (100.0 - t) / 100.0] = True
 
     # -- convert back to uint8

@@ -75,7 +75,7 @@ class ListOfVocals(object):
         for vocal in self.vocals_in_recording:
             cx = vocal.start_coord + ((vocal.end_coord - vocal.start_coord) // 2)
             cy = vocal.min_freq_coord + ((vocal.max_freq_coord - vocal.min_freq_coord) // 2)
-            vocal.centroid = np.rint([cy, cx]).astype(np.int)
+            vocal.centroid = np.rint([cy, cx]).astype(int)
 
         self.centroid_spectro_fixed = True
         return 0
@@ -93,7 +93,7 @@ class ListOfVocals(object):
         for vocal in self.vocals_in_recording:
             col_values = vocal.coords[:, 1]
             # make column values zero-centered by subtracting the mean
-            col_values = col_values - np.int(np.mean(col_values))
+            col_values = col_values - int(np.mean(col_values))
             # col values will be centered in the spectrogram
             col_values = col_values + spec_range
             vocal.coords[:, 1] = col_values
@@ -144,25 +144,33 @@ class ListOfVocals(object):
         """
         for vocal in self.vocals_in_recording:
             cy, cx = vocal.centroid
-            spec_max = full_spectrogram.shape[1]
-
-            lower = cx - spec_range
-            if lower < 0:
-                extra_higher = -lower
-                lower = 0
-                higher = cx + spec_range + extra_higher
-
-            higher = cx + spec_range
-            if higher > spec_max:
-                extra_lower = higher - spec_max
-                higher = spec_max
-                lower = lower - extra_lower
-
-            vocal.spectrogram = full_spectrogram[:, lower:higher]
-            vocal.mask = full_mask[:, lower:higher]
+            vocal.spectrogram = self._centered_crop(full_spectrogram, cx, spec_range)
+            vocal.mask = self._centered_crop(full_mask, cx, spec_range)
             vocal.centroid = [vocal.centroid[0], spec_range]
             self.centroid_spectro_fixed = True
         return 0
+
+    @staticmethod
+    def _centered_crop(data, center, spec_range):
+        """
+        Return a fixed-width crop padded with zeros when the source hits an edge.
+        """
+        target_width = spec_range * 2
+        source_start = center - spec_range
+        source_end = center + spec_range
+
+        crop_start = max(0, source_start)
+        crop_end = min(data.shape[1], source_end)
+        cropped = data[:, crop_start:crop_end]
+
+        if cropped.shape[1] == target_width:
+            return cropped
+
+        output = np.zeros((data.shape[0], target_width), dtype=data.dtype)
+        insert_start = max(0, -source_start)
+        insert_end = insert_start + cropped.shape[1]
+        output[:, insert_start:insert_end] = cropped
+        return output
 
     def save_spectrograms(self, output_dir=None):
         """
