@@ -20,6 +20,21 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx_rtd_theme",
 ]
+autodoc_mock_imports = [
+    "cv2",
+    "joblib",
+    "matplotlib",
+    "numpy",
+    "pandas",
+    "PIL",
+    "scipy",
+    "seaborn",
+    "skimage",
+    "soundfile",
+    "torch",
+    "torchvision",
+    "yaml",
+]
 source_suffix = {
     ".md": "markdown",
     ".rst": "restructuredtext",

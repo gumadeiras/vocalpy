@@ -6,6 +6,8 @@ The pipeline runs in three stages: **detection** finds candidate vocalizations i
 
 **Supported species:** mouse, rat, guinea pig
 
+VocalPy is inspired by [VocalMat](https://github.com/ahof1704/VocalMat).
+
 ## Start here
 
 - [Getting started](getting-started.md) — installation, CLI reference, output format

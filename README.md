@@ -6,7 +6,7 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/python/black)
 ![License](https://img.shields.io/badge/license-Apache%202-blue)
 
-VocalPy detects, classifies, and segments animal vocalizations from audio recordings.
+VocalPy detects, classifies, and segments animal vocalizations from audio recordings. It is inspired by [VocalMat](https://github.com/ahof1704/VocalMat).
 
 Point it at a `.wav` file and it runs a full analysis pipeline: it chunks the audio for parallel processing, detects vocalizations using a spectrogram-based method tuned for the selected species, removes noise candidates with a pretrained classifier, assigns vocalization-type labels, and optionally produces binary segmentation masks for each detected call using SqueakOut. Results land in a CSV, per-vocal spectrogram images, and serialized recording objects — all in an output folder next to the audio file.
 
