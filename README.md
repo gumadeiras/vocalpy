@@ -69,6 +69,12 @@ vocalpy-models list
 vocalpy-models validate --smoke-test
 ```
 
+Docs deploy automatically to `https://vocalpy.gumadeiras.com` from the
+`master` branch via GitHub Pages.
+
+DNS record needed:
+`CNAME vocalpy -> gumadeiras.github.io`
+
 #### Example baseline validation
 
 Validate the shipped example fixtures against the current pipeline:

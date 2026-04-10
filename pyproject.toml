@@ -58,7 +58,7 @@ vocalpy = "vocalpy.cli:main"
 vocalpy-models = "vocalpy.model_cli:main"
 
 [project.urls]
-Homepage = "https://github.com/gumadeiras/vocalpy"
+Homepage = "https://vocalpy.gumadeiras.com"
 Repository = "https://github.com/gumadeiras/vocalpy"
 
 [tool.setuptools]
