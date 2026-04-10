@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Bundled SqueakOut segmentation model and checkpoint loader."""
 
+from __future__ import annotations
+
 __license__ = "Apache License, Version 2.0"
 __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 

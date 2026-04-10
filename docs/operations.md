@@ -68,16 +68,6 @@ python scripts/rewrite_example_vocalpy_fixtures.py
 
 Run the comparison script afterward to confirm the rewritten fixtures now pass.
 
-## Docs deploy
-
-Docs publish automatically from `main` to `https://vocalpy.gumadeiras.com` via GitHub Pages. No manual step needed; merging to `main` triggers the deploy.
-
-DNS record:
-
-```
-CNAME vocalpy -> gumadeiras.github.io
-```
-
 ## Reference
 
 - <a href="genindex.html">General index</a>
