@@ -10,6 +10,9 @@ import pytest
 import torch
 
 from vocalpy.errors import InputPathError, SerializationError
+from vocalpy.modules.list_of_vocals import ListOfVocals
+from vocalpy.modules.recording import Recording
+from vocalpy.modules.vocal import Vocal
 from vocalpy.utils.io import (
     VOCALPY_SERIALIZATION_FORMAT,
     VOCALPY_SERIALIZATION_VERSION,
@@ -49,6 +52,28 @@ def test_load_recording_data_round_trip(tmp_path):
     loaded = load_recording_data(path)
 
     assert loaded == {"name": "mouse"}
+
+
+def test_load_recording_data_round_trip_strips_transient_visual_payloads(tmp_path):
+    vocal = Vocal(
+        bin_number=1,
+        spectrogram=torch.ones((2, 2), dtype=torch.uint8).numpy(),
+        mask=torch.ones((2, 2), dtype=torch.uint8).numpy(),
+        cnn_mask=torch.ones((2, 2), dtype=torch.uint8).numpy(),
+    )
+    recording = Recording.__new__(Recording)
+    recording._list_of_vocals = ListOfVocals([vocal])
+    recording._has_list_of_vocals = True
+
+    recording.remove_spectrograms_and_masks_from_object()
+    recording.save_recording_object(tmp_path, filename="recording_without_spectrograms")
+
+    loaded = load_recording_data(tmp_path / "recording_without_spectrograms.vocalpy")
+    loaded_vocal = loaded.list_of_vocals.vocals_in_recording[0]
+
+    assert loaded_vocal.spectrogram is None
+    assert loaded_vocal.mask is None
+    assert loaded_vocal.cnn_mask is None
 
 
 def test_load_vocalpy_file_keeps_legacy_pickle_compatibility(tmp_path):
