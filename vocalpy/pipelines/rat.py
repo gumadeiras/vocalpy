@@ -5,7 +5,6 @@ __license__ = "Apache License, Version 2.0"
 __copyright__ = "2020 Dietrich Lab - Yale University School of Medicine"
 
 import cv2
-import warnings
 
 import numpy as np
 
@@ -54,15 +53,17 @@ class Rat(Animal):
         timeBinA = time()
 
         # -- unwrap chunk
-        audio_path, output_dir, spectrogram_dir, mask_dir, sample_rate, bin_size, this_bin, start_range, end_range = chunk
-
-        # -- np.hstack converts everything to strings
-        # -- yup, this is ugly
-        sample_rate = int(sample_rate.astype(np.float))
-        bin_size = int(bin_size.astype(np.float))
-        this_bin = int(this_bin.astype(np.float))
-        start_range = int(start_range.astype(np.float))
-        end_range = int(end_range.astype(np.float))
+        (
+            audio_path,
+            _output_dir,
+            _spectrogram_dir,
+            _mask_dir,
+            sample_rate,
+            bin_size,
+            this_bin,
+            start_range,
+            end_range,
+        ) = self.parse_chunk(chunk)
 
         timeAudioRead = time()
         logger.info(f"[bin {this_bin}]: reading audio;")
@@ -200,30 +201,9 @@ class Rat(Animal):
             # -- spectro_range goes over the spectrom vector limit (for this bin)
             # -- left edge: -200 is before vector start index
             # -- right edge: +200 is after vector end index
-            with warnings.catch_warnings():
-                warnings.filterwarnings("error")
-                try:
-                    range_start = centroid_time - spectro_range
-                    range_end = centroid_time + spectro_range
-                    bg_intensity = np.mean(Pxx[:, range_start:range_end])
-                except RuntimeWarning:
-                    left_end_idx = centroid_time - spectro_range
-                    if left_end_idx < 0:
-                        centroid_time = centroid_time + np.abs(left_end_idx)
-                        range_start = centroid_time - spectro_range
-                        range_end = centroid_time + spectro_range
-                        bg_intensity = np.mean(Pxx[:, range_start:range_end])
-                    else:
-                        centroid_time = centroid_time - np.abs(left_end_idx)
-                        range_start = centroid_time - spectro_range
-                        range_end = centroid_time + spectro_range
-                        bg_intensity = np.mean(Pxx[:, range_start:range_end])
-                warnings.simplefilter("ignore")
-                warnings.filterwarnings("ignore")
+            bg_intensity = self.estimate_background_intensity(Pxx, centroid_time, spectro_range)
 
-            # -- if contrast ratio is above treshold
-            # -- then it's a false positive
-            if (prop.mean_intensity / bg_intensity) > 0.91:
+            if not self.has_minimum_contrast(prop.mean_intensity, bg_intensity):
                 continue
 
             if this_bin == 1:
@@ -274,7 +254,6 @@ class Rat(Animal):
         if vocal_list:
             vocal_list = ListOfVocals(vocals_in_recording=np.asarray(vocal_list))
             timeAConnectVocals = time()
-            self.connect_vocals(vocal_list)
             self.connect_vocals(vocal_list)
             vocal_list.update_centroids()
 

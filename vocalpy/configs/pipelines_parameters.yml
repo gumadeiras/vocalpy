@@ -9,6 +9,7 @@ pipelines:
   mouse:
     identifier: True
     classifier: True
+    min_contrast_db: 3.0
     nfft: 1024
     window_type: "hamming"
     window_size: 256
@@ -20,6 +21,7 @@ pipelines:
   rat:
     identifier: True
     classifier: True
+    min_contrast_db: 3.0
     nfft: 1024
     window_type: "hamming"
     window_size: 256
@@ -31,6 +33,7 @@ pipelines:
   guineapig:
     identifier: True
     classifier: False
+    min_contrast_db: 3.0
     nfft: 1024
     window_type: "barthann"
     window_size: 512
