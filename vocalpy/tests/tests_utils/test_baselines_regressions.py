@@ -8,7 +8,15 @@ from pathlib import Path
 
 import pandas as pd
 
-from vocalpy.utils.baselines import BaselineFixture, compare_fixture, load_fixtures
+from vocalpy.utils.baselines import (
+    BaselineFixture,
+    ComparisonResult,
+    compare_fixture,
+    format_result,
+    format_totals,
+    load_fixtures,
+    summarize_results,
+)
 
 
 def test_load_fixtures_filters_manifest_by_species_and_name(tmp_path):
@@ -56,3 +64,75 @@ def test_compare_fixture_ignores_class_columns_when_fixture_has_no_classifier(tm
 
     assert result.top1_mismatches == 0
     assert result.top2_mismatches == 0
+
+
+def test_format_result_renders_optional_detail_sections():
+    result = ComparisonResult(
+        fixture=BaselineFixture(name="mouse_1", species="mouse", audio_filename="mouse_1.wav", outputs_dirname="mouse_1_outputs"),
+        baseline_count=3,
+        current_count=4,
+        matched_count=3,
+        extra_rows=pd.DataFrame(
+            {
+                "start(s)": [1.0],
+                "end(s)": [1.1],
+                "duration(ms)": [100.0],
+                "avg_intensity": [-20.0],
+                "bg_intensity": [-30.0],
+            }
+        ),
+        missing_rows=pd.DataFrame(),
+        top1_mismatches=1,
+        top2_mismatches=0,
+        max_start_delta_ms=0.5,
+        max_end_delta_ms=0.0,
+        extra_image_paths=[Path("/tmp/extra.png")],
+    )
+
+    output = format_result(result)
+
+    assert "== mouse_1 (mouse) ==" in output
+    assert "extra rows:" in output
+    assert "extra validation images:" in output
+    assert "/tmp/extra.png" in output
+
+
+def test_summarize_results_and_format_totals_aggregate_drift():
+    results = [
+        ComparisonResult(
+            fixture=BaselineFixture(name="mouse_1", species="mouse", audio_filename="mouse_1.wav", outputs_dirname="mouse_1_outputs"),
+            baseline_count=3,
+            current_count=3,
+            matched_count=3,
+            extra_rows=pd.DataFrame(),
+            missing_rows=pd.DataFrame(),
+            top1_mismatches=0,
+            top2_mismatches=0,
+            max_start_delta_ms=0.0,
+            max_end_delta_ms=0.0,
+            extra_image_paths=[],
+        ),
+        ComparisonResult(
+            fixture=BaselineFixture(name="mouse_2", species="mouse", audio_filename="mouse_2.wav", outputs_dirname="mouse_2_outputs"),
+            baseline_count=54,
+            current_count=55,
+            matched_count=54,
+            extra_rows=pd.DataFrame({"start(s)": [1.0]}),
+            missing_rows=pd.DataFrame(),
+            top1_mismatches=1,
+            top2_mismatches=2,
+            max_start_delta_ms=1.2,
+            max_end_delta_ms=0.3,
+            extra_image_paths=[],
+        ),
+    ]
+
+    totals = summarize_results(results)
+    output = format_totals(totals, Path("/tmp/work"))
+
+    assert totals.extra_total == 1
+    assert totals.top1_total == 1
+    assert totals.top2_total == 2
+    assert totals.drift_found is True
+    assert "totals: extra=1 missing=0" in output
+    assert "work_dir=/tmp/work" in output

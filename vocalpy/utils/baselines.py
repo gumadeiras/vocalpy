@@ -43,6 +43,17 @@ class ComparisonResult:
     extra_image_paths: list[Path]
 
 
+@dataclass(frozen=True)
+class ComparisonTotals:
+    extra_total: int
+    missing_total: int
+    top1_total: int
+    top2_total: int
+    max_start_delta_ms: float
+    max_end_delta_ms: float
+    drift_found: bool
+
+
 def build_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--audio-dir", type=Path, default=Path("examples/audios"))
@@ -167,31 +178,86 @@ def compare_fixture(fixture: BaselineFixture, audio_dir: Path, work_dir: Path, t
     )
 
 
-def print_result(result: ComparisonResult) -> None:
-    print(f"== {result.fixture.name} ({result.fixture.species}) ==")
-    print(
-        f"baseline={result.baseline_count} current={result.current_count} "
-        f"matched={result.matched_count} extra={len(result.extra_rows)} missing={len(result.missing_rows)}"
-    )
-    print(
-        f"max_start_delta_ms={result.max_start_delta_ms:.3f} "
-        f"max_end_delta_ms={result.max_end_delta_ms:.3f} "
-        f"class_top1_mismatches={result.top1_mismatches} "
-        f"class_top2_mismatches={result.top2_mismatches}"
-    )
+def get_detail_columns(dataframe: pd.DataFrame) -> list[str]:
+    return [
+        column
+        for column in dataframe.columns
+        if column in {"start(s)", "end(s)", "duration(ms)", "avg_intensity", "bg_intensity", "class_top1", "class_top2"}
+    ]
+
+
+def format_result(result: ComparisonResult) -> str:
+    lines = [
+        f"== {result.fixture.name} ({result.fixture.species}) ==",
+        (
+            f"baseline={result.baseline_count} current={result.current_count} "
+            f"matched={result.matched_count} extra={len(result.extra_rows)} missing={len(result.missing_rows)}"
+        ),
+        (
+            f"max_start_delta_ms={result.max_start_delta_ms:.3f} "
+            f"max_end_delta_ms={result.max_end_delta_ms:.3f} "
+            f"class_top1_mismatches={result.top1_mismatches} "
+            f"class_top2_mismatches={result.top2_mismatches}"
+        ),
+    ]
     if not result.extra_rows.empty:
-        columns = [column for column in result.extra_rows.columns if column in {"start(s)", "end(s)", "duration(ms)", "avg_intensity", "bg_intensity", "class_top1", "class_top2"}]
-        print("extra rows:")
-        print(result.extra_rows[columns].to_string(index=False))
+        columns = get_detail_columns(result.extra_rows)
+        lines.append("extra rows:")
+        lines.append(result.extra_rows[columns].to_string(index=False))
         if result.extra_image_paths:
-            print("extra validation images:")
+            lines.append("extra validation images:")
             for path in result.extra_image_paths:
-                print(path)
+                lines.append(str(path))
     if not result.missing_rows.empty:
-        columns = [column for column in result.missing_rows.columns if column in {"start(s)", "end(s)", "duration(ms)", "avg_intensity", "bg_intensity", "class_top1", "class_top2"}]
-        print("missing rows:")
-        print(result.missing_rows[columns].to_string(index=False))
-    print()
+        columns = get_detail_columns(result.missing_rows)
+        lines.append("missing rows:")
+        lines.append(result.missing_rows[columns].to_string(index=False))
+    return "\n".join(lines)
+
+
+def summarize_results(results: list[ComparisonResult]) -> ComparisonTotals:
+    extra_total = 0
+    missing_total = 0
+    top1_total = 0
+    top2_total = 0
+    max_start_delta_ms = 0.0
+    max_end_delta_ms = 0.0
+    drift_found = False
+
+    for result in results:
+        extra_total += result.extra_rows.shape[0]
+        missing_total += result.missing_rows.shape[0]
+        top1_total += result.top1_mismatches
+        top2_total += result.top2_mismatches
+        max_start_delta_ms = max(max_start_delta_ms, result.max_start_delta_ms)
+        max_end_delta_ms = max(max_end_delta_ms, result.max_end_delta_ms)
+        if result.extra_rows.shape[0] or result.missing_rows.shape[0] or result.top1_mismatches or result.top2_mismatches:
+            drift_found = True
+
+    return ComparisonTotals(
+        extra_total=extra_total,
+        missing_total=missing_total,
+        top1_total=top1_total,
+        top2_total=top2_total,
+        max_start_delta_ms=max_start_delta_ms,
+        max_end_delta_ms=max_end_delta_ms,
+        drift_found=drift_found,
+    )
+
+
+def format_totals(totals: ComparisonTotals, work_dir: Path) -> str:
+    return "\n".join(
+        [
+            (
+                "totals: "
+                f"extra={totals.extra_total} missing={totals.missing_total} "
+                f"top1_mismatches={totals.top1_total} top2_mismatches={totals.top2_total} "
+                f"max_start_delta_ms={totals.max_start_delta_ms:.3f} "
+                f"max_end_delta_ms={totals.max_end_delta_ms:.3f}"
+            ),
+            f"work_dir={work_dir}",
+        ]
+    )
 
 
 def main(argv=None):
@@ -214,43 +280,24 @@ def main(argv=None):
             run_pipeline_for_fixture(args.audio_dir, work_dir, fixture, args.validation)
 
         results = [compare_fixture(fixture, args.audio_dir, work_dir, args.tolerance_ms) for fixture in fixtures]
-        drift_found = False
-        extra_total = 0
-        missing_total = 0
-        top1_total = 0
-        top2_total = 0
-        max_start_delta_ms = 0.0
-        max_end_delta_ms = 0.0
         for result in results:
-            print_result(result)
-            extra_total += result.extra_rows.shape[0]
-            missing_total += result.missing_rows.shape[0]
-            top1_total += result.top1_mismatches
-            top2_total += result.top2_mismatches
-            max_start_delta_ms = max(max_start_delta_ms, result.max_start_delta_ms)
-            max_end_delta_ms = max(max_end_delta_ms, result.max_end_delta_ms)
-            if result.extra_rows.shape[0] or result.missing_rows.shape[0] or result.top1_mismatches or result.top2_mismatches:
-                drift_found = True
-        print(
-            "totals: "
-            f"extra={extra_total} missing={missing_total} "
-            f"top1_mismatches={top1_total} top2_mismatches={top2_total} "
-            f"max_start_delta_ms={max_start_delta_ms:.3f} max_end_delta_ms={max_end_delta_ms:.3f}"
-        )
-        print(f"work_dir={work_dir}")
-        if args.max_extra_total is not None and extra_total > args.max_extra_total:
+            print(format_result(result))
+            print()
+        totals = summarize_results(results)
+        print(format_totals(totals, work_dir))
+        if args.max_extra_total is not None and totals.extra_total > args.max_extra_total:
             return 1
-        if args.max_missing_total is not None and missing_total > args.max_missing_total:
+        if args.max_missing_total is not None and totals.missing_total > args.max_missing_total:
             return 1
-        if args.max_top1_mismatches_total is not None and top1_total > args.max_top1_mismatches_total:
+        if args.max_top1_mismatches_total is not None and totals.top1_total > args.max_top1_mismatches_total:
             return 1
-        if args.max_top2_mismatches_total is not None and top2_total > args.max_top2_mismatches_total:
+        if args.max_top2_mismatches_total is not None and totals.top2_total > args.max_top2_mismatches_total:
             return 1
-        if args.max_start_delta_ms is not None and max_start_delta_ms > args.max_start_delta_ms:
+        if args.max_start_delta_ms is not None and totals.max_start_delta_ms > args.max_start_delta_ms:
             return 1
-        if args.max_end_delta_ms is not None and max_end_delta_ms > args.max_end_delta_ms:
+        if args.max_end_delta_ms is not None and totals.max_end_delta_ms > args.max_end_delta_ms:
             return 1
-        return 1 if (args.fail_on_drift and drift_found) else 0
+        return 1 if (args.fail_on_drift and totals.drift_found) else 0
     finally:
         if temp_dir is not None and not args.keep_work_dir:
             temp_dir.cleanup()
