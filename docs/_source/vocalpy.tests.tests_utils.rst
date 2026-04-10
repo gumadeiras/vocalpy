@@ -20,15 +20,6 @@ vocalpy.tests.tests\_utils.test\_misc module
    :undoc-members:
    :show-inheritance:
 
-vocalpy.tests.tests\_utils.test\_processing module
---------------------------------------------------
-
-.. automodule:: vocalpy.tests.tests_utils.test_processing
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
 Module contents
 ---------------
 
