@@ -47,9 +47,6 @@ def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    print("run 'vocalpy --help' to show the help menu")
-    print("use '-v' to enable verbose output (recommended)")
-
     try:
         args = validate_arguments(args)
         list_of_files = parse_input_path(args.path_to_audio)
@@ -73,9 +70,8 @@ def main(argv=None):
 
         time_start = time()
         recording = Recording(recording_path=audio_path, args=args)
-        print(recording)
-
         logger.info(f"recording object created ({time() - time_start:.2f}s)")
+        logger.info(recording)
         logger.info(f"recording duration: {recording.audio.audio_duration:.2f} seconds")
         logger.info(f"splitting audio into {recording.audio.bins} chunks")
 
