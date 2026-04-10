@@ -9,7 +9,6 @@ Subpackages
 
    vocalpy.modules
    vocalpy.pipelines
-   vocalpy.tests
    vocalpy.utils
 
 Module contents

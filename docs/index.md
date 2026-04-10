@@ -32,3 +32,9 @@ expected to be rewritten through the current package helpers.
 
 - <a href="genindex.html">General index</a>
 - <a href="py-modindex.html">Python module index</a>
+
+```{toctree}
+:hidden:
+
+_source/vocalpy
+```
