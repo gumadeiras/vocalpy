@@ -18,7 +18,6 @@ extensions = [
     "myst_parser",
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
-    "sphinx_rtd_theme",
 ]
 autodoc_mock_imports = [
     "cv2",
@@ -41,11 +40,11 @@ source_suffix = {
 }
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
-html_theme = "sphinx_rtd_theme"
+html_theme = "furo"
 html_static_path = ["_static"]
 html_extra_path = ["CNAME", ".nojekyll"]
-html_show_sourcelink = False
 html_theme_options = {
-    "collapse_navigation": False,
-    "navigation_depth": 4,
+    "source_repository": "https://github.com/gumadeiras/vocalpy/",
+    "source_branch": "main",
+    "source_directory": "docs/",
 }

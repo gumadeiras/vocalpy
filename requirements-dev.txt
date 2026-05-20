@@ -3,7 +3,7 @@
 pytest
 pytest-cov
 sphinx
-sphinx-rtd-theme
+furo
 myst-parser
 jupyterlab
 notebook
