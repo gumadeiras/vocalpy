@@ -1,5 +1,9 @@
-vocalpy.pipelines package
-=========================
+VocalPy pipeline API
+====================
+
+VocalPy uses one pipeline class for each supported animal. These classes detect candidate vocalizations, apply species-specific checks, and run optional classification and segmentation steps.
+
+Use :doc:`../getting-started` for installation, CLI commands, and output details. Use this page when you write Python code that calls or extends a pipeline class.
 
 Submodules
 ----------
@@ -37,8 +41,8 @@ vocalpy.pipelines.rat module
    :show-inheritance:
 
 
-Module contents
----------------
+Package contents
+----------------
 
 .. automodule:: vocalpy.pipelines
    :members:

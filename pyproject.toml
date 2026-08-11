@@ -47,6 +47,7 @@ docs = [
   "furo>=2025.12,<2026",
   "myst-parser>=4,<5",
   "sphinx>=8,<9",
+  "sphinx-sitemap>=2.9,<3",
 ]
 notebooks = [
   "jupyterlab>=4.5.7,<5",
